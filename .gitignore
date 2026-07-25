@@ -1,0 +1,40 @@
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+
+# Node and Vite
+node_modules/
+.pnpm-store/
+apps/web/dist/
+apps/web/coverage/
+apps/web/node_modules/.tmp/
+*.tsbuildinfo
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# Local delivery artifacts
+/FatorX_Global_Intelligence_F1_Clean.zip

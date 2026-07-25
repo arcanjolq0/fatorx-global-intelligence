@@ -1,0 +1,31 @@
+{
+  "name": "fatorx-global-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo do Fator X Global Intelligence",
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "pnpm": "11.5.2"
+  },
+  "scripts": {
+    "api:dev": "uv run uvicorn fatorx_api.main:app --reload",
+    "web:dev": "pnpm --filter @fatorx/web dev",
+    "lint:python": "uv run ruff check apps src tests scripts",
+    "lint:web": "pnpm --filter @fatorx/web lint",
+    "secrets": "uv run python scripts/check_secrets.py",
+    "lint": "pnpm lint:python && pnpm lint:web && pnpm secrets",
+    "format": "uv run ruff format apps src tests scripts && pnpm --filter @fatorx/web format",
+    "format:check": "uv run ruff format --check apps src tests scripts && pnpm --filter @fatorx/web format:check",
+    "typecheck:python": "uv run mypy apps/api src tests scripts",
+    "typecheck:web": "pnpm --filter @fatorx/web typecheck",
+    "typecheck": "pnpm typecheck:python && pnpm typecheck:web",
+    "test:python": "uv run pytest",
+    "test:web": "pnpm --filter @fatorx/web test",
+    "test": "pnpm test:python && pnpm test:web",
+    "build:python": "uv build --out-dir dist/python",
+    "build:web": "pnpm --filter @fatorx/web build",
+    "build": "pnpm build:python && pnpm build:web",
+    "quality": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
+  }
+}

@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fatorx-global-intelligence"
+version = "0.1.0"
+description = "Fundação executável do Fator X Global Intelligence"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi==0.140.0",
+    "pydantic==2.13.4",
+    "uvicorn==0.51.0",
+]
+
+[dependency-groups]
+dev = [
+    "hatchling==1.31.0",
+    "httpx2==2.9.1",
+    "mypy==2.3.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "pytest-socket==0.8.0",
+    "ruff==0.16.0",
+]
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/intelligence", "apps/api/fatorx_api"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "apps/api/fatorx_api",
+    "src/intelligence",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["apps/web"]
+
+[tool.ruff.lint]
+select = ["ANN", "B", "E", "F", "I", "RUF", "S", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fatorx_api", "intelligence", "scripts"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+mypy_path = ["src", "apps/api"]
+exclude = ["apps/web", "dist"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--disable-socket",
+    "--cov=intelligence",
+    "--cov=fatorx_api",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]
+testpaths = ["tests"]
+pythonpath = [".", "src", "apps/api"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
