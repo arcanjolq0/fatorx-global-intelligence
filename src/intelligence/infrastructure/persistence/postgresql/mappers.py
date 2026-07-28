@@ -9,14 +9,26 @@ from enum import StrEnum
 from uuid import UUID
 
 from intelligence.application.errors import PersistenceDataError
+from intelligence.domain.audit import AuditEvent, AuditOutcome, AuditResourceId, AuditResourceType
 from intelligence.domain.companies import Company, CompanyStatus
 from intelligence.domain.errors import DomainError
 from intelligence.domain.geography import CountryCode
 from intelligence.domain.identifiers import (
+    AuditEventId,
     CompanyId,
+    CorrelationId,
     InvestigationId,
+    MembershipId,
     UserId,
     WorkspaceId,
+)
+from intelligence.domain.identities import (
+    EmailAddress,
+    MembershipRole,
+    MembershipStatus,
+    UserAccount,
+    UserAccountStatus,
+    WorkspaceMembership,
 )
 from intelligence.domain.investigations import Investigation, InvestigationState
 from intelligence.domain.money import CurrencyCode, Money
@@ -168,6 +180,133 @@ def investigation_from_values(values: RelationalValues) -> Investigation:
         raise PersistenceDataError("Persisted Investigation data is invalid.") from error
 
 
+def user_account_to_values(user: UserAccount) -> dict[str, object]:
+    """Map an internal identity snapshot to relational values."""
+
+    return {
+        "id": user.id.value,
+        "email": user.email.value,
+        "display_name": user.display_name,
+        "status": user.status.value,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+    }
+
+
+def user_account_from_values(values: RelationalValues) -> UserAccount:
+    """Reconstitute an internal identity from validated relational values."""
+
+    try:
+        return UserAccount(
+            id=UserId(_required(values, "id", UUID)),
+            email=EmailAddress(_required(values, "email", str)),
+            display_name=_required(values, "display_name", str),
+            status=_enum(values, "status", UserAccountStatus),
+            created_at=_required_datetime(values, "created_at"),
+            updated_at=_required_datetime(values, "updated_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted UserAccount data is invalid.") from error
+
+
+def workspace_membership_to_values(
+    membership: WorkspaceMembership,
+) -> dict[str, object]:
+    """Map a membership snapshot to relational values."""
+
+    return {
+        "id": membership.id.value,
+        "workspace_id": membership.workspace_id.value,
+        "user_id": membership.user_id.value,
+        "role": membership.role.value,
+        "status": membership.status.value,
+        "created_at": membership.created_at,
+        "updated_at": membership.updated_at,
+        "deactivated_at": membership.deactivated_at,
+    }
+
+
+def workspace_membership_from_values(values: RelationalValues) -> WorkspaceMembership:
+    """Reconstitute a membership snapshot from relational values."""
+
+    try:
+        return WorkspaceMembership(
+            id=MembershipId(_required(values, "id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            user_id=UserId(_required(values, "user_id", UUID)),
+            role=_enum(values, "role", MembershipRole),
+            status=_enum(values, "status", MembershipStatus),
+            created_at=_required_datetime(values, "created_at"),
+            updated_at=_required_datetime(values, "updated_at"),
+            deactivated_at=_optional_datetime(values, "deactivated_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted WorkspaceMembership data is invalid.") from error
+
+
+def audit_event_to_values(event: AuditEvent) -> dict[str, object]:
+    """Map an append-only audit event to its minimal relational representation."""
+
+    return {
+        "id": event.id.value,
+        "workspace_id": event.workspace_id.value,
+        "actor_user_id": event.actor_user_id.value,
+        "action_code": event.action_code,
+        "resource_type": event.resource_type.value,
+        "resource_id": event.resource_id.value if event.resource_id is not None else None,
+        "outcome": event.outcome.value,
+        "reason_code": event.reason_code,
+        "correlation_id": event.correlation_id.value,
+        "occurred_at": event.occurred_at,
+    }
+
+
+def audit_event_from_values(values: RelationalValues) -> AuditEvent:
+    """Reconstitute an audit event and its strongly typed resource ID."""
+
+    try:
+        resource_type = _enum(values, "resource_type", AuditResourceType)
+        resource_uuid = _optional(values, "resource_id", UUID)
+        return AuditEvent(
+            id=AuditEventId(_required(values, "id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            actor_user_id=UserId(_required(values, "actor_user_id", UUID)),
+            action_code=_required(values, "action_code", str),
+            resource_type=resource_type,
+            resource_id=(
+                _audit_resource_id(resource_type, resource_uuid)
+                if resource_uuid is not None
+                else None
+            ),
+            outcome=_enum(values, "outcome", AuditOutcome),
+            reason_code=_optional(values, "reason_code", str),
+            correlation_id=CorrelationId(_required(values, "correlation_id", UUID)),
+            occurred_at=_required_datetime(values, "occurred_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted AuditEvent data is invalid.") from error
+
+
+def _audit_resource_id(
+    resource_type: AuditResourceType,
+    resource_uuid: UUID,
+) -> AuditResourceId:
+    identifier_types: dict[AuditResourceType, type[AuditResourceId]] = {
+        AuditResourceType.WORKSPACE: WorkspaceId,
+        AuditResourceType.USER: UserId,
+        AuditResourceType.MEMBERSHIP: MembershipId,
+        AuditResourceType.COMPANY: CompanyId,
+        AuditResourceType.INVESTIGATION: InvestigationId,
+    }
+    return identifier_types[resource_type](resource_uuid)
+
+
 def _read(values: RelationalValues, field_name: str) -> object:
     try:
         return values[field_name]
@@ -235,10 +374,16 @@ def _enum[EnumValue: StrEnum](
 
 __all__ = [
     "RelationalValues",
+    "audit_event_from_values",
+    "audit_event_to_values",
     "company_from_values",
     "company_to_values",
     "investigation_from_values",
     "investigation_to_values",
+    "user_account_from_values",
+    "user_account_to_values",
     "workspace_from_values",
+    "workspace_membership_from_values",
+    "workspace_membership_to_values",
     "workspace_to_values",
 ]

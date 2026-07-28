@@ -66,4 +66,24 @@ class InvestigationId(_UUIDIdentifier):
     """Identifier for an investigation aggregate."""
 
 
-__all__ = ("CompanyId", "InvestigationId", "UserId", "WorkspaceId")
+class MembershipId(_UUIDIdentifier):
+    """Identifier for one user membership within a workspace."""
+
+
+class AuditEventId(_UUIDIdentifier):
+    """Identifier for an immutable audit event."""
+
+
+class CorrelationId(_UUIDIdentifier):
+    """Identifier used to correlate related operations and audit events."""
+
+
+__all__ = (
+    "AuditEventId",
+    "CompanyId",
+    "CorrelationId",
+    "InvestigationId",
+    "MembershipId",
+    "UserId",
+    "WorkspaceId",
+)

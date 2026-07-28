@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3, F2.3.1 e F2.3.2 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
-- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado, round-trip por portas e repositórios Core, e Unit of Work síncrona com fronteira transacional terminal após qualquer tentativa de finalização.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.1 concluídas em 2026-07-28**; F2.4.2 não iniciada.
+- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core e Unit of Work síncrona endurecida. Identidades, memberships e auditoria mínima existem sem autenticação ou autorização.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3, F2.3.1 e F2.3.2 concluídas em 2026-07-28. F2.4 não iniciada.**
+**Status: em andamento; F2.1 a F2.4.1 concluídas. F2.4.2 não iniciada.**
 
 Escopo:
 
@@ -86,9 +86,9 @@ Escopo:
 - criar schema e migrations iniciais;
 - criar repositórios como portas e adaptadores PostgreSQL;
 - aplicar isolamento estrutural por workspace nas relações e consultas;
-- aplicar isolamento no nível dos serviços, memberships e auditoria mínima em uma tarefa F2.4 separada dos repositórios.
+- materializar identidades, memberships e auditoria mínima na F2.4.1, mantendo autorização e isolamento no nível dos serviços para a F2.4.2.
 
-Critério de saída: round-trip de persistência, constraints e migrations testados; domínio não importa infraestrutura; isolamento de serviços, memberships e auditoria mínima da F2.4 testados sem acoplamento oculto aos repositórios.
+Critério de saída: round-trip, constraints e migrations testados; domínio não importa infraestrutura; a fundação persistida da F2.4.1 não antecipa a autorização e o isolamento de serviços da F2.4.2.
 
 #### F2.1 — Tipos fundamentais e invariantes do domínio
 
@@ -240,19 +240,41 @@ Evidências de conclusão:
 
 A invalidação é lógica e irreversível para aquela instância. Ela não substitui rollback/close técnicos: o `__exit__` ainda tenta limpar a transação e a conexão diretamente, mas nenhum método público ou repositório volta a operar.
 
-#### F2.4 — Isolamento de serviços, memberships e auditoria mínima
+#### F2.4.1 — Identidades internas, memberships e auditoria mínima persistida
 
-Status: **Não iniciada.**
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- `EmailAddress`, `UserAccount`, `WorkspaceMembership` e `AuditEvent` imutáveis, com IDs fortes e vocabulários fechados;
+- revision `20260728_02` para `user_account`, `workspace_membership` e `audit_event`, sem alterar a migration inicial;
+- e-mail canônico e único, uma membership permanente por `(workspace_id, user_id)` e eventos append-only sem payload genérico;
+- `investigation.requested_by` preservado sem foreign key até haver reconciliação segura dos UUIDs existentes;
+- três portas/adaptadores adicionais e os seis repositórios sob a mesma conexão, transação original e guard terminal;
+- testes unitários, arquiteturais, de migration e round-trip em PostgreSQL real, documentados em `docs/validation/f2.4.1-identities-memberships-audit.md`.
+
+Evidências de conclusão:
+
+- 373 testes Python e 1 teste web passaram, com cobertura Python total de 94,92%;
+- 101 testes PostgreSQL reais passaram;
+- lint, formatação, tipos estritos, scanner, builds e `pnpm quality` foram aprovados;
+- `upgrade head -> downgrade -1 -> upgrade head -> downgrade base -> upgrade head` terminou em `head`, e `alembic check` não encontrou divergências.
+
+Limites: identidade interna não é autenticação; papel persistido não aplica permissão; não há update/delete, serviços, endpoints, contexto do ator ou auditoria automática.
+
+#### F2.4.2 — Contexto do ator, autorização e isolamento nos serviços
+
+Status: **Não iniciada e não autorizada por esta entrega.**
 
 Escopo reservado:
 
-- comprovar o workspace e a membership do ator no nível dos serviços/casos de uso;
-- materializar o contrato mínimo de usuários e memberships sem autenticação própria;
-- registrar auditoria mínima das operações autorizadas e negadas segundo política explícita;
-- manter autorização e auditoria coordenadas pela aplicação, não como efeitos ocultos de `add`/`get` nos repositórios da F2.3;
-- criar portas, serviços, migrations e testes próprios somente quando a tarefa for autorizada.
+- comprovar workspace e membership do ator nos serviços/casos de uso;
+- aplicar matriz de permissões e proteção do último owner;
+- implementar serviços de membership e mudanças controladas de papel/estado;
+- registrar auditoria coordenada de ações permitidas e negadas;
+- validar `Investigation.requested_by` na aplicação antes de considerar uma futura foreign key.
 
-Fora deste escopo permanecem endpoints de negócio, autenticação completa, transições da investigação, conectores e integrações externas. O gate G2 só deve ser reavaliado depois das evidências da F2.4.
+Fora deste escopo permanecem endpoints de negócio, autenticação completa, transições da investigação, conectores e integrações externas.
 
 ### Fase 3 — Framework de conectores simulados
 

@@ -248,3 +248,78 @@ def test_repository_adapters_never_commit_transactions() -> None:
     ]
 
     assert commit_calls == []
+
+
+def test_repository_adapters_never_roll_back_transactions() -> None:
+    """Only the Unit of Work may roll back the shared transaction."""
+
+    repository_path = INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py"
+    tree = ast.parse(repository_path.read_text(encoding="utf-8"), filename=str(repository_path))
+    rollback_calls = [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "rollback"
+    ]
+
+    assert rollback_calls == []
+
+
+def test_audit_repository_surfaces_are_append_only() -> None:
+    """The audit port and adapter expose insertion, never mutation or deletion."""
+
+    paths_and_classes = (
+        (
+            APPLICATION_ROOT / "ports" / "repositories.py",
+            "AuditEventRepository",
+        ),
+        (
+            INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py",
+            "PostgreSQLAuditEventRepository",
+        ),
+    )
+    for path, class_name in paths_and_classes:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        class_node = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name
+        )
+        methods = {
+            node.name
+            for node in class_node.body
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        }
+        assert "add" in methods
+        assert methods.isdisjoint({"delete", "replace", "save", "update"})
+
+
+def test_f241_does_not_add_authentication_or_authorization_services() -> None:
+    """Actor context, authentication, and authorization remain deferred to F2.4.2."""
+
+    forbidden_modules = {
+        "actor_context",
+        "auth",
+        "authentication",
+        "authorization",
+        "membership_service",
+        "permissions",
+    }
+    forbidden_classes = {
+        "ActorContext",
+        "AuthenticationService",
+        "AuthorizationService",
+        "MembershipService",
+        "PermissionMatrix",
+    }
+    source_root = Path(__file__).parents[2] / "src"
+    discovered_modules: set[str] = set()
+    discovered_classes: set[str] = set()
+    for path in sorted(source_root.rglob("*.py")):
+        discovered_modules.add(path.stem.lower())
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        discovered_classes.update(
+            node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
+        )
+
+    assert discovered_modules.isdisjoint(forbidden_modules)
+    assert discovered_classes.isdisjoint(forbidden_classes)

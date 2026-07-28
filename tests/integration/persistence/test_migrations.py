@@ -31,7 +31,14 @@ from tests.support.destructive_database import require_safe_destructive_database
 pytestmark = pytest.mark.allow_hosts(["127.0.0.1", "::1", "localhost"])
 
 REPOSITORY_ROOT = Path(__file__).parents[3]
-DOMAIN_TABLES = {"workspace", "company", "investigation"}
+DOMAIN_TABLES = {
+    "workspace",
+    "company",
+    "investigation",
+    "user_account",
+    "workspace_membership",
+    "audit_event",
+}
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 
 

@@ -45,19 +45,19 @@ Campos mínimos: `id`, `name`, `status`, `retention_policy_version`, `created_at
 
 ### `UserAccount`
 
-Identidade interna mapeada a provedor de autenticação.
+Identidade interna do sistema, sem representar autenticação.
 
-Campos mínimos: `id`, `external_subject`, `display_name`, `email_normalized` quando permitido, `status`, timestamps. Não armazenar senha.
+Campos da F2.4.1: `id`, `email`, `display_name`, `status`, `created_at`, `updated_at`. O e-mail é canônico em minúsculas, único e validado apenas por estrutura mínima local/domínio; não existe consulta DNS. Não há senha, credencial, sessão, token, login, sujeito OAuth ou MFA.
 
-### `Membership`
+### `WorkspaceMembership`
 
-Relaciona usuário e workspace com papel versionável.
+Relaciona um usuário interno a um workspace.
 
-Campos: `workspace_id`, `user_id`, `role`, `valid_from`, `valid_until`, `created_by`.
+Campos da F2.4.1: `id`, `workspace_id`, `user_id`, `role`, `status`, `created_at`, `updated_at`, `deactivated_at`.
 
-Papéis iniciais: `ANALYST`, `REVIEWER`, `ADMIN`, `AUDITOR`. Alçadas finais dependem de validação.
+Papéis persistidos: `OWNER`, `ADMIN`, `ANALYST`, `VIEWER`. Estados: `ACTIVE`, `INACTIVE`. A combinação `(workspace_id, user_id)` é permanentemente única; reativação futura reutiliza a mesma linha. Esta fase não implementa mudança de papel/estado, permissões ou proteção do último owner.
 
-`UserAccount` e `Membership` permanecem modelo alvo e serão tratados na F2.4 junto ao isolamento no nível dos serviços e à auditoria mínima. A existência de `requested_by` em investigação ou de um filtro `workspace_id` no repositório não prova membership nem autorização.
+`UserAccount`, `WorkspaceMembership` e a persistência mínima de auditoria são materializados na F2.4.1. A existência de `requested_by`, de uma membership ou de um filtro `workspace_id` no repositório não prova autorização. Contexto do ator, matriz de permissões e isolamento nos serviços pertencem à F2.4.2.
 
 ## 4. Entidades empresariais
 
@@ -101,7 +101,7 @@ Campos: `id`, `workspace_id`, `requested_by`, `profile_code`, `country_code`, `i
 
 Na F2.2/F2.2.1, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` exige `started_at` nulo; todo estado posterior exige início preenchido. Estados terminais exigem `completed_at`, e estados não terminais o proíbem. A investigação pode referenciar empresa canônica previamente cadastrada no mesmo workspace, e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
 
-`requested_by` permanece UUID tipado sem foreign key na F2.2, pois `User` e `Membership` não foram materializados. A FK será adicionada por migration posterior somente depois que identidade e tenancy de usuário tiverem contrato aprovado; até lá, o UUID não implica existência nem autorização e não deve ser usado como prova de acesso.
+`requested_by` permanece UUID tipado sem foreign key também na F2.4.1. Bancos na revisão anterior podem conter investigações cujos UUIDs não correspondem a um `UserAccount`, e não existe backfill confiável. A migration não inventa identidades nem descarta ou altera investigações. A F2.4.2 validará ator e membership nos serviços; uma FK futura depende de reconciliação explícita dos dados existentes.
 
 `budget_amount` usa `NUMERIC` sem precisão ou escala fixadas e rejeita `NaN` e infinitos, preservando o contrato de `Money` finito sem arredondamento ou conversão. Valores negativos continuam estruturalmente possíveis porque a F2.1 não definiu semântica de limite orçamentário; eventual proibição exige regra de negócio explícita.
 
@@ -221,11 +221,13 @@ Status: `DRAFT`, `IN_REVIEW`, `APPROVED`, `EXPORTED`, `SUPERSEDED`.
 
 ### `AuditEvent`
 
-Campos: `id`, `workspace_id`, `actor_type`, `actor_id`, `action`, `target_type`, `target_id`, `occurred_at`, `correlation_id`, `request_id`, `outcome`, metadados redigidos e `previous_event_hash` opcional.
+Campos da F2.4.1: `id`, `workspace_id`, `actor_user_id`, `action_code`, `resource_type`, `resource_id`, `outcome`, `reason_code`, `correlation_id`, `occurred_at`.
+
+Resultados: `SUCCESS`, `DENIED`, `FAILURE`. Recursos iniciais: `WORKSPACE`, `USER`, `MEMBERSHIP`, `COMPANY`, `INVESTIGATION`. `resource_id` é uma referência polimórfica tipada no domínio e não possui foreign key. Não há payload ou JSON genérico.
 
 Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal desnecessário.
 
-A materialização mínima de `AuditEvent` e sua coordenação com autorização pertencem à F2.4. Os repositórios da F2.3 não geram auditoria por efeito colateral e não serão usados como substituto da decisão de serviço.
+A materialização mínima de `AuditEvent` pertence à F2.4.1. O evento é imutável, e a porta possui somente `add`; correções futuras criam outro evento. Foreign keys de workspace e ator usam `RESTRICT`, sem cascata, para que eventos sobrevivam à desativação. A coordenação com autorização e a emissão automática por casos de uso pertencem à F2.4.2; repositórios não geram auditoria por efeito colateral.
 
 ## 10. Índices e constraints iniciais
 
@@ -241,7 +243,7 @@ A materialização mínima de `AuditEvent` e sua coordenação com autorização
 
 Na F2.2, `Company(id, workspace_id)` possui chave unique técnica e `Investigation(confirmed_company_id, workspace_id)` usa foreign key composta. Assim, uma empresa confirmada nunca pertence a workspace diferente do agregado, inclusive em escrita SQL direta. Essa chave é redundante em relação à PK de empresa, mas torna o isolamento verificável no banco. Row Level Security permanece adiado e não foi substituído por essa constraint.
 
-Na F2.3, consultas de `Company` e `Investigation` também filtram simultaneamente por `workspace_id` e pelo ID forte. `Workspace` é consultado apenas por seu próprio ID porque ele é a raiz da fronteira. Esses filtros são defesa em profundidade e não substituem membership, autorização de caso de uso ou auditoria, que permanecem separadas para a F2.4.
+Consultas de `Company`, `Investigation` e `WorkspaceMembership` incluem `workspace_id`; `Workspace` é consultado apenas por seu próprio ID porque ele é a raiz da fronteira. Esses filtros são defesa em profundidade e não substituem contexto do ator, autorização de caso de uso ou emissão coordenada de auditoria, reservados à F2.4.2.
 
 ## 11. Retenção e exclusão
 

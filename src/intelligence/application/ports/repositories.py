@@ -2,8 +2,10 @@
 
 from typing import Protocol
 
+from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
-from intelligence.domain.identifiers import CompanyId, InvestigationId, WorkspaceId
+from intelligence.domain.identifiers import CompanyId, InvestigationId, UserId, WorkspaceId
+from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
 
@@ -42,4 +44,45 @@ class InvestigationRepository(Protocol):
         """Return an investigation only within the supplied workspace."""
 
 
-__all__ = ["CompanyRepository", "InvestigationRepository", "WorkspaceRepository"]
+class UserRepository(Protocol):
+    """Persistence operations for internal user identities."""
+
+    def add(self, user: UserAccount) -> None:
+        """Add an internal user to the current transaction."""
+
+    def get(self, user_id: UserId) -> UserAccount | None:
+        """Return the internal user identified by its ID."""
+
+    def get_by_email(self, email: EmailAddress) -> UserAccount | None:
+        """Return the internal user identified by canonical email."""
+
+
+class WorkspaceMembershipRepository(Protocol):
+    """Persistence operations for workspace membership snapshots."""
+
+    def add(self, membership: WorkspaceMembership) -> None:
+        """Add one membership to the current transaction."""
+
+    def get(
+        self,
+        workspace_id: WorkspaceId,
+        user_id: UserId,
+    ) -> WorkspaceMembership | None:
+        """Return the unique membership for a user within a workspace."""
+
+
+class AuditEventRepository(Protocol):
+    """Append-only persistence port for minimal audit events."""
+
+    def add(self, event: AuditEvent) -> None:
+        """Append an immutable event to the current transaction."""
+
+
+__all__ = [
+    "AuditEventRepository",
+    "CompanyRepository",
+    "InvestigationRepository",
+    "UserRepository",
+    "WorkspaceMembershipRepository",
+    "WorkspaceRepository",
+]

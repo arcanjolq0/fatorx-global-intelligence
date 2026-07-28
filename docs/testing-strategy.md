@@ -57,6 +57,8 @@ Na F2.3.1, o guard transacional é testado contra conexão fechada, transação 
 
 Na F2.3.2, os doubles mantêm deliberadamente a `RootTransaction` ativa e sua identidade preservada depois de falhas de commit/rollback. A suíte exige invalidação explícita do guard, bloqueio de leitura/escrita e de toda nova finalização pública, tentativa de limpeza interna pelo `__exit__`, não reutilização depois de falha de entrada e terminalidade mesmo quando o fechamento falha. SQL, URL, senha e marcadores técnicos são inseridos apenas nas exceções simuladas e devem permanecer ausentes das mensagens públicas. Os testes PostgreSQL reais continuam cobrindo falhas efetivas de início, commit e rollback, operações normais e ausência de autobegin após finalizações bem-sucedidas.
 
+Na F2.4.1, testes unitários cobrem e-mail canônico, identidades, memberships, auditoria imutável, IDs fortes e mapeadores. PostgreSQL real comprova a nova revision a partir de banco vazio e da revision anterior — inclusive com `requested_by` órfão preservado —, constraints, downgrade de uma revision, re-upgrade e round-trip dos três novos snapshots. Os testes transacionais exigem o mesmo guard nos seis repositórios, rollback sem dados parciais, bloqueio depois de finalização/falha e nenhuma transação por autobegin.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;
@@ -68,7 +70,7 @@ Na F2.3.2, os doubles mantêm deliberadamente a `RootTransaction` ativa e sua id
 - rate limit, budget e payload excessivo;
 - corrida/idempotência e replay.
 
-O filtro relacional da F2.3 é testado, mas os cenários de autorização por membership e auditoria de negação pertencem à F2.4. Esses testes devem ser adicionados no nível dos serviços, separados dos testes de round-trip dos repositórios.
+O filtro relacional e a consulta tenant-first de membership são testados, mas autorização por papel, contexto do ator e auditoria automática de permissão/negação pertencem à F2.4.2. Esses testes serão adicionados no nível dos serviços, separados dos testes de round-trip dos repositórios.
 
 ### 3.5 Testes ponta a ponta
 

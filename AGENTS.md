@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F2.3.2 da Fase 2 — Invalidação da Unit of Work após falhas de finalização. O código autorizado contém a fundação técnica da Fase 1, os tipos e entidades imutáveis da F2.1, o schema versionado e o hardening da F2.2/F2.2.1, o round-trip da F2.3, o vínculo transacional da F2.3.1 e a invalidação terminal explícita antes de qualquer tentativa de commit ou rollback da F2.3.2. Até nova instrução, não iniciar a F2.4, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas. A F2.4 deverá tratar isolamento no nível dos serviços, memberships e auditoria mínima em escopo próprio; essas responsabilidades não devem ser embutidas como efeitos ocultos nos repositórios da F2.3/F2.3.1/F2.3.2.
+O projeto concluiu a F2.4.1 da Fase 2 — identidades internas, memberships e auditoria mínima persistida. O código autorizado contém seis snapshots persistidos e seis repositórios sob a fronteira transacional endurecida, sem autenticação, autorização ou serviços. Até nova instrução, não iniciar a F2.4.2, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas. Contexto do ator, matriz de permissões, isolamento no nível dos serviços, serviços de membership, proteção do último owner e auditoria coordenada pertencem exclusivamente à F2.4.2 e não devem ser embutidos nos repositórios.
 
 ## Ordem de precedência documental
 

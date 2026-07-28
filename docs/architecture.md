@@ -38,7 +38,7 @@ PostgreSQL + Object storage + Queue adapter
 - coordenação entre portas;
 - emissão de eventos e auditoria.
 
-Na F2.3, somente as portas de repositório e Unit of Work foram materializadas. Autorização, memberships, casos de uso completos e emissão de auditoria permanecem reservados à F2.4; os adaptadores de persistência não executam essas responsabilidades implicitamente.
+Na F2.4.1, identidades internas, memberships e eventos mínimos de auditoria passam a ter domínio e persistência próprios. Isso não autentica atores, aplica permissões nem emite auditoria automaticamente: contexto do ator, autorização, serviços e coordenação de eventos permanecem reservados à F2.4.2.
 
 ### Orquestração
 
@@ -107,7 +107,7 @@ Na F2.3, somente as portas de repositório e Unit of Work foram materializadas. 
 - A Unit of Work síncrona abre uma conexão e uma `RootTransaction`, compartilha um guard com os repositórios e exige commit explícito; saída sem commit executa rollback.
 - Antes de qualquer operação, o guard comprova que não foi invalidado, conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
 - A Unit of Work invalida permanentemente o guard antes de tentar commit ou rollback. Falha do driver não reabre a fronteira; somente o `__exit__` pode executar rollback/close técnicos depois da invalidação.
-- Repositórios recebem o guard da Unit of Work, não abrem transações e não executam commit.
+- Os seis repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
 - Mudança de estado e evento a publicar usam transação única com outbox.
 - Workers usam chave de idempotência e inbox/registro de processamento.
 - Entrega pode ser ao menos uma vez; efeitos devem ser idempotentes.
@@ -130,7 +130,7 @@ O produto de fila/cache não está decidido. Sua escolha deve ser registrada e j
 - `workspace_id` é obrigatório em toda raiz agregada e chave de storage/cache.
 - Autorização é verificada no caso de uso e reforçada no adaptador de dados.
 - Na F2.3, `Company.get` e `Investigation.get` exigem `workspace_id`, e a relação investigação/empresa continua protegida por constraint composta. Isso reduz acesso acidental entre tenants, mas não comprova que um ator pertence ao workspace.
-- A F2.4 tratará isolamento no nível dos serviços, memberships e auditoria mínima como um conjunto separado; essas verificações não são efeitos ocultos de `add`/`get`.
+- A F2.4.1 materializa memberships e auditoria mínima, mas não interpreta papéis. A F2.4.2 tratará contexto do ator, isolamento e autorização no nível dos serviços; essas verificações não são efeitos ocultos de `add`/`get`.
 - Coleta externa usa política de egress e resolução segura de DNS/redirecionamentos.
 - Browser, parsing e OCR executam isolados do núcleo e sem credenciais desnecessárias.
 - Logs contêm IDs, estados, durações e códigos; conteúdo e segredos são redigidos.

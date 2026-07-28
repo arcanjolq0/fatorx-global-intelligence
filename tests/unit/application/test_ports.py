@@ -3,8 +3,11 @@
 import pytest
 
 from intelligence.application.ports.repositories import (
+    AuditEventRepository,
     CompanyRepository,
     InvestigationRepository,
+    UserRepository,
+    WorkspaceMembershipRepository,
     WorkspaceRepository,
 )
 from intelligence.application.ports.unit_of_work import UnitOfWork
@@ -12,7 +15,15 @@ from intelligence.application.ports.unit_of_work import UnitOfWork
 
 @pytest.mark.parametrize(
     "port_type",
-    [WorkspaceRepository, CompanyRepository, InvestigationRepository, UnitOfWork],
+    [
+        WorkspaceRepository,
+        CompanyRepository,
+        InvestigationRepository,
+        UserRepository,
+        WorkspaceMembershipRepository,
+        AuditEventRepository,
+        UnitOfWork,
+    ],
 )
 def test_persistence_ports_are_protocols_not_technical_implementations(
     port_type: type[object],
@@ -34,5 +45,29 @@ def test_protocol_types_accept_structural_adapters_without_base_classes() -> Non
     assert _workspace_repository(repository) is repository
 
 
+def test_audit_event_repository_is_an_append_only_protocol() -> None:
+    public_operations = {
+        name
+        for name, member in AuditEventRepository.__dict__.items()
+        if not name.startswith("_") and callable(member)
+    }
+
+    assert public_operations == {"add"}
+
+
+def test_audit_event_protocol_accepts_add_only_structural_adapter() -> None:
+    class StructuralAuditEventRepository:
+        def add(self, event: object) -> None:
+            del event
+
+    repository = StructuralAuditEventRepository()
+
+    assert _audit_event_repository(repository) is repository
+
+
 def _workspace_repository(repository: WorkspaceRepository) -> WorkspaceRepository:
+    return repository
+
+
+def _audit_event_repository(repository: AuditEventRepository) -> AuditEventRepository:
     return repository

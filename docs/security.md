@@ -27,7 +27,7 @@ Dados devem ser validados em cada fronteira; estar em rede interna não os torna
 - contas de serviço separadas por componente/ambiente;
 - sessões, revogação e MFA dependem da política organizacional a validar.
 
-Na F2.3, filtros compostos por `workspace_id` nos repositórios de empresa e investigação reforçam o isolamento relacional, mas não autenticam um ator nem comprovam membership. A F2.4 implementará o isolamento no nível dos serviços, memberships e auditoria mínima como fronteira própria. Repositórios não autorizam operações nem registram auditoria por efeito colateral.
+Na F2.4.1, a identidade interna não contém credencial, membership não concede permissão por si só e a auditoria mínima não recebe payload arbitrário. Filtros tenant-first reforçam o isolamento relacional, mas não autenticam nem autorizam um ator. A F2.4.2 implementará contexto do ator e isolamento no nível dos serviços; repositórios não autorizam operações nem registram auditoria por efeito colateral.
 
 ## 4. Segredos
 
@@ -87,6 +87,7 @@ Na F2.3, filtros compostos por `workspace_id` nos repositórios de empresa e inv
 - repositórios vinculados à identidade da transação original; commit/rollback encerram imediatamente sua capacidade de operar, ainda que a conexão permaneça aberta;
 - guard invalidado antes da finalização; falha de commit/rollback não permite reutilizar uma transação de resultado incerto, mesmo quando o driver ainda a apresenta como ativa;
 - eventos para acesso, exportação, revisão e transição;
+- `AuditEvent` persistido é imutável no domínio e seu repositório aceita somente append; não há cascata destrutiva, JSON genérico ou expurgo nesta fase;
 - horário confiável e correlação ponta a ponta;
 - logs append-only/protegidos conforme operação;
 - nunca registrar conteúdo completo por conveniência.

@@ -4,8 +4,11 @@ from types import TracebackType
 from typing import Literal, Protocol, Self
 
 from intelligence.application.ports.repositories import (
+    AuditEventRepository,
     CompanyRepository,
     InvestigationRepository,
+    UserRepository,
+    WorkspaceMembershipRepository,
     WorkspaceRepository,
 )
 
@@ -24,6 +27,18 @@ class UnitOfWork(Protocol):
     @property
     def investigations(self) -> InvestigationRepository:
         """Return the investigation repository bound to the active transaction."""
+
+    @property
+    def users(self) -> UserRepository:
+        """Return the internal-user repository bound to the active transaction."""
+
+    @property
+    def memberships(self) -> WorkspaceMembershipRepository:
+        """Return the membership repository bound to the active transaction."""
+
+    @property
+    def audit_events(self) -> AuditEventRepository:
+        """Return the append-only audit repository bound to the active transaction."""
 
     def __enter__(self) -> Self:
         """Open the transaction and bind all repositories."""

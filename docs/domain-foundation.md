@@ -96,11 +96,11 @@ Permanecem para tarefas posteriores, sem implementação implícita:
 
 - catálogos oficiais e versionados de países e moedas;
 - definição de `JurisdictionCode` e registros subnacionais;
-- usuários, memberships e regras de autorização;
+- autenticação, contexto do ator e regras de autorização;
 - aliases, endereços, identificadores externos e relações de empresas;
 - transições da investigação e comandos de domínio;
-- isolamento no nível dos serviços, memberships e autorização da F2.4;
-- auditoria persistida mínima e concorrência otimista;
+- isolamento no nível dos serviços, mudanças de membership e autorização da F2.4.2;
+- emissão coordenada/automática de auditoria, retenção executável e concorrência otimista;
 - contratos de conectores, evidências, risco e relatórios.
 
 ## 7. Decisões pré-schema da F2.2
@@ -139,4 +139,22 @@ O construtor comum de `Investigation` permanece sendo o contrato de criação: e
 
 `Investigation.reconstitute(...)` é o contrato explícito de leitura de snapshots persistidos. Ele aceita qualquer estado canônico, exige versão positiva e reaplica todos os tipos fortes, normalização UTC, deadline, ordem temporal e coerência de início/término. Estados diferentes de `CREATED` exigem `started_at`; estados terminais exigem `completed_at`; estados não terminais o proíbem. A implementação interna inicializa o snapshot imutável somente depois de receber todos os valores e o valida no próprio módulo de domínio. O mapper não altera atributos privados e não corrige dados inválidos.
 
-A reconstituição não representa comando, transição ou autorização. Os repositórios e a Unit of Work da F2.3 apenas persistem snapshots. Isolamento contextual de serviços, memberships e auditoria mínima continuam separados para a F2.4.
+A reconstituição não representa comando, transição ou autorização. Os repositórios e a Unit of Work apenas persistem snapshots. A F2.4.1 materializa identidades, memberships e auditoria mínima; isolamento contextual, serviços e autorização continuam separados para a F2.4.2.
+
+## 9. Decisões pré-schema da F2.4.1
+
+### 9.1 Identidade interna e e-mail
+
+`UserAccount` é identidade interna, não credencial de autenticação. `EmailAddress` remove whitespace externo, rejeita controles e whitespace interno, normaliza toda a representação para minúsculas, limita o total a 254 caracteres e exige exatamente uma parte local e um domínio não vazios separados por `@`. A regra não consulta DNS nem promete conformidade RFC completa. PostgreSQL garante a forma canônica e `UNIQUE(email)` sem extensão adicional.
+
+### 9.2 Membership única
+
+Existe no máximo uma `WorkspaceMembership` por `(workspace_id, user_id)`. O vínculo possui ID próprio, papel e estado, mas nenhum comando de mudança nesta fase. Uma futura reativação reutilizará a mesma linha; alteração de papel/estado, permissões e proteção do último owner pertencem à F2.4.2.
+
+### 9.3 Solicitante de investigação
+
+`Investigation.requested_by` não recebe foreign key na F2.4.1. A revisão anterior pode conter UUIDs sem identidade correspondente e não há backfill admissível. A validação de existência e membership ficará no serviço futuro da F2.4.2; uma FK exige reconciliação posterior explícita.
+
+### 9.4 Auditoria append-only e retenção
+
+`AuditEvent` é imutável, e sua persistência oferece apenas adição. Não existem update/delete nem trigger nesta fase; correção é outro evento. O schema não contém payload arbitrário. Foreign keys usam `RESTRICT`, não cascade, e eventos sobrevivem à desativação. Não há expurgo genérico; retenção futura depende de política aprovada e deve produzir registro auditável.

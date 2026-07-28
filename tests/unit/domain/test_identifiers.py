@@ -8,8 +8,11 @@ import pytest
 
 from intelligence.domain.errors import InvalidIdentifierError
 from intelligence.domain.identifiers import (
+    AuditEventId,
     CompanyId,
+    CorrelationId,
     InvestigationId,
+    MembershipId,
     UserId,
     WorkspaceId,
 )
@@ -17,10 +20,26 @@ from intelligence.domain.identifiers import (
 
 @pytest.mark.parametrize(
     "identifier_type",
-    [WorkspaceId, UserId, CompanyId, InvestigationId],
+    [
+        WorkspaceId,
+        UserId,
+        CompanyId,
+        InvestigationId,
+        MembershipId,
+        AuditEventId,
+        CorrelationId,
+    ],
 )
 def test_identifier_can_be_created_and_reconstructed(
-    identifier_type: type[WorkspaceId] | type[UserId] | type[CompanyId] | type[InvestigationId],
+    identifier_type: (
+        type[WorkspaceId]
+        | type[UserId]
+        | type[CompanyId]
+        | type[InvestigationId]
+        | type[MembershipId]
+        | type[AuditEventId]
+        | type[CorrelationId]
+    ),
 ) -> None:
     identifier = identifier_type.new()
 
@@ -33,11 +52,18 @@ def test_identifier_can_be_created_and_reconstructed(
 
 def test_identifier_types_remain_distinct_for_the_same_uuid() -> None:
     value = UUID("63592cee-39bc-436a-8031-08d1c902239f")
-    workspace_id = WorkspaceId(value)
-    company_id = CompanyId(value)
+    identifiers: set[object] = {
+        WorkspaceId(value),
+        UserId(value),
+        CompanyId(value),
+        InvestigationId(value),
+        MembershipId(value),
+        AuditEventId(value),
+        CorrelationId(value),
+    }
 
-    assert cast(object, workspace_id) != company_id
-    assert len({workspace_id, company_id}) == 2
+    assert cast(object, MembershipId(value)) != AuditEventId(value)
+    assert len(identifiers) == 7
 
 
 @pytest.mark.parametrize(

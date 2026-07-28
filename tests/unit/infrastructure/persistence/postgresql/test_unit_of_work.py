@@ -10,8 +10,15 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from intelligence.application.errors import PersistenceError, PersistenceStateError
 from intelligence.application.ports.unit_of_work import UnitOfWork
-from intelligence.domain.identifiers import WorkspaceId
+from intelligence.domain.audit import AuditEvent
+from intelligence.domain.identifiers import UserId, WorkspaceId
+from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
 from intelligence.domain.workspaces import Workspace
+from intelligence.infrastructure.persistence.postgresql.repositories import (
+    PostgreSQLAuditEventRepository,
+    PostgreSQLUserRepository,
+    PostgreSQLWorkspaceMembershipRepository,
+)
 from intelligence.infrastructure.persistence.postgresql.unit_of_work import (
     PostgreSQLUnitOfWork,
 )
@@ -111,6 +118,43 @@ def _assert_public_error_is_redacted(
         assert sensitive_fragment not in message
 
 
+def _capture_new_repositories(
+    unit_of_work: PostgreSQLUnitOfWork,
+) -> tuple[
+    PostgreSQLUserRepository,
+    PostgreSQLWorkspaceMembershipRepository,
+    PostgreSQLAuditEventRepository,
+]:
+    return (
+        unit_of_work.users,
+        unit_of_work.memberships,
+        unit_of_work.audit_events,
+    )
+
+
+def _assert_new_repositories_reject_operations(
+    repositories: tuple[
+        PostgreSQLUserRepository,
+        PostgreSQLWorkspaceMembershipRepository,
+        PostgreSQLAuditEventRepository,
+    ],
+) -> None:
+    users, memberships, audit_events = repositories
+
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        users.get(UserId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        users.get_by_email(EmailAddress("analyst@example.com"))
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        users.add(cast(UserAccount, None))
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        memberships.get(WorkspaceId.new(), UserId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        memberships.add(cast(WorkspaceMembership, None))
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        audit_events.add(cast(AuditEvent, None))
+
+
 def test_concrete_unit_of_work_satisfies_the_application_port() -> None:
     unit_of_work, _ = _unit_of_work()
     application_port: UnitOfWork = unit_of_work
@@ -154,6 +198,9 @@ def test_repositories_share_the_connection_opened_by_the_unit_of_work() -> None:
             id(unit_of_work.workspaces._transaction_guard),
             id(unit_of_work.companies._transaction_guard),
             id(unit_of_work.investigations._transaction_guard),
+            id(unit_of_work.users._transaction_guard),
+            id(unit_of_work.memberships._transaction_guard),
+            id(unit_of_work.audit_events._transaction_guard),
         }
         guard = unit_of_work.workspaces._transaction_guard
 
@@ -168,12 +215,14 @@ def test_captured_repository_rejects_read_and_write_after_commit() -> None:
 
     with unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
         unit_of_work.commit()
 
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.get(WorkspaceId.new())
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.add(cast(Workspace, None))
+        _assert_new_repositories_reject_operations(new_repositories)
 
         assert engine.connection.get_transaction() is None
 
@@ -183,6 +232,7 @@ def test_captured_repository_rejects_read_and_write_after_rollback() -> None:
 
     with unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
         guard = repository._transaction_guard
         unit_of_work.rollback()
 
@@ -191,6 +241,7 @@ def test_captured_repository_rejects_read_and_write_after_rollback() -> None:
             repository.get(WorkspaceId.new())
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.add(cast(Workspace, None))
+        _assert_new_repositories_reject_operations(new_repositories)
 
         assert engine.connection.get_transaction() is None
 
@@ -212,13 +263,34 @@ def test_repository_rejects_a_different_active_transaction_identity() -> None:
 def test_unit_of_work_and_repositories_reject_use_after_close() -> None:
     unit_of_work, _ = _unit_of_work()
 
+    for repository_name in (
+        "workspaces",
+        "companies",
+        "investigations",
+        "users",
+        "memberships",
+        "audit_events",
+    ):
+        with pytest.raises(PersistenceStateError):
+            getattr(unit_of_work, repository_name)
+
     with unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
 
-    with pytest.raises(PersistenceStateError):
-        _ = unit_of_work.workspaces
+    for repository_name in (
+        "workspaces",
+        "companies",
+        "investigations",
+        "users",
+        "memberships",
+        "audit_events",
+    ):
+        with pytest.raises(PersistenceStateError):
+            getattr(unit_of_work, repository_name)
     with pytest.raises(PersistenceStateError, match="transaction is not active"):
         repository.get(WorkspaceId.new())
+    _assert_new_repositories_reject_operations(new_repositories)
     with pytest.raises(PersistenceStateError):
         unit_of_work.__enter__()
 
@@ -261,6 +333,7 @@ def test_commit_failure_poisons_guard_repositories_and_public_finalization() -> 
 
     with unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
         guard = repository._transaction_guard
         with pytest.raises(PersistenceError) as captured:
             unit_of_work.commit()
@@ -271,6 +344,7 @@ def test_commit_failure_poisons_guard_repositories_and_public_finalization() -> 
             repository.get(WorkspaceId.new())
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.add(cast(Workspace, None))
+        _assert_new_repositories_reject_operations(new_repositories)
         with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
             unit_of_work.commit()
         with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
@@ -292,6 +366,7 @@ def test_rollback_failure_poisons_guard_repositories_and_public_finalization() -
 
     with unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
         guard = repository._transaction_guard
         engine.connection.transaction.rollback_error = _technical_error(marker)
         with pytest.raises(PersistenceError) as captured:
@@ -303,6 +378,7 @@ def test_rollback_failure_poisons_guard_repositories_and_public_finalization() -
             repository.get(WorkspaceId.new())
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.add(cast(Workspace, None))
+        _assert_new_repositories_reject_operations(new_repositories)
         with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
             unit_of_work.commit()
         with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
@@ -325,6 +401,7 @@ def test_close_failure_keeps_unit_of_work_and_guard_terminal() -> None:
 
     with pytest.raises(PersistenceError) as captured, unit_of_work:
         repository = unit_of_work.workspaces
+        new_repositories = _capture_new_repositories(unit_of_work)
         guard = repository._transaction_guard
 
     _assert_public_error_is_redacted(
@@ -340,6 +417,7 @@ def test_close_failure_keeps_unit_of_work_and_guard_terminal() -> None:
         _ = unit_of_work.workspaces
     with pytest.raises(PersistenceStateError, match="transaction is not active"):
         repository.get(WorkspaceId.new())
+    _assert_new_repositories_reject_operations(new_repositories)
     with pytest.raises(PersistenceStateError, match="no active transaction"):
         unit_of_work.commit()
     with pytest.raises(PersistenceStateError, match="no active transaction"):

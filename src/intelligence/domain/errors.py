@@ -25,6 +25,10 @@ class InvalidDateTimeError(DomainError):
     """A domain timestamp is missing timezone information or is invalid."""
 
 
+class InvalidEmailAddressError(DomainError):
+    """An email address does not satisfy the internal canonical format."""
+
+
 class InvariantViolationError(DomainError):
     """An entity would be created in an inconsistent business state."""
 
@@ -34,6 +38,7 @@ __all__ = (
     "InvalidCountryCodeError",
     "InvalidCurrencyCodeError",
     "InvalidDateTimeError",
+    "InvalidEmailAddressError",
     "InvalidIdentifierError",
     "InvalidMoneyError",
     "InvariantViolationError",

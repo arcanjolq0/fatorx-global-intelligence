@@ -15,8 +15,11 @@ from intelligence.application.errors import (
     PersistenceStateError,
 )
 from intelligence.infrastructure.persistence.postgresql.repositories import (
+    PostgreSQLAuditEventRepository,
     PostgreSQLCompanyRepository,
     PostgreSQLInvestigationRepository,
+    PostgreSQLUserRepository,
+    PostgreSQLWorkspaceMembershipRepository,
     PostgreSQLWorkspaceRepository,
 )
 from intelligence.infrastructure.persistence.postgresql.transaction_guard import (
@@ -25,7 +28,7 @@ from intelligence.infrastructure.persistence.postgresql.transaction_guard import
 
 
 class PostgreSQLUnitOfWork:
-    """Single-use explicit transaction shared by three repositories."""
+    """Single-use explicit transaction shared by all six repositories."""
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -35,6 +38,9 @@ class PostgreSQLUnitOfWork:
         self._workspaces: PostgreSQLWorkspaceRepository | None = None
         self._companies: PostgreSQLCompanyRepository | None = None
         self._investigations: PostgreSQLInvestigationRepository | None = None
+        self._users: PostgreSQLUserRepository | None = None
+        self._memberships: PostgreSQLWorkspaceMembershipRepository | None = None
+        self._audit_events: PostgreSQLAuditEventRepository | None = None
         self._entered = False
         self._closed = False
         self._finalization_attempted = False
@@ -66,6 +72,30 @@ class PostgreSQLUnitOfWork:
         return repository
 
     @property
+    def users(self) -> PostgreSQLUserRepository:
+        self._require_active()
+        repository = self._users
+        if repository is None:
+            raise PersistenceStateError("User repository is unavailable.")
+        return repository
+
+    @property
+    def memberships(self) -> PostgreSQLWorkspaceMembershipRepository:
+        self._require_active()
+        repository = self._memberships
+        if repository is None:
+            raise PersistenceStateError("Membership repository is unavailable.")
+        return repository
+
+    @property
+    def audit_events(self) -> PostgreSQLAuditEventRepository:
+        self._require_active()
+        repository = self._audit_events
+        if repository is None:
+            raise PersistenceStateError("Audit event repository is unavailable.")
+        return repository
+
+    @property
     def is_closed(self) -> bool:
         """Report whether the Unit of Work has reached a terminal closed state."""
 
@@ -92,6 +122,9 @@ class PostgreSQLUnitOfWork:
         self._workspaces = PostgreSQLWorkspaceRepository(transaction_guard)
         self._companies = PostgreSQLCompanyRepository(transaction_guard)
         self._investigations = PostgreSQLInvestigationRepository(transaction_guard)
+        self._users = PostgreSQLUserRepository(transaction_guard)
+        self._memberships = PostgreSQLWorkspaceMembershipRepository(transaction_guard)
+        self._audit_events = PostgreSQLAuditEventRepository(transaction_guard)
         self._entered = True
         return self
 
