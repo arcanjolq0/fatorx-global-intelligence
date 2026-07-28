@@ -40,7 +40,19 @@ ADMIN administra somente ANALYST/VIEWER e nunca a própria membership. OWNER pod
 - redaction de headers, query strings e exceções;
 - scanner de segredos no commit e pipeline.
 
+Na F3.1, o descritor guarda somente um nome canônico de referência. O contexto
+aceita um handle opaco por `Protocol`, excluído de `repr`, igualdade e hash.
+Payloads ocultam bytes, paginação redige cursor e mensagens públicas rejeitam
+marcadores comuns de segredo, URL e quebras de linha. Nenhum valor de credencial
+é permitido nos envelopes ou fixtures.
+
 ## 5. Coleta e SSRF
+
+Na F3.1 não existe coleta, URL de destino, DNS, redirecionamento, socket ou
+cliente HTTP. Os contratos aceitam somente domínio canônico na query e
+referências lógicas/opacas para origem e artefato; não oferecem método de busca.
+As proteções runtime abaixo continuam obrigatórias para uma futura integração,
+mas não são antecipadas pelo registro tipado.
 
 - conectores usam destinos aprovados, não URL arbitrária do usuário;
 - HTTPS obrigatório salvo exceção formal;

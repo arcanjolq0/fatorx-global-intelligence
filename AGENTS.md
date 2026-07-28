@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F2.4.1 da Fase 2 — identidades internas, memberships e auditoria mínima persistida. O código autorizado contém seis snapshots persistidos e seis repositórios sob a fronteira transacional endurecida, sem autenticação, autorização ou serviços. Até nova instrução, não iniciar a F2.4.2, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas. Contexto do ator, matriz de permissões, isolamento no nível dos serviços, serviços de membership, proteção do último owner e auditoria coordenada pertencem exclusivamente à F2.4.2 e não devem ser embutidos nos repositórios.
+O projeto concluiu a F2.4.2 da Fase 2 e a F3.1 da Fase 3 — contratos tipados, Protocol assíncrono e registro explícito de conectores, sem I/O. A plataforma mantém contexto do ator, autorização tenant-scoped, serviços mínimos, proteção concorrente do último owner e auditoria coordenada, sem autenticação, endpoints ou acesso ao banco pela API. Até nova instrução, não iniciar F3.2, F3.3, Fase 4, conectores simulados ou reais, HTTP, retries, timeout efetivo, idempotência, jobs, transições de investigação ou integrações externas. A camada F3.1 não persiste, não orquestra e não cria empresa, evidência, claim, risco ou relatório canônico.
 
 ## Ordem de precedência documental
 

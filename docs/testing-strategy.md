@@ -61,6 +61,14 @@ Na F2.4.1, testes unitários cobrem e-mail canônico, identidades, memberships, 
 
 Na F2.4.2, uma tabela unitária exaustiva cobre cada combinação de quatro papéis e oito permissões. Fakes com estado transacional exercitam autorizador e serviços sem simular PostgreSQL. Integração real comprova escopo exclusivo do ator, `requested_by`, auditoria atômica, negações persistidas, falhas sem sucesso, locks da membership e terminalidade do guard. Corridas usam `Barrier`, `Event`, threads daemon, `lock_timeout` local e join limitado; sleeps arbitrários não são o mecanismo de sincronização.
 
+Na F3.1, testes unitários cobrem IDs fortes, SemVer, cobertura explícita,
+contexto sem segredo, queries, candidatos opacos, escalares de observação,
+artefatos, metadados, todos os estados de outcome, Protocol e seleção do
+registry. Testes AST impedem imports de aplicação/infraestrutura/frameworks,
+rede, banco, filesystem, descoberta dinâmica, simuladores e migrations novas.
+A suíte focada executa com sockets desabilitados e exige pelo menos 90% de
+branch coverage em `intelligence.connectors`.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

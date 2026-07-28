@@ -37,7 +37,8 @@ O conector não pode:
 | `version` | SemVer | mudança incompatível incrementa major |
 | `contract_version` | SemVer | versão deste contrato suportada |
 | `source_id` | UUID/string estável | aponta para fonte catalogada |
-| `countries` | conjunto ISO alfa-2 | vazio não significa global |
+| `coverage_kind` | enum | `GLOBAL` ou `COUNTRY_SET`; nunca inferido por omissão |
+| `countries` | conjunto ISO alfa-2 | vazio somente com `GLOBAL`; `COUNTRY_SET` exige conjunto não vazio |
 | `capabilities` | conjunto enum | somente capacidades implementadas |
 | `operations` | conjunto enum | `SEARCH`, `FETCH_DETAILS`, opcionalmente `FETCH_DOCUMENT` |
 | `access_type` | enum | `API`, `FILE`, `WEB_PUBLIC`, `USER_UPLOAD`; sem implicar permissão |
@@ -47,19 +48,23 @@ O conector não pode:
 
 Descritor é validado ao registrar o conector. País/capacidade não declarado falha antes de qualquer I/O.
 
+A versão inicial executável do contrato é `1.0.0`. A compatibilidade é decidida
+por major, e o registro rejeita major desconhecida. A forma SemVer aceita nesta
+fase é estritamente `MAJOR.MINOR.PATCH`, sem prerelease ou build metadata.
+
 ## 4. Entradas
 
 ### `ConnectorContext`
 
 - `workspace_id`, `investigation_id`, `operation_id`, `attempt`;
 - `correlation_id` e `request_id`;
-- `deadline_at` monotonicamente aplicável;
+- `MonotonicDeadline` absoluto, a ser interpretado por relógio monotônico na F3.3;
 - orçamento restante e moeda;
 - locale/idiomas aceitos;
 - versão da política da fonte;
 - modo `TEST` ou `PRODUCTION`;
-- handle para credencial de menor privilégio, resolvido pelo adaptador e nunca serializado;
-- função de cancelamento.
+- handle opaco para credencial de menor privilégio, definido por `Protocol`, excluído de `repr`/igualdade/hash e nunca serializado;
+- sinal cooperativo de cancelamento por `Protocol`, sem espera ou efeito na F3.1.
 
 ### `CompanyQuery`
 
@@ -82,19 +87,24 @@ Identificador opaco retornado pelo mesmo conector, acompanhado de snapshot míni
 describe() -> ConnectorDescriptor
 search(query, context) -> ConnectorOutcome[CandidateObservation]
 fetch_details(candidate_ref, context) -> ConnectorOutcome[Observation]
-fetch_document(document_ref, context) -> ConnectorOutcome[ArtifactPayload]  # opcional
+fetch_document(document_ref, context) -> ConnectorOutcome[ArtifactPayload]
 ```
 
-Todas são assíncronas, canceláveis e respeitam deadline. `normalize` é responsabilidade interna do adaptador e produz somente tipos do envelope de integração, não objetos do domínio.
+`search`, `fetch_details` e `fetch_document` são assinaturas assíncronas. O
+descritor declara quais operações existem; `FETCH_DOCUMENT` não declarado é
+rejeitado pela seleção antes de chamar o conector. A F3.1 apenas transporta
+deadline e cancelamento, sem executá-los. `normalize` é responsabilidade interna
+do adaptador e produz somente tipos do envelope de integração, não objetos do
+domínio.
 
 ## 6. Resultado
 
-`ConnectorOutcome[T]` contém:
+`ConnectorOutcome[T]` é imutável, converte coleções para tuplas e contém:
 
 - `status`;
 - `items: list[T]`;
 - `artifacts: list[ArtifactPayload | ArtifactReference]`;
-- `source_snapshot` com fonte, URL/endpoint lógico e instante;
+- `source_snapshot` com fonte, identificador lógico de origem sem URL/query secreta e instante;
 - `pagination` sem token secreto persistível;
 - `usage` com chamadas, bytes, duração e custo conhecido/estimado;
 - `warnings` tipados;
@@ -126,7 +136,10 @@ Observação não é fato canônico e não pode aparecer em relatório até pass
 
 ## 8. Artefatos e política
 
-O conector entrega bytes por stream ou referência temporária ao serviço de ingestão. Não escreve diretamente em storage. O serviço aplica `SourcePolicyVersion`:
+Na F3.1, o contrato representa somente payload inline pequeno e limitado ou
+referência opaca temporária, sem stream, storage ou método de busca. Uma futura
+execução poderá entregar bytes por stream ao serviço de ingestão sem escrever
+diretamente em storage. O serviço aplica `SourcePolicyVersion`:
 
 - `STORE_ORIGINAL`;
 - `STORE_EXCERPT_ONLY`;
@@ -197,3 +210,17 @@ CI usa fixtures e servidores locais controlados. Chamadas reais são proibidas.
 ## 13. Compatibilidade
 
 Mudança incompatível no envelope ou semântica incrementa a versão major do contrato. Orquestrador rejeita versão desconhecida. Alteração de fornecedor não deve exigir mudança no domínio se o contrato permanecer compatível.
+
+## 14. Materialização da F3.1
+
+O contrato `1.0.0` está materializado em `src/intelligence/connectors/` somente
+com biblioteca padrão e tipos estáveis do domínio. IDs de integração são fortes
+e distintos; candidato é opaco e escopado ao conector; observações aceitam
+apenas escalares fechados; artefato inline calcula tamanho e SHA-256 e oculta os
+bytes; referência não possui URL ou método de busca; cursor é redigido.
+
+`ConnectorRegistry` recebe objetos explicitamente, captura e valida o descritor
+uma vez, rejeita ID duplicado e major desconhecida e seleciona em ordem estável
+sem executar operação. Não usa singleton, importação dinâmica, entry points,
+filesystem, configuração externa, rede ou persistência. Simuladores e suíte
+reutilizável pertencem à F3.2; controles efetivos de execução pertencem à F3.3.

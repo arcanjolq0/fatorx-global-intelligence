@@ -9,6 +9,7 @@ import intelligence
 DOMAIN_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "domain"
 APPLICATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "application"
 INFRASTRUCTURE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "infrastructure"
+CONNECTORS_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "connectors"
 API_ROOT = Path(__file__).parents[2] / "apps" / "api"
 ALLOWED_INTERNAL_PREFIX = "intelligence.domain"
 ALLOWED_INFRASTRUCTURE_IMPORTS = {
@@ -19,6 +20,18 @@ FORBIDDEN_NETWORK_IMPORTS = {
     "requests",
     "socket",
     "urllib",
+}
+FORBIDDEN_CONNECTOR_IMPORT_PREFIXES = {
+    "alembic",
+    "fastapi",
+    "pydantic",
+    "sqlalchemy",
+    "intelligence.application",
+    "intelligence.claims",
+    "intelligence.evidence",
+    "intelligence.infrastructure",
+    "intelligence.reporting",
+    "intelligence.risk",
 }
 
 
@@ -64,6 +77,112 @@ def test_domain_imports_only_standard_library_or_core_packages() -> None:
             violations.append(f"{path.relative_to(DOMAIN_ROOT)} -> {imported_module}")
 
     assert violations == []
+
+
+def test_domain_never_imports_connector_contracts() -> None:
+    """Dependency direction remains connectors -> stable domain types only."""
+
+    violations: list[str] = []
+    for path in sorted(DOMAIN_ROOT.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if "intelligence.connectors" in source:
+            violations.append(path.name)
+
+    assert violations == []
+
+
+def test_connectors_import_only_standard_library_domain_and_own_contracts() -> None:
+    """Connector contracts stay independent from frameworks and downstream layers."""
+
+    violations: list[str] = []
+    for path in sorted(CONNECTORS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                root = module.partition(".")[0]
+                is_allowed_internal = module.startswith(
+                    ("intelligence.connectors", "intelligence.domain")
+                )
+                is_forbidden = any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in FORBIDDEN_CONNECTOR_IMPORT_PREFIXES
+                )
+                if is_forbidden or (
+                    root not in sys.stdlib_module_names and not is_allowed_internal
+                ):
+                    violations.append(f"{path.relative_to(CONNECTORS_ROOT)} -> {module}")
+
+    assert violations == []
+
+
+def test_connectors_have_no_network_database_or_import_time_io_surface() -> None:
+    """F3.1 contracts cannot open sockets, engines, files, or dynamic modules."""
+
+    forbidden_import_roots = FORBIDDEN_NETWORK_IMPORTS | {
+        "alembic",
+        "importlib",
+        "pathlib",
+        "pkgutil",
+        "sqlalchemy",
+    }
+    forbidden_calls = {
+        "connect",
+        "create_engine",
+        "entry_points",
+        "glob",
+        "iterdir",
+        "open",
+        "read_bytes",
+        "read_text",
+        "rglob",
+        "socket",
+    }
+    violations: list[str] = []
+    for path in sorted(CONNECTORS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_import_roots:
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    call_name = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    call_name = node.func.attr
+                else:
+                    continue
+                if call_name in forbidden_calls:
+                    violations.append(f"{path.name} -> call {call_name}")
+
+    assert violations == []
+
+
+def test_f31_contains_contracts_only_and_preserves_existing_migrations() -> None:
+    """No simulator, runner, HTTP adapter, or schema change is introduced in F3.1."""
+
+    forbidden_parts = {"adapters", "execution", "http", "real", "simulated"}
+    assert all(
+        forbidden_parts.isdisjoint(path.relative_to(CONNECTORS_ROOT).parts)
+        for path in CONNECTORS_ROOT.rglob("*")
+    )
+
+    migration_root = Path(__file__).parents[2] / "migrations" / "versions"
+    assert {path.name for path in migration_root.glob("*.py")} == {
+        "20260728_01_create_initial_domain_schema.py",
+        "20260728_02_create_identities_memberships_audit.py",
+    }
 
 
 def test_boundary_checker_rejects_external_and_cross_layer_imports(tmp_path: Path) -> None:

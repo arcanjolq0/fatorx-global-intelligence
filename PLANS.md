@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 concluídas em 2026-07-28**; nenhuma fase posterior iniciada.
-- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida e serviços mínimos tenant-scoped. Identidades e memberships agora sustentam contexto do ator, autorização por papel, proteção concorrente do último owner e auditoria coordenada, sem autenticação ou acesso pela API.
+- Fase atual: **Fase 3 — Framework de conectores simulados, limitada à F3.1**.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 concluídas em 2026-07-28; F3.1 implementada em 2026-07-28**. F3.2, F3.3 e fases posteriores não foram iniciadas.
+- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped e contratos puros de conectores `1.0.0` com registro explícito. Não há autenticação, acesso pela API, simulador, executor ou I/O de conector.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -288,6 +288,8 @@ Limites: `ActorContext` não autentica nem representa sessão/token; o bootstrap
 
 ### Fase 3 — Framework de conectores simulados
 
+**Status: em andamento; somente F3.1 concluída. O gate G3 permanece aberto para F3.2 e F3.3.**
+
 Escopo:
 
 - implementar portas e envelopes de `docs/connector-contract.md`;
@@ -296,6 +298,34 @@ Escopo:
 - criar suíte reutilizável de testes de contrato.
 
 Critério de saída: qualquer conector simulado que viole o contrato falha nos testes; nenhum conector escreve no domínio ou faz acesso externo.
+
+#### F3.1 — Contratos tipados e registro de conectores
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- pacote `intelligence.connectors` somente com biblioteca padrão e tipos estáveis do domínio;
+- IDs fortes de integração, SemVer mínimo e contrato inicial `1.0.0`;
+- descritor imutável com cobertura `GLOBAL` ou `COUNTRY_SET` explícita;
+- vocabulários fechados de capacidade, operação, acesso, modo, status, falha, retenção e warnings;
+- contexto, query, candidato opaco, observações neutras, artefatos, metadados e outcomes imutáveis;
+- `Connector` Protocol assíncrono e `ConnectorRegistry` explícito, determinístico e sem descoberta dinâmica;
+- ADR-0014, testes unitários/arquiteturais e registro de validação.
+
+Evidências de conclusão:
+
+- 678 testes Python e 1 teste web passaram, com cobertura Python total de 95,03%;
+- 200 testes focados/arquiteturais comprovaram 94,21% de branch coverage em `intelligence.connectors`;
+- 113 testes PostgreSQL reais passaram sem alteração de schema;
+- instalações frozen, lint, formatação, tipos estritos, scanner, builds e `pnpm quality` foram aprovados;
+- `alembic check` não detectou operação nova e a revisão permaneceu `20260728_02 (head)`.
+
+Limites: não há simulador, suíte comum de conectores, runner, retry, deadline
+efetivo, cancelamento efetivo, idempotência, cache, HTTP, rede, persistência,
+job, transição, orquestração, resolução, evidência, claim, scoring ou relatório.
+F3.2 e F3.3 exigem autorização e tarefas próprias; a conclusão da F3.1 não
+fecha o gate G3.
 
 ### Fase 4 — Orquestração e resolução de entidades
 

@@ -95,6 +95,13 @@ Risco específico: `psycopg-binary` incorpora bibliotecas nativas. Correções d
 
 ## 10. Dependências deliberadamente ausentes
 
-A F2.4.1 reutiliza exclusivamente biblioteca padrão, SQLAlchemy Core, Alembic e Psycopg já aprovados. Nenhuma dependência de autenticação, autorização, validação de e-mail ou auditoria foi adicionada.
+A F2.4.1 e a F2.4.2 reutilizam exclusivamente biblioteca padrão, SQLAlchemy Core, Alembic e Psycopg já aprovados. Nenhuma dependência de autenticação, autorização, validação de e-mail ou auditoria foi adicionada.
+
+A F3.1 implementa contratos, validação, Protocol e registro somente com a
+biblioteca padrão e tipos estáveis do domínio. SemVer foi implementado na forma
+mínima `MAJOR.MINOR.PATCH`; adicionar pacote externo criaria superfície de
+supply chain sem resolver necessidade desta etapa. Nenhum cliente HTTP, SDK de
+fonte, framework de descoberta, cache ou biblioteca de retry foi adicionado, e
+os lockfiles permanecem inalterados.
 
 Não foram adicionados Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de modelo, LangGraph, Playwright, scraper, conector, pacote de país, scoring, relatório, parser documental, ORM adicional ou framework de repositório.
