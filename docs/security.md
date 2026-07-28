@@ -85,6 +85,7 @@ Na F2.3, filtros compostos por `workspace_id` nos repositórios de empresa e inv
 - hash de artefato/evidência;
 - versões imutáveis de políticas, métodos e regras;
 - repositórios vinculados à identidade da transação original; commit/rollback encerram imediatamente sua capacidade de operar, ainda que a conexão permaneça aberta;
+- guard invalidado antes da finalização; falha de commit/rollback não permite reutilizar uma transação de resultado incerto, mesmo quando o driver ainda a apresenta como ativa;
 - eventos para acesso, exportação, revisão e transição;
 - horário confiável e correlação ponta a ponta;
 - logs append-only/protegidos conforme operação;

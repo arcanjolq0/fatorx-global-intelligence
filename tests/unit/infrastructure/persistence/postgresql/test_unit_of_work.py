@@ -44,6 +44,8 @@ class FakeTransaction:
 class FakeConnection:
     def __init__(self) -> None:
         self.closed = False
+        self.close_calls = 0
+        self.close_error: SQLAlchemyError | None = None
         self.transaction = FakeTransaction(self)
         self.current_transaction: object | None = None
         self.begin_error: SQLAlchemyError | None = None
@@ -58,6 +60,9 @@ class FakeConnection:
         return self.current_transaction
 
     def close(self) -> None:
+        self.close_calls += 1
+        if self.close_error is not None:
+            raise self.close_error
         self.closed = True
 
 
@@ -80,7 +85,30 @@ def _unit_of_work() -> tuple[PostgreSQLUnitOfWork, FakeEngine]:
 
 
 def _technical_error(marker: str) -> OperationalError:
-    return OperationalError("sensitive statement", {}, RuntimeError(marker))
+    return OperationalError(
+        "SELECT secret_value FROM private_table",
+        {
+            "url": "postgresql+psycopg://sensitive-user:sensitive-password@database/private",
+            "password": "sensitive-password",
+        },
+        RuntimeError(marker),
+    )
+
+
+def _assert_public_error_is_redacted(
+    error: PersistenceError,
+    expected_message: str,
+    marker: str,
+) -> None:
+    message = str(error)
+    assert message == expected_message
+    for sensitive_fragment in (
+        "SELECT secret_value",
+        "postgresql+psycopg://",
+        "sensitive-password",
+        marker,
+    ):
+        assert sensitive_fragment not in message
 
 
 def test_concrete_unit_of_work_satisfies_the_application_port() -> None:
@@ -105,7 +133,9 @@ def test_explicit_commit_happens_once_and_exit_only_closes() -> None:
     unit_of_work, engine = _unit_of_work()
 
     with unit_of_work:
+        guard = unit_of_work.workspaces._transaction_guard
         unit_of_work.commit()
+        assert guard.is_invalidated
         with pytest.raises(PersistenceStateError):
             unit_of_work.commit()
 
@@ -153,8 +183,10 @@ def test_captured_repository_rejects_read_and_write_after_rollback() -> None:
 
     with unit_of_work:
         repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
         unit_of_work.rollback()
 
+        assert guard.is_invalidated
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
             repository.get(WorkspaceId.new())
         with pytest.raises(PersistenceStateError, match="transaction is not active"):
@@ -210,34 +242,107 @@ def test_start_failure_is_translated_and_closes_the_connection() -> None:
     with pytest.raises(PersistenceError) as captured:
         unit_of_work.__enter__()
 
-    assert str(captured.value) == "Unable to start the persistence transaction."
-    assert marker not in str(captured.value)
+    _assert_public_error_is_redacted(
+        captured.value,
+        "Unable to start the persistence transaction.",
+        marker,
+    )
     assert engine.connection.closed
+    assert unit_of_work.is_closed
+    with pytest.raises(PersistenceStateError, match="single-use"):
+        unit_of_work.__enter__()
+    assert engine.connect_calls == 1
 
 
-def test_commit_failure_is_translated_without_technical_details() -> None:
+def test_commit_failure_poisons_guard_repositories_and_public_finalization() -> None:
     unit_of_work, engine = _unit_of_work()
     marker = "commit-technical-marker"
     engine.connection.transaction.commit_error = _technical_error(marker)
 
-    with pytest.raises(PersistenceError) as captured, unit_of_work:
-        unit_of_work.commit()
+    with unit_of_work:
+        repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
+        with pytest.raises(PersistenceError) as captured:
+            unit_of_work.commit()
 
-    assert str(captured.value) == "Unable to commit the persistence transaction."
-    assert marker not in str(captured.value)
+        assert engine.connection.transaction.is_active
+        assert guard.is_invalidated
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.get(WorkspaceId.new())
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.add(cast(Workspace, None))
+        with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+            unit_of_work.commit()
+        with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+            unit_of_work.rollback()
+
+    _assert_public_error_is_redacted(
+        captured.value,
+        "Unable to commit the persistence transaction.",
+        marker,
+    )
+    assert engine.connection.transaction.commit_calls == 1
+    assert engine.connection.transaction.rollback_calls == 1
     assert engine.connection.closed
 
 
-def test_rollback_failure_is_translated_without_technical_details() -> None:
+def test_rollback_failure_poisons_guard_repositories_and_public_finalization() -> None:
     unit_of_work, engine = _unit_of_work()
     marker = "rollback-technical-marker"
 
     with unit_of_work:
+        repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
         engine.connection.transaction.rollback_error = _technical_error(marker)
         with pytest.raises(PersistenceError) as captured:
             unit_of_work.rollback()
+
+        assert engine.connection.transaction.is_active
+        assert guard.is_invalidated
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.get(WorkspaceId.new())
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.add(cast(Workspace, None))
+        with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+            unit_of_work.commit()
+        with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+            unit_of_work.rollback()
         engine.connection.transaction.rollback_error = None
 
-    assert str(captured.value) == "Unable to roll back the persistence transaction."
-    assert marker not in str(captured.value)
+    _assert_public_error_is_redacted(
+        captured.value,
+        "Unable to roll back the persistence transaction.",
+        marker,
+    )
+    assert engine.connection.transaction.rollback_calls == 2
     assert engine.connection.closed
+
+
+def test_close_failure_keeps_unit_of_work_and_guard_terminal() -> None:
+    unit_of_work, engine = _unit_of_work()
+    marker = "close-technical-marker"
+    engine.connection.close_error = _technical_error(marker)
+
+    with pytest.raises(PersistenceError) as captured, unit_of_work:
+        repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
+
+    _assert_public_error_is_redacted(
+        captured.value,
+        "Unable to close the persistence connection.",
+        marker,
+    )
+    assert unit_of_work.is_closed
+    assert guard.is_invalidated
+    assert not engine.connection.closed
+    assert engine.connection.close_calls == 1
+    with pytest.raises(PersistenceStateError):
+        _ = unit_of_work.workspaces
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        repository.get(WorkspaceId.new())
+    with pytest.raises(PersistenceStateError, match="no active transaction"):
+        unit_of_work.commit()
+    with pytest.raises(PersistenceStateError, match="no active transaction"):
+        unit_of_work.rollback()
+    with pytest.raises(PersistenceStateError, match="single-use"):
+        unit_of_work.__enter__()

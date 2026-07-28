@@ -513,51 +513,79 @@ def test_duplicate_rollback_is_rejected_without_autobegin(engine: Engine) -> Non
 def test_real_postgresql_start_failure_is_translated_without_technical_details(
     engine: Engine,
 ) -> None:
-    missing_database = "fatorx_missing_f231"
+    missing_database = "fatorx_missing_f232"
     unavailable_url = engine.url.set(database=missing_database).render_as_string(
         hide_password=False
     )
     unavailable_engine = create_postgresql_engine({"DATABASE_URL": unavailable_url})
+    unit_of_work = PostgreSQLUnitOfWork(unavailable_engine)
 
     try:
-        with (
-            pytest.raises(PersistenceError) as captured,
-            PostgreSQLUnitOfWork(unavailable_engine),
-        ):
+        with pytest.raises(PersistenceError) as captured, unit_of_work:
             pytest.fail("The Unit of Work unexpectedly connected to a missing database.")
     finally:
         unavailable_engine.dispose()
 
     assert str(captured.value) == "Unable to start the persistence transaction."
     assert missing_database not in str(captured.value)
+    assert unavailable_url not in str(captured.value)
+    assert unit_of_work.is_closed
+    with pytest.raises(PersistenceStateError, match="single-use"):
+        unit_of_work.__enter__()
 
 
 def test_real_postgresql_commit_failure_is_translated_without_technical_details(
     engine: Engine,
 ) -> None:
+    unit_of_work = PostgreSQLUnitOfWork(engine)
     with (
         pytest.raises(PersistenceError) as captured,
-        PostgreSQLUnitOfWork(engine) as unit_of_work,
+        unit_of_work,
     ):
+        repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
         _terminate_unit_of_work_backend(engine, unit_of_work)
         unit_of_work.commit()
 
     assert str(captured.value) == "Unable to commit the persistence transaction."
     assert "pg_terminate_backend" not in str(captured.value)
+    assert engine.url.render_as_string(hide_password=False) not in str(captured.value)
+    assert guard.is_invalidated
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        repository.get(WorkspaceId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        repository.add(_workspace())
+    with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+        unit_of_work.commit()
+    with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+        unit_of_work.rollback()
 
 
 def test_real_postgresql_rollback_failure_is_translated_without_technical_details(
     engine: Engine,
 ) -> None:
+    unit_of_work = PostgreSQLUnitOfWork(engine)
     with (
         pytest.raises(PersistenceError) as captured,
-        PostgreSQLUnitOfWork(engine) as unit_of_work,
+        unit_of_work,
     ):
+        repository = unit_of_work.workspaces
+        guard = repository._transaction_guard
         _terminate_unit_of_work_backend(engine, unit_of_work)
         unit_of_work.rollback()
 
     assert str(captured.value) == "Unable to roll back the persistence transaction."
     assert "pg_terminate_backend" not in str(captured.value)
+    assert engine.url.render_as_string(hide_password=False) not in str(captured.value)
+    assert guard.is_invalidated
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        repository.get(WorkspaceId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        repository.add(_workspace())
+    with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+        unit_of_work.commit()
+    with pytest.raises(PersistenceStateError, match="finalization has already been attempted"):
+        unit_of_work.rollback()
 
 
 def test_repository_does_not_commit_implicitly(engine: Engine) -> None:

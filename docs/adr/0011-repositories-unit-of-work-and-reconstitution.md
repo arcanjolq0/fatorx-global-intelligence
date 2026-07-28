@@ -44,3 +44,20 @@ Os três repositórios passam a compartilhar um guard criado pela Unit of Work c
 `connection.in_transaction()` isoladamente não é suficiente porque não comprova identidade. Se qualquer condição falhar, a operação termina em `PersistenceStateError` antes de chamar `execute`, impedindo autobegin. A Unit of Work usa o mesmo guard para commit e rollback, continua sendo a única responsável pelo commit e define erros explícitos para chamadas duplicadas.
 
 Falhas SQLAlchemy de início, commit e rollback são traduzidas para `PersistenceError` com mensagens fixas; a causa técnica permanece encadeada sem integrar a mensagem pública. Nenhuma migration, dependência, transação aninhada, retry ou funcionalidade da F2.4 é introduzida.
+
+## Adendo F2.3.2 — invalidação terminal antes da finalização
+
+Data: 2026-07-28.
+
+O estado observado de uma `RootTransaction` não comprova que uma tentativa de finalização anterior teve resultado conhecido. Um erro em `commit()` ou `rollback()` pode deixar `is_active` verdadeiro e preservar a identidade retornada por `connection.get_transaction()`. Reutilizar a fronteira nessa situação permitiria novas operações sobre uma transação cujo resultado é incerto.
+
+O guard passa a possuir estado explícito e irreversível de invalidação. A Unit of Work o invalida e registra que a finalização foi tentada antes de delegar ao SQLAlchemy. A partir desse instante:
+
+- nenhum repositório pode ler ou escrever;
+- commit e rollback públicos não podem ser tentados novamente;
+- o resultado da chamada do driver não revalida o guard;
+- somente o `__exit__` pode acessar diretamente a transação e a conexão para tentar rollback e close técnicos.
+
+Falha ao iniciar marca a instância como terminal antes da tentativa de fechar uma conexão parcialmente aberta. O `__exit__` também marca a instância e invalida o guard antes da limpeza; eventual falha de close é traduzida sem fazer `is_closed` voltar a falso. Quando uma exceção do corpo já está em propagação, falhas secundárias de limpeza não a substituem.
+
+Portas de aplicação e contratos de repositório permanecem inalterados. Nenhuma migration, dependência, retry, reconciliação transacional ou funcionalidade da F2.4 é introduzida.

@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3 e F2.3.1 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
-- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado, round-trip por portas e repositórios Core, e Unit of Work síncrona com fronteira transacional endurecida.
+- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3, F2.3.1 e F2.3.2 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
+- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado, round-trip por portas e repositórios Core, e Unit of Work síncrona com fronteira transacional terminal após qualquer tentativa de finalização.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3 e F2.3.1 concluídas em 2026-07-28. F2.4 não iniciada.**
+**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3, F2.3.1 e F2.3.2 concluídas em 2026-07-28. F2.4 não iniciada.**
 
 Escopo:
 
@@ -214,6 +214,31 @@ Evidências de conclusão:
 - resultados, falhas intermediárias e limitações constam em `docs/validation/f2.3.1-transaction-boundary-hardening.md`.
 
 A decisão sobre como tratar uma empresa já confirmada pertence à futura resolução de entidades/orquestração. A persistência somente mantém a referência tipada e a coerência relacional por workspace; a F2.3.1 não introduz essa política.
+
+#### F2.3.2 — Invalidação após falhas de finalização
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- estado explícito, permanente e observável de invalidação no guard transacional;
+- invalidação do guard antes de invocar commit ou rollback, tornando a Unit of Work terminal mesmo quando o SQLAlchemy lança erro e mantém a `RootTransaction` ativa;
+- bloqueio de leitura, escrita e nova finalização pública depois de qualquer tentativa de commit ou rollback;
+- limpeza técnica interna do `__exit__` preservada sem reabrir a fronteira pública;
+- falha de entrada torna a instância não reutilizável, e falha de fechamento mantém o estado terminal;
+- mensagens públicas fixas e redigidas para falhas de início, commit, rollback e fechamento;
+- testes com doubles controlados e PostgreSQL real, sem alterar portas, contratos de repositório, schema ou dependências.
+
+Evidências de conclusão:
+
+- 226 testes Python e 1 teste web passaram, com cobertura Python total de 94,92%;
+- 58 testes PostgreSQL passaram, incluindo falhas reais de início, commit e rollback e os cenários sem `autobegin` da F2.3.1;
+- lint, formatação, tipos estritos, scanner de segredos, builds e `pnpm quality` foram aprovados;
+- `upgrade -> downgrade -> upgrade` terminou em `head`, e `alembic check` não encontrou operações novas;
+- nenhuma migration, dependência, porta, contrato de repositório ou funcionalidade da F2.4 foi adicionada;
+- resultados e limitações constam em `docs/validation/f2.3.2-unit-of-work-poisoning.md`.
+
+A invalidação é lógica e irreversível para aquela instância. Ela não substitui rollback/close técnicos: o `__exit__` ainda tenta limpar a transação e a conexão diretamente, mas nenhum método público ou repositório volta a operar.
 
 #### F2.4 — Isolamento de serviços, memberships e auditoria mínima
 

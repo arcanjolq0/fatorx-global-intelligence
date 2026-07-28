@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from types import TracebackType
 from typing import Literal
 
@@ -36,6 +37,7 @@ class PostgreSQLUnitOfWork:
         self._investigations: PostgreSQLInvestigationRepository | None = None
         self._entered = False
         self._closed = False
+        self._finalization_attempted = False
         self._committed = False
         self._rolled_back = False
 
@@ -65,7 +67,7 @@ class PostgreSQLUnitOfWork:
 
     @property
     def is_closed(self) -> bool:
-        """Report whether the caller-owned context has closed its connection."""
+        """Report whether the Unit of Work has reached a terminal closed state."""
 
         return self._closed
 
@@ -77,8 +79,10 @@ class PostgreSQLUnitOfWork:
             connection = self._engine.connect()
             transaction = connection.begin()
         except SQLAlchemyError as error:
+            self._closed = True
             if connection is not None:
-                connection.close()
+                with suppress(SQLAlchemyError):
+                    connection.close()
             raise PersistenceError("Unable to start the persistence transaction.") from error
 
         transaction_guard = PostgreSQLTransactionGuard(connection, transaction)
@@ -99,8 +103,13 @@ class PostgreSQLUnitOfWork:
     ) -> Literal[False]:
         del exception_type, traceback
         rollback_error: PersistenceError | None = None
+        close_error: PersistenceError | None = None
         transaction = self._transaction
         connection = self._connection
+        transaction_guard = self._transaction_guard
+        if transaction_guard is not None:
+            transaction_guard.invalidate()
+        self._closed = True
         try:
             if transaction is not None and transaction.is_active:
                 try:
@@ -112,17 +121,25 @@ class PostgreSQLUnitOfWork:
                     rollback_error.__cause__ = error
         finally:
             if connection is not None:
-                connection.close()
-            self._closed = True
+                try:
+                    connection.close()
+                except SQLAlchemyError as error:
+                    close_error = PersistenceError("Unable to close the persistence connection.")
+                    close_error.__cause__ = error
 
-        if rollback_error is not None and exception is None:
-            raise rollback_error
+        if exception is None:
+            if rollback_error is not None:
+                raise rollback_error
+            if close_error is not None:
+                raise close_error
         return False
 
     def commit(self) -> None:
         if self._committed:
             raise PersistenceStateError("Unit of Work has already been committed.")
-        transaction = self._require_active()
+        if self._rolled_back:
+            raise PersistenceStateError("Unit of Work has already been rolled back.")
+        transaction = self._start_finalization()
         try:
             transaction.commit()
         except IntegrityError as error:
@@ -134,12 +151,25 @@ class PostgreSQLUnitOfWork:
     def rollback(self) -> None:
         if self._rolled_back:
             raise PersistenceStateError("Unit of Work has already been rolled back.")
-        transaction = self._require_active()
+        if self._committed:
+            raise PersistenceStateError("Unit of Work has already been committed.")
+        transaction = self._start_finalization()
         try:
             transaction.rollback()
         except SQLAlchemyError as error:
             raise PersistenceError("Unable to roll back the persistence transaction.") from error
         self._rolled_back = True
+
+    def _start_finalization(self) -> RootTransaction:
+        if self._finalization_attempted:
+            raise PersistenceStateError("Unit of Work finalization has already been attempted.")
+        transaction = self._require_active()
+        transaction_guard = self._transaction_guard
+        if transaction_guard is None:
+            raise PersistenceStateError("Unit of Work has no active transaction.")
+        self._finalization_attempted = True
+        transaction_guard.invalidate()
+        return transaction
 
     def _require_active(self) -> RootTransaction:
         transaction = self._transaction

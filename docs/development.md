@@ -2,7 +2,7 @@
 
 ## 1. Escopo atual
 
-A fundação concluída pelas tarefas F1.1, F1.2, F2.1, F2.2, F2.2.1, F2.3 e F2.3.1 oferece somente:
+A fundação concluída pelas tarefas F1.1, F1.2, F2.1, F2.2, F2.2.1, F2.3, F2.3.1 e F2.3.2 oferece somente:
 
 - pacote Python independente em `src/intelligence`, com tipos fundamentais e entidades imutáveis do domínio;
 - metadata e primeira migration PostgreSQL para workspace, empresa e investigação;
@@ -10,6 +10,7 @@ A fundação concluída pelas tarefas F1.1, F1.2, F2.1, F2.2, F2.2.1, F2.3 e F2.
 - factory explícita de engine, mapeadores puros e adaptadores SQLAlchemy Core para round-trip de `Workspace`, `Company` e `Investigation`;
 - Unit of Work síncrona com uma conexão/`RootTransaction` compartilhada, commit explícito e rollback padrão;
 - guard transacional que vincula cada repositório à transação original e bloqueia leitura/escrita e autobegin após commit, rollback ou substituição da transação;
+- invalidação irreversível do guard antes de qualquer tentativa de finalização; erros de commit/rollback não permitem reutilização pública, embora o `__exit__` ainda tente a limpeza técnica;
 - API FastAPI com `GET /health`;
 - shell React/Vite estático;
 - testes, lint, formatação, tipos, builds e scanner básico de segredos.
@@ -154,7 +155,7 @@ Comandos específicos usam os sufixos `:python` e `:web` quando disponíveis.
 
 Os testes unitários do domínio estão em `tests/unit/domain`. A política de sockets desabilitados também se aplica a eles. O teste em `tests/architecture/test_domain_boundaries.py` impede que o pacote de domínio importe frameworks, infraestrutura ou outras camadas internas.
 
-Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence/test_repositories.py`. A F2.3.1 verifica que um repositório capturado falha antes de `execute` quando a `RootTransaction` original terminou e confirma que `connection.get_transaction()` permanece nula, sem autobegin. Os testes arquiteturais também impedem que aplicação importe infraestrutura, que portas importem SQLAlchemy/Alembic, que um módulo abra conexão no import e que repositórios executem commit.
+Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence/test_repositories.py`. A F2.3.1 verifica que um repositório capturado falha antes de `execute` quando a `RootTransaction` original terminou e confirma que `connection.get_transaction()` permanece nula, sem autobegin. A F2.3.2 mantém a transação ativa nos doubles após falhas de commit/rollback para comprovar que a invalidação lógica, por si, bloqueia repositórios e nova finalização; também cobre reentrada e falha de close. Os testes arquiteturais impedem que aplicação importe infraestrutura, que portas importem SQLAlchemy/Alembic, que um módulo abra conexão no import e que repositórios executem commit.
 
 ## 7. Política de rede em testes
 
@@ -182,6 +183,7 @@ Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem ban
 | Hardening relacional F2.2.1 | Executado e aprovado no Windows 10 em 2026-07-28; consulte `docs/validation/f2.2.1-relational-hardening.md`. |
 | Repositórios e Unit of Work F2.3 | Executados e aprovados no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3-persistence-round-trip.md`. |
 | Fronteira transacional F2.3.1 | Executada e aprovada no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3.1-transaction-boundary-hardening.md`. |
+| Invalidação terminal F2.3.2 | Executada e aprovada no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3.2-unit-of-work-poisoning.md`. |
 | Builds locais Python e web | Executados e aprovados no Windows 10 em 2026-07-28. |
 | Workflow de CI | Configurada e revisada localmente. |
 | Execução no GitHub Actions | Não executada; o repositório não possui remoto e nenhum push foi realizado. |

@@ -105,7 +105,8 @@ Na F2.3, somente as portas de repositório e Unit of Work foram materializadas. 
 
 - PostgreSQL é a fonte de verdade.
 - A Unit of Work síncrona abre uma conexão e uma `RootTransaction`, compartilha um guard com os repositórios e exige commit explícito; saída sem commit executa rollback.
-- Antes de qualquer operação, o guard comprova conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
+- Antes de qualquer operação, o guard comprova que não foi invalidado, conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
+- A Unit of Work invalida permanentemente o guard antes de tentar commit ou rollback. Falha do driver não reabre a fronteira; somente o `__exit__` pode executar rollback/close técnicos depois da invalidação.
 - Repositórios recebem o guard da Unit of Work, não abrem transações e não executam commit.
 - Mudança de estado e evento a publicar usam transação única com outbox.
 - Workers usam chave de idempotência e inbox/registro de processamento.

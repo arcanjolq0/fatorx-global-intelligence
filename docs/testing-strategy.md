@@ -55,6 +55,8 @@ Na F2.3, testes unitários exercitam mapeadores válidos/inválidos, tipos forte
 
 Na F2.3.1, o guard transacional é testado contra conexão fechada, transação original inativa e identidade diferente em `connection.get_transaction()`. Testes PostgreSQL reais capturam repositórios antes de commit/rollback, tentam leitura e escrita depois do encerramento e confirmam que nenhuma nova transação aparece por autobegin. Doubles controlados provocam falhas SQLAlchemy de início, commit e rollback para validar tradução e mensagens públicas redigidas; esses doubles complementam, sem substituir, os testes PostgreSQL reais.
 
+Na F2.3.2, os doubles mantêm deliberadamente a `RootTransaction` ativa e sua identidade preservada depois de falhas de commit/rollback. A suíte exige invalidação explícita do guard, bloqueio de leitura/escrita e de toda nova finalização pública, tentativa de limpeza interna pelo `__exit__`, não reutilização depois de falha de entrada e terminalidade mesmo quando o fechamento falha. SQL, URL, senha e marcadores técnicos são inseridos apenas nas exceções simuladas e devem permanecer ausentes das mensagens públicas. Os testes PostgreSQL reais continuam cobrindo falhas efetivas de início, commit e rollback, operações normais e ausência de autobegin após finalizações bem-sucedidas.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;
