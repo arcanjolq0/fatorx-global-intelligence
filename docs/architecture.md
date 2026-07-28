@@ -177,12 +177,12 @@ fatorx-global-intelligence/
 
 Esta é uma proposta; diretórios de código serão criados somente na fase de implementação.
 
-## 10. Dependências técnicas propostas, ainda não instaladas
+## 10. Dependências técnicas
 
 | Área | Opção do plano | Justificativa | Gate |
 |---|---|---|---|
 | API | FastAPI + Pydantic | contratos tipados e ecossistema Python | Fase 1 |
-| ORM/migrations | SQLAlchemy + Alembic | modelo relacional e migrations explícitas | Fase 2 |
+| Schema/migrations | SQLAlchemy Core 2.x + Alembic + Psycopg 3 síncrono | metadata relacional e migrations explícitas, sem ORM/repositório na F2.2 | Fase 2 — adotado no ADR-0010 |
 | HTTP | cliente assíncrono | deadlines, streaming e paralelismo | Fase 3 |
 | Web | React + TypeScript + Vite | UI tipada e separada | Fase 1 |
 | Banco | PostgreSQL | transação, JSONB e busca textual | Fase 2 |
@@ -191,7 +191,7 @@ Esta é uma proposta; diretórios de código serão criados somente na fase de i
 | Browser | não decidido | somente fonte aprovada que realmente exija | G6 |
 | Vetores/busca externa | adiado | depende de métrica de volume/qualidade | Pós-MVP ou ADR futuro |
 
-Nenhuma linha desta tabela autoriza adicionar a dependência sem a análise prevista em `AGENTS.md`.
+Itens ainda propostos nesta tabela não autorizam dependência sem a análise prevista em `AGENTS.md`. As dependências já adotadas possuem versões e análise em `docs/dependencies.md`.
 
 ## 11. Requisitos de implantação
 

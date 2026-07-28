@@ -1,4 +1,4 @@
-# Registro de dependências da F1.1
+# Registro de dependências
 
 ## 1. Política
 
@@ -75,6 +75,24 @@ Critérios comuns de manutenção: release estável disponível, repositório p�
 
 Todas as actions estão fixadas pelo SHA do commit, e a tag revisada aparece em comentário no workflow. Atualizações exigem validar tag, commit, licença e changelog.
 
-## 8. Dependências deliberadamente ausentes
+## 8. Persistência relacional da F2.2
 
-Não foram adicionados SQLAlchemy, Alembic, PostgreSQL, Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de modelo, LangGraph, Playwright, scraper, conector, pacote de país, scoring, relatório ou parser documental.
+Versões verificadas nos projetos oficiais e no PyPI em 28 de julho de 2026. A escolha síncrona atende migrations e testes sem antecipar concorrência de casos de uso; não define o modelo de execução futuro da API.
+
+| Dependência | Versão | Finalidade e motivo | Manutenção | Licença | Alternativa considerada |
+|---|---:|---|---|---|---|
+| SQLAlchemy | 2.0.51 | Metadata e tabelas com SQLAlchemy Core; oferece tipos PostgreSQL e convenções estáveis sem acoplar o domínio a ORM. | Projeto SQLAlchemy maduro, estável e ativo. | MIT | SQL manual duplicaria tipos/constraints entre código e inspeção; ORM foi rejeitado por não haver repositório nesta tarefa. |
+| Alembic | 1.18.5 | Migration versionada, transacional, com upgrade/downgrade e metadata do projeto. | Mantido pelo projeto SQLAlchemy, estável e ativo. | MIT | Scripts SQL próprios perderiam grafo de revisões e integração de metadata; Flyway adicionaria runtime/ecossistema separado. |
+| Psycopg com extra `binary` | 3.3.4 | Driver PostgreSQL síncrono compatível com Python 3.14, SQLAlchemy e Alembic; o extra inclui implementação e libpq para instalação reproduzível em Windows/Linux. | Psycopg 3 é a geração atual, com PostgreSQL 10–18 e Python 3.10–3.14 suportados. | LGPL-3.0-only | `asyncpg` anteciparia async sem caso de uso; Psycopg 2 é geração anterior; build `psycopg[c]` exigiria compilador/libpq local. |
+
+Risco específico: `psycopg-binary` incorpora bibliotecas nativas. Correções de libpq/OpenSSL chegam por atualização do pacote, não automaticamente pelo sistema operacional; o lockfile e o scanner de dependências futuro devem acompanhar seus releases. Não foi adicionado pool de conexão.
+
+## 9. Infraestrutura de desenvolvimento
+
+| Componente | Versão | Finalidade | Licença/manutenção | Alternativa considerada |
+|---|---:|---|---|---|
+| PostgreSQL oficial em container | 18.4-bookworm | Banco real e reproduzível para migration e integração local/CI. Não é dependência do produto Python. | PostgreSQL License; imagem oficial mantida no Docker Hub. | PostgreSQL instalado localmente é suportado, mas não garante ambiente limpo; SQLite é proibido por divergir em UUID, `NUMERIC`, timezone, regex e constraints. |
+
+## 10. Dependências deliberadamente ausentes
+
+Não foram adicionados Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de modelo, LangGraph, Playwright, scraper, conector, pacote de país, scoring, relatório, parser documental, ORM adicional ou framework de repositório.

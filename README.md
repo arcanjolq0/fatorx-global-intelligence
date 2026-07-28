@@ -4,7 +4,7 @@ Plataforma de investigação empresarial internacional orientada por evidências
 
 ## Estado atual
 
-O repositório concluiu a **Fase 1 — Esqueleto técnico**, incluindo a validação limpa F1.2. Há uma API FastAPI apenas com `GET /health`, um shell React/Vite estático e gates de qualidade locais com workflow de CI configurada. Não há registro de execução no GitHub Actions, regra de negócio, banco, fila, autenticação, modelo de IA, conector real, integração externa nem segredo.
+O repositório concluiu a **F2.2 — Schema PostgreSQL e migrations iniciais**. Além da fundação técnica da Fase 1 e do domínio imutável da F2.1, há metadata e migration versionada de workspace, empresa e investigação, validadas em PostgreSQL 18.4 real. Há uma API FastAPI apenas com `GET /health`, um shell React/Vite estático e gates de qualidade locais com workflow de CI configurada. Não há registro de execução no GitHub Actions, repositório, acesso da API ao banco, transição de investigação, fila, autenticação, modelo de IA, conector real, integração externa nem segredo.
 
 ## Como navegar
 
@@ -15,7 +15,9 @@ O repositório concluiu a **Fase 1 — Esqueleto técnico**, incluindo a valida�
 - [docs/critical-analysis.md](docs/critical-analysis.md): análise crítica, riscos, ambiguidades e validações pendentes.
 - [docs/development.md](docs/development.md): instalação, execução e gates locais.
 - [docs/dependencies.md](docs/dependencies.md): versões, finalidade, manutenção, licenças e alternativas das dependências.
+- [docs/domain-foundation.md](docs/domain-foundation.md): tipos, entidades e invariantes implementados na F2.1.
 - [docs/validation/f1.2-clean-validation.md](docs/validation/f1.2-clean-validation.md): evidência da instalação e dos gates executados em ambiente limpo.
+- [docs/validation/f2.2-postgresql-migrations.md](docs/validation/f2.2-postgresql-migrations.md): evidência das migrations, constraints e gates executados com PostgreSQL real.
 
 As decisões aceitas em `docs/adr/` prevalecem sobre recomendações ainda não decididas no planejamento de entrada.
 
@@ -25,4 +27,4 @@ Consulte [docs/development.md](docs/development.md). O comando agregado de verif
 
 ## Próximo passo
 
-Nenhuma implementação da Fase 2 está autorizada. O próximo incremento deve ser definido em nova instrução e respeitar os gates e as dependências comerciais de `PLANS.md`.
+A F2.2 está concluída. Não iniciar a F2.3 nem antecipar repositórios, acesso da API ao banco ou transições sem nova instrução; o próximo incremento deve respeitar os gates e as dependências comerciais de `PLANS.md`.

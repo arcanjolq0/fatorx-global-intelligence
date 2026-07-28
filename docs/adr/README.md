@@ -21,3 +21,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0007 | Accepted | PostgreSQL + storage de objetos; busca especializada adiada |
 | 0008 | Accepted | workspace como fronteira obrigatória de autorização |
 | 0009 | Accepted | Python/FastAPI e React/TypeScript/Vite para a fundação executável |
+| 0010 | Accepted | SQLAlchemy Core síncrono, Alembic e isolamento relacional inicial |

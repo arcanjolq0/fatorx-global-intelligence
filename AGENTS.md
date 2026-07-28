@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F1.2 de fechamento da Fase 1 — Esqueleto técnico. O código autorizado limita-se à API de saúde, ao shell web estático e aos gates de qualidade descritos em `PLANS.md`. Até nova instrução, não iniciar a Fase 2, conectores reais ou integrações externas.
+O projeto concluiu a F2.2 da Fase 2 — Schema PostgreSQL e migrations iniciais. O código autorizado contém a fundação técnica da Fase 1, os tipos e entidades imutáveis da F2.1 e o schema versionado de `Workspace`, `Company` e `Investigation`. Até nova instrução, não iniciar a F2.3, repositórios, Unit of Work, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas.
 
 ## Ordem de precedência documental
 

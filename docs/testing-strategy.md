@@ -49,6 +49,8 @@ Usam serviços locais efêmeros/controlados:
 
 Não usam conta ou endpoint de fornecedor.
 
+Na F2.2, os testes relacionais usam exclusivamente PostgreSQL 18.4 real. Cada cenário retorna as revisions à `base`, aplica `head` quando necessário e encerra novamente em `base`, evitando dependência de ordem. A configuração recusa host não local ou banco cujo nome não contenha `test`. São verificados tipos, PKs, FKs, checks, índices, isolamento composto por workspace, upgrade repetido, downgrade e aderência entre metadata e migration. SQLite e mocks de PostgreSQL são proibidos.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 1 — Esqueleto técnico**.
-- Status: **F1.1 e fechamento F1.2 concluídos em 2026-07-25**; aguardando nova instrução antes da Fase 2.
-- Código executável: somente API de saúde, shell web estático e ferramentas de qualidade.
+- Fase atual: **Fase 2 — Domínio e persistência inicial**.
+- Status: **F2.1 concluída em 2026-07-25 e F2.2 concluída em 2026-07-28**; aguardando nova instrução antes da F2.3.
+- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio e schema PostgreSQL versionado.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,6 +77,8 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
+**Status: em andamento; F2.1 concluída em 2026-07-25 e F2.2 concluída em 2026-07-28. Repositórios e round-trip de entidades não iniciados.**
+
 Escopo:
 
 - implementar IDs, enums, valores monetários e timestamps tipados;
@@ -86,6 +88,55 @@ Escopo:
 - aplicar isolamento por workspace e auditoria mínima.
 
 Critério de saída: round-trip de persistência, constraints e migrations testados; domínio não importa infraestrutura.
+
+#### F2.1 — Tipos fundamentais e invariantes do domínio
+
+Status: **Concluída em 2026-07-25.**
+
+Entregas:
+
+- IDs fortes e imutáveis para workspace, usuário, empresa e investigação;
+- códigos canônicos de país e moeda com validação de formato;
+- dinheiro exato com `Decimal`, moeda explícita e operações sem conversão implícita;
+- normalização obrigatória de instantes com fuso para UTC;
+- snapshots imutáveis de `Workspace`, `Company` e `Investigation`;
+- vocabulário completo de estados de investigação, sem implementar transições;
+- erros tipados, testes unitários e teste arquitetural de independência do domínio;
+- decisões, invariantes e itens adiados registrados em `docs/domain-foundation.md`.
+
+Evidências de conclusão:
+
+- testes cobrem caminhos válidos, formatos inválidos, tipos trocados, precisão monetária, datas inconsistentes, tenancy explícita e estado inicial;
+- lint, formatação e mypy estrito aprovados;
+- domínio depende somente da biblioteca padrão e não importa FastAPI, Pydantic, banco, HTTP ou outras camadas internas;
+- nenhuma dependência, migration, repositório, endpoint ou integração foi adicionada.
+
+F2.1, isoladamente, não conclui o gate G2. O schema e as constraints passaram a existir na F2.2; o round-trip por repositórios continua pendente para a F2.3.
+
+#### F2.2 — Schema PostgreSQL e migrations iniciais
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- metadata SQLAlchemy Core e migration Alembic inicial para `Workspace`, `Company` e `Investigation`;
+- PostgreSQL 18.4 real e reproduzível para desenvolvimento e CI;
+- UUID nativo, timestamps com fuso, `NUMERIC` exato e constraints de vocabulário e datas;
+- isolamento relacional da empresa confirmada por foreign key composta com `workspace_id`;
+- configuração obrigatória e validada por `DATABASE_URL`, sem segredo ou fallback;
+- testes de upgrade, upgrade repetido, downgrade, tipos, constraints, índices, isolamento e aderência do metadata;
+- decisão arquitetural ADR-0010 e registro de dependências, operação e validação.
+
+Evidências de conclusão:
+
+- a revisão `20260728_01` executou manualmente `upgrade -> downgrade -> upgrade` em PostgreSQL 18.4;
+- 99 testes Python e 1 teste web passaram; cobertura Python total de 97,34%;
+- lint, formatação, tipos estritos, scanner de segredos e builds foram aprovados por `pnpm quality`;
+- instalações foram verificadas com os dois lockfiles em modo frozen;
+- nenhum repositório, Unit of Work, acesso da API ao banco, transição de investigação, autenticação ou integração externa foi implementado;
+- detalhes, falhas intermediárias e limitações constam em `docs/validation/f2.2-postgresql-migrations.md`.
+
+A F2.2 comprova a parcela de schema, migration e constraints do gate G2, mas não encerra o gate: o round-trip de persistência e as portas/adaptadores permanecem para a F2.3. Não iniciar a F2.3 sem nova instrução.
 
 ### Fase 3 — Framework de conectores simulados
 
@@ -220,7 +271,7 @@ Evidências de conclusão:
 - CI mínima configurada em `.github/workflows/ci.yml` com ações fixadas por SHA;
 - escopo revisado sem itens da Fase 2 ou posteriores.
 
-Não iniciar a Fase 2 sem nova instrução.
+Esta era a restrição vigente no fechamento da F1.1; as F2.1 e F2.2 foram posteriormente autorizadas e concluídas em tarefas separadas.
 
 ## 7. Fechamento F1.2
 
@@ -240,7 +291,7 @@ Evidências de conclusão:
 - pacote de entrega gerado exclusivamente dos arquivos rastreados por `git archive`;
 - resultados detalhados registrados em `docs/validation/f1.2-clean-validation.md`.
 
-A workflow de CI está configurada, mas não há execução registrada no GitHub Actions. Não iniciar a Fase 2 sem nova instrução.
+A workflow de CI está configurada, mas não há execução registrada no GitHub Actions. A restrição de não iniciar a Fase 2 era a vigente neste fechamento histórico; as tarefas F2.1 e F2.2 foram posteriormente autorizadas e executadas separadamente.
 
 ## 8. Protocolo de atualização do plano
 

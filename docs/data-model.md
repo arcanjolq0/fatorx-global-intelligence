@@ -61,7 +61,9 @@ Papéis iniciais: `ANALYST`, `REVIEWER`, `ADMIN`, `AUDITOR`. Alçadas finais dep
 
 ### `Company`
 
-Campos: `id`, `workspace_id`, `legal_name`, `trade_name`, `country_code`, `jurisdiction_code`, `legal_form`, `status`, `incorporated_on`, `dissolved_on`, `official_domain`, `created_at`, `updated_at`.
+Campos implementados na F2.2: `id`, `workspace_id`, `legal_name`, `trade_name`, `country_code`, `legal_form`, `status`, `incorporated_on`, `dissolved_on`, `official_domain`, `created_at`, `updated_at`.
+
+`jurisdiction_code` permanece no modelo alvo, mas não é criado na F2.2. Ele depende de um `JurisdictionCode` de domínio com semântica para registros nacionais, subnacionais e múltiplos registros por país. `country_code` não o substitui implicitamente.
 
 `Company` é uma entidade canônica interna, não uma cópia de uma fonte. Cada atributo factual relevante deve ser apoiado por claim/evidência.
 
@@ -94,6 +96,12 @@ Substitui o conceito estreito de `SearchRun`.
 Campos: `id`, `workspace_id`, `requested_by`, `profile_code`, `country_code`, `input_snapshot`, `state`, `state_version`, `confirmed_company_id`, `methodology_version_id`, `budget_amount`, `budget_currency`, `deadline_at`, `started_at`, `completed_at`, `created_at`.
 
 `input_snapshot` é versionado e redigido; não deve virar depósito de segredos ou documentos.
+
+Na F2.2, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` não pode possuir `started_at`; pode referenciar empresa canônica previamente cadastrada no mesmo workspace; e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
+
+`requested_by` permanece UUID tipado sem foreign key na F2.2, pois `User` e `Membership` não foram materializados. A FK será adicionada por migration posterior somente depois que identidade e tenancy de usuário tiverem contrato aprovado; até lá, o UUID não implica existência nem autorização e não deve ser usado como prova de acesso.
+
+`budget_amount` usa `NUMERIC` sem precisão ou escala fixadas e rejeita `NaN` e infinitos, preservando o contrato de `Money` finito sem arredondamento ou conversão. Valores negativos continuam estruturalmente possíveis porque a F2.1 não definiu semântica de limite orçamentário; eventual proibição exige regra de negócio explícita.
 
 ### `InvestigationSubject`
 
@@ -216,7 +224,7 @@ Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal des
 ## 10. Índices e constraints iniciais
 
 - todos os acessos por raiz: índice começando por `workspace_id`;
-- `Investigation(state, updated_at)` para workers/consulta;
+- `Investigation(workspace_id, state)` para consultas de raiz na F2.2; ordenação temporal será avaliada quando `updated_at` ou eventos persistidos forem introduzidos;
 - `ConnectorRun(operation_id, connector_id, operation_kind)` único;
 - `Artifact(workspace_id, sha256, source_policy_version_id)` para deduplicação permitida;
 - `Evidence(investigation_id, subject_ref, admissibility_status)`;
@@ -224,6 +232,8 @@ Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal des
 - `AuditEvent(workspace_id, occurred_at)` particionável por volume;
 - checks para país, moeda, scores no intervalo definido e período válido;
 - foreign keys sem cascade destrutivo sobre evidência, claim, avaliação e auditoria.
+
+Na F2.2, `Company(id, workspace_id)` possui chave unique técnica e `Investigation(confirmed_company_id, workspace_id)` usa foreign key composta. Assim, uma empresa confirmada nunca pertence a workspace diferente do agregado, inclusive em escrita SQL direta. Essa chave é redundante em relação à PK de empresa, mas torna o isolamento verificável no banco. Row Level Security permanece adiado e não foi substituído por essa constraint.
 
 ## 11. Retenção e exclusão
 

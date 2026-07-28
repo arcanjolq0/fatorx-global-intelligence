@@ -11,6 +11,7 @@
 
 - `architecture.md`: arquitetura lógica, fluxos, fronteiras e estrutura proposta.
 - `data-model.md`: modelo relacional inicial e invariantes.
+- `domain-foundation.md`: tipos, entidades imutáveis, invariantes e adiamentos da F2.1.
 - `connector-contract.md`: porta comum para conectores e taxonomia de resultados/falhas.
 - `evidence-contract.md`: proveniência, cadeia de custódia, claims e admissibilidade.
 - `investigation-lifecycle.md`: estados, transições e regras de conclusão.
@@ -29,6 +30,7 @@
 ## Validações
 
 - `validation/f1.2-clean-validation.md`: instalação limpa, gates locais, auditoria Git e limites da validação da Fase 1.
+- `validation/f2.2-postgresql-migrations.md`: schema, migrations, constraints e gates da F2.2 validados em PostgreSQL real.
 
 ## Decisões
 
@@ -42,6 +44,7 @@
 - `adr/0007-storage-and-search.md`: PostgreSQL como fonte de verdade e storage de objetos para artefatos.
 - `adr/0008-tenancy-boundary.md`: workspace como fronteira de autorização.
 - `adr/0009-application-stack.md`: stack executável e ferramentas da Fase 1.
+- `adr/0010-initial-relational-persistence.md`: stack relacional, convenções e isolamento da F2.2.
 
 ## Regra de consistência
 
