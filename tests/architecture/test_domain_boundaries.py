@@ -7,6 +7,7 @@ from pathlib import Path
 import intelligence
 
 DOMAIN_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "domain"
+APPLICATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "application"
 INFRASTRUCTURE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "infrastructure"
 API_ROOT = Path(__file__).parents[2] / "apps" / "api"
 ALLOWED_INTERNAL_PREFIX = "intelligence.domain"
@@ -97,8 +98,10 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
                 modules.append(node.module)
             for module in modules:
                 root = module.partition(".")[0]
-                is_internal = module.startswith("intelligence.domain") or module.startswith(
-                    "intelligence.infrastructure"
+                is_internal = (
+                    module.startswith("intelligence.application")
+                    or module.startswith("intelligence.domain")
+                    or module.startswith("intelligence.infrastructure")
                 )
                 if (
                     root not in sys.stdlib_module_names
@@ -106,6 +109,53 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
                     and not is_internal
                 ):
                     violations.append(f"{path.relative_to(INFRASTRUCTURE_ROOT)} -> {module}")
+
+    assert violations == []
+
+
+def test_application_imports_only_domain_and_application_contracts() -> None:
+    """Application ports cannot depend on infrastructure or database frameworks."""
+
+    violations: list[str] = []
+    for path in sorted(APPLICATION_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                root = module.partition(".")[0]
+                is_internal = module.startswith("intelligence.application") or module.startswith(
+                    "intelligence.domain"
+                )
+                if root not in sys.stdlib_module_names and not is_internal:
+                    violations.append(f"{path.relative_to(APPLICATION_ROOT)} -> {module}")
+
+    assert violations == []
+
+
+def test_persistence_ports_do_not_import_database_implementations() -> None:
+    """Port modules remain free of SQLAlchemy, Alembic, and PostgreSQL adapters."""
+
+    ports_root = APPLICATION_ROOT / "ports"
+    violations: list[str] = []
+    for path in sorted(ports_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in {"alembic", "sqlalchemy"} or module.startswith(
+                    "intelligence.infrastructure"
+                ):
+                    violations.append(f"{path.relative_to(ports_root)} -> {module}")
 
     assert violations == []
 
@@ -153,3 +203,48 @@ def test_new_persistence_modules_have_no_network_client_imports() -> None:
                         violations.append(f"{path.relative_to(root_path)} -> {module}")
 
     assert violations == []
+
+
+def test_source_modules_do_not_open_database_connections_during_import() -> None:
+    """Engine creation and connection opening must stay inside explicit callables."""
+
+    source_root = Path(__file__).parents[2] / "src"
+    forbidden_call_names = {"begin", "connect", "create_engine"}
+    violations: list[str] = []
+    for path in sorted(source_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for statement in tree.body:
+            if isinstance(statement, (ast.AsyncFunctionDef, ast.ClassDef, ast.FunctionDef)):
+                continue
+            for node in ast.walk(statement):
+                if not isinstance(node, ast.Call):
+                    continue
+                if isinstance(node.func, ast.Name):
+                    call_name = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    call_name = node.func.attr
+                else:
+                    continue
+                if call_name in forbidden_call_names:
+                    violations.append(f"{path.relative_to(source_root)} -> {call_name}")
+
+    assert violations == []
+
+
+def test_repository_adapters_never_commit_transactions() -> None:
+    """Only the Unit of Work may decide the transaction outcome."""
+
+    repository_path = INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py"
+    tree = ast.parse(
+        repository_path.read_text(encoding="utf-8"),
+        filename=str(repository_path),
+    )
+    commit_calls = [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "commit"
+    ]
+
+    assert commit_calls == []

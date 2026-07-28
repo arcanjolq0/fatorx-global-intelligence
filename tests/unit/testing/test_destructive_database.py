@@ -80,7 +80,15 @@ def test_destructive_database_rejects_connection_query_parameters(query: str) ->
 
 @pytest.mark.parametrize(
     "variable_name",
-    ["PGDATABASE", "PGHOST", "PGHOSTADDR", "PGPORT", "PGSERVICE", "PGSERVICEFILE"],
+    [
+        "PGDATABASE",
+        "PGHOST",
+        "PGHOSTADDR",
+        "PGPORT",
+        "PGSERVICE",
+        "PGSERVICEFILE",
+        "PGOPTIONS",
+    ],
 )
 def test_destructive_database_rejects_target_altering_libpq_environment(
     variable_name: str,

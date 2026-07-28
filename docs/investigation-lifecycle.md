@@ -41,6 +41,12 @@ No cancelamento direto `CREATED -> CANCELLED`, a investigação não entra em id
 
 Essas invariantes descrevem snapshots persistidos. Elas não autorizam alteração direta de estado nem substituem os futuros comandos transacionais e eventos de auditoria.
 
+### 2.2 Criação e reconstituição
+
+Uma nova investigação continua sendo construída somente em `CREATED`, com `state_version = 1` e sem timestamps de início/término. A F2.3 introduz `Investigation.reconstitute(...)` para ler snapshots que já foram persistidos em outros estados. O método revalida o vocabulário, a versão positiva, os tipos e todas as regras temporais desta seção, sem executar uma transição e sem produzir evento.
+
+Somente o mapper de persistência usa esse contrato no round-trip atual. Transições, optimistic locking, autorização do ator e auditoria continuam fora da F2.3; isolamento de serviços, memberships e auditoria mínima formam a F2.4 separada.
+
 ## 3. Fluxo
 
 ```mermaid

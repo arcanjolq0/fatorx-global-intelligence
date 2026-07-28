@@ -99,8 +99,8 @@ Permanecem para tarefas posteriores, sem implementação implícita:
 - usuários, memberships e regras de autorização;
 - aliases, endereços, identificadores externos e relações de empresas;
 - transições da investigação e comandos de domínio;
-- repositórios, Unit of Work, round-trip de entidades e políticas de consulta por workspace;
-- auditoria persistida e concorrência otimista;
+- isolamento no nível dos serviços, memberships e autorização da F2.4;
+- auditoria persistida mínima e concorrência otimista;
 - contratos de conectores, evidências, risco e relatórios.
 
 ## 7. Decisões pré-schema da F2.2
@@ -132,3 +132,11 @@ Uma investigação em `CREATED` não pode possuir `started_at`. O instante repre
 O hardening F2.2.1 define `started_at` como o instante em que a execução do ciclo deixa `CREATED` e `completed_at` como o instante em que entra em qualquer estado terminal. Normalmente, o início é atribuído em `CREATED -> IDENTIFYING`. Portanto, `CREATED` exige início nulo, qualquer outro estado exige início preenchido, estados terminais exigem término preenchido e estados não terminais proíbem término.
 
 Para `FAILED` e `CANCELLED`, `completed_at` significa terminalização, não sucesso. No cancelamento direto antes da identificação, `started_at` e `completed_at` recebem o mesmo instante: o ciclo inicia apenas para registrar sua terminalização atômica. A regra é aplicada no schema para proteger futuros snapshots reconstruídos e escritas diretas. O construtor de domínio existente continua limitado ao snapshot inicial em `CREATED`; nenhum método de transição ou reconstrução foi introduzido na F2.2.1.
+
+## 8. Reconstituição persistida da F2.3
+
+O construtor comum de `Investigation` permanece sendo o contrato de criação: estado `CREATED`, `state_version = 1`, `started_at` e `completed_at` nulos. Ele não foi relaxado para acomodar persistência.
+
+`Investigation.reconstitute(...)` é o contrato explícito de leitura de snapshots persistidos. Ele aceita qualquer estado canônico, exige versão positiva e reaplica todos os tipos fortes, normalização UTC, deadline, ordem temporal e coerência de início/término. Estados diferentes de `CREATED` exigem `started_at`; estados terminais exigem `completed_at`; estados não terminais o proíbem. A implementação interna inicializa o snapshot imutável somente depois de receber todos os valores e o valida no próprio módulo de domínio. O mapper não altera atributos privados e não corrige dados inválidos.
+
+A reconstituição não representa comando, transição ou autorização. Os repositórios e a Unit of Work da F2.3 apenas persistem snapshots. Isolamento contextual de serviços, memberships e auditoria mínima continuam separados para a F2.4.

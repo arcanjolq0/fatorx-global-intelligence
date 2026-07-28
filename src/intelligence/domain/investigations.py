@@ -1,8 +1,11 @@
-"""Investigation entity and initial-state invariants."""
+"""Investigation entity creation and persisted-snapshot invariants."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Self
 
 from intelligence.domain.errors import InvariantViolationError
 from intelligence.domain.geography import CountryCode
@@ -47,7 +50,7 @@ INITIAL_STATE_VERSION = 1
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Investigation:
-    """Immutable initial snapshot of an investigation."""
+    """Immutable investigation snapshot with an initial-only public constructor."""
 
     id: InvestigationId
     workspace_id: WorkspaceId
@@ -64,6 +67,54 @@ class Investigation:
     completed_at: datetime | None = None
 
     def __post_init__(self) -> None:
+        self._validate_and_normalize(is_reconstitution=False)
+
+    @classmethod
+    def reconstitute(
+        cls,
+        *,
+        id: InvestigationId,
+        workspace_id: WorkspaceId,
+        requested_by: UserId,
+        profile_code: str,
+        country_code: CountryCode,
+        created_at: datetime,
+        state: InvestigationState,
+        state_version: int,
+        confirmed_company_id: CompanyId | None = None,
+        budget: Money | None = None,
+        deadline_at: datetime | None = None,
+        started_at: datetime | None = None,
+        completed_at: datetime | None = None,
+    ) -> Self:
+        """Reconstitute a validated persisted snapshot without executing a transition.
+
+        This is the only contract persistence adapters may use for non-initial states.
+        The ordinary constructor remains restricted to a new ``CREATED`` snapshot.
+        """
+
+        snapshot = object.__new__(cls)
+        values: dict[str, object] = {
+            "id": id,
+            "workspace_id": workspace_id,
+            "requested_by": requested_by,
+            "profile_code": profile_code,
+            "country_code": country_code,
+            "created_at": created_at,
+            "state": state,
+            "state_version": state_version,
+            "confirmed_company_id": confirmed_company_id,
+            "budget": budget,
+            "deadline_at": deadline_at,
+            "started_at": started_at,
+            "completed_at": completed_at,
+        }
+        for field_name, value in values.items():
+            object.__setattr__(snapshot, field_name, value)
+        snapshot._validate_and_normalize(is_reconstitution=True)
+        return snapshot
+
+    def _validate_and_normalize(self, *, is_reconstitution: bool) -> None:
         _validate_types(self)
         profile_code = _required_text(self.profile_code)
         created_at = normalize_utc(self.created_at)
@@ -82,22 +133,32 @@ class Investigation:
                 raise InvariantViolationError(
                     "Investigation completed_at cannot precede started_at."
                 )
-        if self.state is not InvestigationState.CREATED:
-            raise InvariantViolationError(
-                "A new Investigation snapshot must start in the CREATED state."
+        if self.state_version < INITIAL_STATE_VERSION:
+            raise InvariantViolationError("Investigation state_version must be positive.")
+
+        if is_reconstitution:
+            _validate_persisted_state_timestamps(
+                state=self.state,
+                started_at=started_at,
+                completed_at=completed_at,
             )
-        if self.state_version != INITIAL_STATE_VERSION:
-            raise InvariantViolationError(
-                "A new Investigation snapshot must start at state_version 1."
-            )
-        if completed_at is not None:
-            raise InvariantViolationError(
-                "A new Investigation snapshot cannot define completed_at."
-            )
-        if started_at is not None:
-            raise InvariantViolationError(
-                "An Investigation in CREATED state cannot define started_at."
-            )
+        else:
+            if self.state is not InvestigationState.CREATED:
+                raise InvariantViolationError(
+                    "A new Investigation snapshot must start in the CREATED state."
+                )
+            if self.state_version != INITIAL_STATE_VERSION:
+                raise InvariantViolationError(
+                    "A new Investigation snapshot must start at state_version 1."
+                )
+            if completed_at is not None:
+                raise InvariantViolationError(
+                    "A new Investigation snapshot cannot define completed_at."
+                )
+            if started_at is not None:
+                raise InvariantViolationError(
+                    "An Investigation in CREATED state cannot define started_at."
+                )
 
         object.__setattr__(self, "profile_code", profile_code)
         object.__setattr__(self, "created_at", created_at)
@@ -129,6 +190,30 @@ def _validate_types(investigation: Investigation) -> None:
         raise InvariantViolationError("Investigation confirmed_company_id must be a CompanyId.")
     if investigation.budget is not None and not isinstance(investigation.budget, Money):
         raise InvariantViolationError("Investigation budget must be Money.")
+
+
+def _validate_persisted_state_timestamps(
+    *,
+    state: InvestigationState,
+    started_at: datetime | None,
+    completed_at: datetime | None,
+) -> None:
+    if state is InvestigationState.CREATED and started_at is not None:
+        raise InvariantViolationError(
+            "A persisted Investigation in CREATED state cannot define started_at."
+        )
+    if state is not InvestigationState.CREATED and started_at is None:
+        raise InvariantViolationError(
+            "A persisted Investigation outside CREATED state requires started_at."
+        )
+
+    is_terminal = state in TERMINAL_INVESTIGATION_STATES
+    if is_terminal and completed_at is None:
+        raise InvariantViolationError("A persisted terminal Investigation requires completed_at.")
+    if not is_terminal and completed_at is not None:
+        raise InvariantViolationError(
+            "A persisted non-terminal Investigation cannot define completed_at."
+        )
 
 
 def _required_text(value: str) -> str:

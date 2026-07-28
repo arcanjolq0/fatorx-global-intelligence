@@ -45,6 +45,28 @@ def _investigation(**overrides: object) -> Investigation:
     return Investigation(**cast(Any, values))
 
 
+def _reconstituted_investigation(**overrides: object) -> Investigation:
+    values: dict[str, object] = {
+        "id": InvestigationId.new(),
+        "workspace_id": WorkspaceId.new(),
+        "requested_by": UserId.new(),
+        "profile_code": "  SUPPLIER_STANDARD  ",
+        "country_code": CountryCode("BR"),
+        "created_at": datetime(2026, 7, 25, 12, tzinfo=UTC),
+        "state": InvestigationState.IDENTIFYING,
+        "state_version": 2,
+        "started_at": datetime(
+            2026,
+            7,
+            25,
+            10,
+            tzinfo=timezone(-timedelta(hours=3)),
+        ),
+    }
+    values.update(overrides)
+    return Investigation.reconstitute(**cast(Any, values))
+
+
 def test_investigation_starts_created_at_version_one_and_normalizes_time() -> None:
     investigation = _investigation()
 
@@ -144,3 +166,61 @@ def test_created_investigation_rejects_started_at_and_expired_deadline() -> None
         _investigation(started_at=datetime(2026, 7, 25, 12, 1, tzinfo=UTC))
     with pytest.raises(InvariantViolationError):
         _investigation(deadline_at=datetime(2026, 7, 25, 11, 59, tzinfo=UTC))
+
+
+def test_reconstitution_accepts_valid_non_initial_snapshot_and_normalizes_it() -> None:
+    investigation = _reconstituted_investigation()
+
+    assert investigation.state is InvestigationState.IDENTIFYING
+    assert investigation.state_version == 2
+    assert investigation.profile_code == "SUPPLIER_STANDARD"
+    assert investigation.started_at == datetime(2026, 7, 25, 13, tzinfo=UTC)
+
+
+@pytest.mark.parametrize("state", sorted(TERMINAL_INVESTIGATION_STATES, key=str))
+def test_reconstitution_accepts_every_terminal_state(state: InvestigationState) -> None:
+    completed_at = datetime(2026, 7, 25, 14, tzinfo=UTC)
+
+    investigation = _reconstituted_investigation(
+        state=state,
+        state_version=7,
+        completed_at=completed_at,
+    )
+
+    assert investigation.state is state
+    assert investigation.completed_at == completed_at
+
+
+def test_reconstitution_accepts_created_snapshot_without_relaxing_creation() -> None:
+    investigation = _reconstituted_investigation(
+        state=InvestigationState.CREATED,
+        state_version=1,
+        started_at=None,
+    )
+
+    assert investigation.state is InvestigationState.CREATED
+    assert investigation.started_at is None
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"state_version": 0},
+        {"state": InvestigationState.CREATED},
+        {"started_at": None},
+        {"completed_at": datetime(2026, 7, 25, 14, tzinfo=UTC)},
+        {
+            "state": InvestigationState.COMPLETED,
+            "completed_at": None,
+        },
+        {
+            "state": InvestigationState.COMPLETED,
+            "completed_at": datetime(2026, 7, 25, 12, 59, tzinfo=UTC),
+        },
+    ],
+)
+def test_reconstitution_rejects_inconsistent_persisted_snapshots(
+    overrides: dict[str, object],
+) -> None:
+    with pytest.raises(InvariantViolationError):
+        _reconstituted_investigation(**overrides)

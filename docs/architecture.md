@@ -38,6 +38,8 @@ PostgreSQL + Object storage + Queue adapter
 - coordenação entre portas;
 - emissão de eventos e auditoria.
 
+Na F2.3, somente as portas de repositório e Unit of Work foram materializadas. Autorização, memberships, casos de uso completos e emissão de auditoria permanecem reservados à F2.4; os adaptadores de persistência não executam essas responsabilidades implicitamente.
+
 ### Orquestração
 
 - cria plano de capacidades;
@@ -102,6 +104,8 @@ PostgreSQL + Object storage + Queue adapter
 ## 4. Consistência e mensageria
 
 - PostgreSQL é a fonte de verdade.
+- A Unit of Work síncrona abre uma conexão e uma transação, compartilha-as entre os repositórios e exige commit explícito; saída sem commit executa rollback.
+- Repositórios recebem a conexão da Unit of Work, não abrem transações e não executam commit.
 - Mudança de estado e evento a publicar usam transação única com outbox.
 - Workers usam chave de idempotência e inbox/registro de processamento.
 - Entrega pode ser ao menos uma vez; efeitos devem ser idempotentes.
@@ -123,6 +127,8 @@ O produto de fila/cache não está decidido. Sua escolha deve ser registrada e j
 
 - `workspace_id` é obrigatório em toda raiz agregada e chave de storage/cache.
 - Autorização é verificada no caso de uso e reforçada no adaptador de dados.
+- Na F2.3, `Company.get` e `Investigation.get` exigem `workspace_id`, e a relação investigação/empresa continua protegida por constraint composta. Isso reduz acesso acidental entre tenants, mas não comprova que um ator pertence ao workspace.
+- A F2.4 tratará isolamento no nível dos serviços, memberships e auditoria mínima como um conjunto separado; essas verificações não são efeitos ocultos de `add`/`get`.
 - Coleta externa usa política de egress e resolução segura de DNS/redirecionamentos.
 - Browser, parsing e OCR executam isolados do núcleo e sem credenciais desnecessárias.
 - Logs contêm IDs, estados, durações e códigos; conteúdo e segredos são redigidos.
@@ -152,7 +158,7 @@ fatorx-global-intelligence/
 │   └── web/                    # React/TypeScript
 ├── src/intelligence/
 │   ├── domain/                 # tipos e invariantes
-│   ├── application/            # casos de uso e portas
+│   ├── application/            # portas e futuros casos de uso
 │   ├── orchestration/          # planner e lifecycle
 │   ├── entity_resolution/
 │   ├── evidence/
@@ -182,7 +188,7 @@ Esta é uma proposta; diretórios de código serão criados somente na fase de i
 | Área | Opção do plano | Justificativa | Gate |
 |---|---|---|---|
 | API | FastAPI + Pydantic | contratos tipados e ecossistema Python | Fase 1 |
-| Schema/migrations | SQLAlchemy Core 2.x + Alembic + Psycopg 3 síncrono | metadata relacional e migrations explícitas, sem ORM/repositório na F2.2 | Fase 2 — adotado no ADR-0010 |
+| Persistência | SQLAlchemy Core 2.x + Alembic + Psycopg 3 síncrono | metadata/migrations explícitas e adaptadores sem ORM; Unit of Work controla a transação | Fase 2 — ADR-0010 e ADR-0011 |
 | HTTP | cliente assíncrono | deadlines, streaming e paralelismo | Fase 3 |
 | Web | React + TypeScript + Vite | UI tipada e separada | Fase 1 |
 | Banco | PostgreSQL | transação, JSONB e busca textual | Fase 2 |

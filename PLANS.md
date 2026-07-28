@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 e F2.2.1 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.3.
-- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio e schema PostgreSQL versionado com hardening relacional.
+- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1 e F2.3 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
+- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado e round-trip por portas, repositórios Core e Unit of Work síncrona.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2 e F2.2.1 concluídas em 2026-07-28. Repositórios e round-trip de entidades não iniciados.**
+**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1 e F2.3 concluídas em 2026-07-28. F2.4 não iniciada.**
 
 Escopo:
 
@@ -85,9 +85,10 @@ Escopo:
 - implementar entidades centrais e invariantes de `docs/data-model.md`;
 - criar schema e migrations iniciais;
 - criar repositórios como portas e adaptadores PostgreSQL;
-- aplicar isolamento por workspace e auditoria mínima.
+- aplicar isolamento estrutural por workspace nas relações e consultas;
+- aplicar isolamento no nível dos serviços, memberships e auditoria mínima em uma tarefa F2.4 separada dos repositórios.
 
-Critério de saída: round-trip de persistência, constraints e migrations testados; domínio não importa infraestrutura.
+Critério de saída: round-trip de persistência, constraints e migrations testados; domínio não importa infraestrutura; isolamento de serviços, memberships e auditoria mínima da F2.4 testados sem acoplamento oculto aos repositórios.
 
 #### F2.1 — Tipos fundamentais e invariantes do domínio
 
@@ -162,7 +163,47 @@ Evidências de conclusão:
 - nenhum repositório, interface de persistência, Unit of Work, mapper, CRUD, endpoint ou transição foi criado;
 - resultados e limitações constam em `docs/validation/f2.2.1-relational-hardening.md`.
 
-A revisão da migration inicial foi permitida porque não há registro de promoção compartilhada ou remoto; somente bancos locais descartáveis constam das validações. O gate G2 ainda aguarda round-trip por portas e adaptadores. Não iniciar a F2.3 sem nova instrução.
+A revisão da migration inicial foi permitida porque não há registro de promoção compartilhada ou remoto; somente bancos locais descartáveis constam das validações. Naquele fechamento, o gate G2 ainda aguardava round-trip por portas e adaptadores; essa parcela foi posteriormente concluída pela F2.3 autorizada.
+
+#### F2.3 — Portas de persistência, repositórios PostgreSQL e Unit of Work
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- portas pequenas e tipadas para `Workspace`, `Company`, `Investigation` e Unit of Work, sem imports de infraestrutura;
+- hierarquia mínima de erros para falha, conflito, dados persistidos inválidos e uso fora de transação;
+- criação pública de `Investigation` preservada em `CREATED`/versão 1 e reconstituição explícita, validada e sem transição;
+- factory de engine sem conexão no import, mapeadores puros e três repositórios SQLAlchemy Core;
+- consultas de empresa e investigação sempre compostas por `workspace_id` e ID, sem `SELECT *`, delete, listagem ou commit interno;
+- Unit of Work síncrona, de uso único, com uma conexão/transação compartilhada, commit explícito e rollback padrão;
+- bloqueio de `PGOPTIONS` na guarda destrutiva para impedir alteração de `search_path`;
+- ADR-0011, testes unitários, arquiteturais e PostgreSQL reais e registro de validação.
+
+Evidências de conclusão:
+
+- 210 testes Python e 1 teste web passaram, com cobertura Python total de 93,70%;
+- 50 testes PostgreSQL passaram, incluindo 24 cenários novos de repositórios, round-trip, isolamento e transações;
+- lint, formatação, tipos estritos, scanner de segredos, builds e `pnpm quality` foram aprovados;
+- `upgrade -> downgrade -> upgrade` terminou em `head`, e `alembic check` não encontrou operações novas;
+- nenhuma migration, dependência, endpoint, transição, membership, autorização ou auditoria persistida foi adicionada;
+- detalhes, inclusive uma falha intermediária de formatação corrigida, constam em `docs/validation/f2.3-persistence-round-trip.md`.
+
+A F2.3 conclui a parcela de round-trip do gate G2. A Fase 2 permanece aberta para a F2.4; não iniciar essa tarefa sem nova instrução.
+
+#### F2.4 — Isolamento de serviços, memberships e auditoria mínima
+
+Status: **Não iniciada.**
+
+Escopo reservado:
+
+- comprovar o workspace e a membership do ator no nível dos serviços/casos de uso;
+- materializar o contrato mínimo de usuários e memberships sem autenticação própria;
+- registrar auditoria mínima das operações autorizadas e negadas segundo política explícita;
+- manter autorização e auditoria coordenadas pela aplicação, não como efeitos ocultos de `add`/`get` nos repositórios da F2.3;
+- criar portas, serviços, migrations e testes próprios somente quando a tarefa for autorizada.
+
+Fora deste escopo permanecem endpoints de negócio, autenticação completa, transições da investigação, conectores e integrações externas. O gate G2 só deve ser reavaliado depois das evidências da F2.4.
 
 ### Fase 3 — Framework de conectores simulados
 

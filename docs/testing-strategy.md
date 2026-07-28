@@ -49,7 +49,9 @@ Usam serviços locais efêmeros/controlados:
 
 Não usam conta ou endpoint de fornecedor.
 
-Na F2.2/F2.2.1, os testes relacionais usam exclusivamente PostgreSQL 18.4 real. Cada cenário retorna as revisions à `base`, aplica `head` quando necessário e encerra novamente em `base`, evitando dependência de ordem. Antes de criar engine, abrir conexão ou chamar Alembic, a guarda exige simultaneamente `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host `localhost`, `127.0.0.1` ou `::1` e banco `fatorx_test` ou `fatorx_test_<sufixo seguro>`. Query string e variáveis libpq que podem redirecionar o alvo são proibidas. São verificados tipos, PKs, FKs, checks, índices, isolamento composto por workspace, coerência de estado/timestamps — inclusive cancelamento direto atômico —, upgrade repetido, downgrade e aderência entre metadata e migration. SQLite e mocks de PostgreSQL são proibidos.
+Desde a F2.2, os testes relacionais usam exclusivamente PostgreSQL 18.4 real. Cada cenário destrutivo retorna as revisions à `base`, aplica `head` quando necessário e encerra novamente em `base`, evitando dependência de ordem. Antes de criar engine, abrir conexão ou chamar Alembic, a guarda exige simultaneamente `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host `localhost`, `127.0.0.1` ou `::1` e banco `fatorx_test` ou `fatorx_test_<sufixo seguro>`. Query string e variáveis libpq que podem redirecionar o alvo são proibidas; `PGOPTIONS` também é rejeitada para impedir alteração de `search_path`. São verificados tipos, PKs, FKs, checks, índices, isolamento composto por workspace, coerência de estado/timestamps — inclusive cancelamento direto atômico —, upgrade repetido, downgrade e aderência entre metadata e migration. SQLite e mocks de PostgreSQL são proibidos.
+
+Na F2.3, testes unitários exercitam mapeadores válidos/inválidos, tipos fortes, `Decimal`, UTC, reconstituição e ciclo básico da Unit of Work com doubles controlados. Testes PostgreSQL reais comprovam `INSERT -> COMMIT -> SELECT` para as três entidades, todos os status aplicáveis, snapshots não iniciais e terminais, rollback padrão/em exceção, transação compartilhada, conflitos traduzidos e consultas isoladas por workspace. Um teste arquitetural por AST impede commit dentro dos repositórios e conexão durante import.
 
 ### 3.4 Testes de segurança
 
@@ -61,6 +63,8 @@ Na F2.2/F2.2.1, os testes relacionais usam exclusivamente PostgreSQL 18.4 real. 
 - XSS/sanitização de conteúdo e relatório;
 - rate limit, budget e payload excessivo;
 - corrida/idempotência e replay.
+
+O filtro relacional da F2.3 é testado, mas os cenários de autorização por membership e auditoria de negação pertencem à F2.4. Esses testes devem ser adicionados no nível dos serviços, separados dos testes de round-trip dos repositórios.
 
 ### 3.5 Testes ponta a ponta
 

@@ -24,6 +24,7 @@ _TARGET_ALTERING_LIBPQ_VARIABLES: Final = frozenset(
         "PGPORT",
         "PGSERVICE",
         "PGSERVICEFILE",
+        "PGOPTIONS",
     }
 )
 _DATABASE_NAME_PATTERN: Final = re.compile(

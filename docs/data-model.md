@@ -57,6 +57,8 @@ Campos: `workspace_id`, `user_id`, `role`, `valid_from`, `valid_until`, `created
 
 Papéis iniciais: `ANALYST`, `REVIEWER`, `ADMIN`, `AUDITOR`. Alçadas finais dependem de validação.
 
+`UserAccount` e `Membership` permanecem modelo alvo e serão tratados na F2.4 junto ao isolamento no nível dos serviços e à auditoria mínima. A existência de `requested_by` em investigação ou de um filtro `workspace_id` no repositório não prova membership nem autorização.
+
 ## 4. Entidades empresariais
 
 ### `Company`
@@ -102,6 +104,8 @@ Na F2.2/F2.2.1, somente os campos já representados pelo domínio são criados; 
 `requested_by` permanece UUID tipado sem foreign key na F2.2, pois `User` e `Membership` não foram materializados. A FK será adicionada por migration posterior somente depois que identidade e tenancy de usuário tiverem contrato aprovado; até lá, o UUID não implica existência nem autorização e não deve ser usado como prova de acesso.
 
 `budget_amount` usa `NUMERIC` sem precisão ou escala fixadas e rejeita `NaN` e infinitos, preservando o contrato de `Money` finito sem arredondamento ou conversão. Valores negativos continuam estruturalmente possíveis porque a F2.1 não definiu semântica de limite orçamentário; eventual proibição exige regra de negócio explícita.
+
+Na F2.3, snapshots persistidos retornam ao domínio por `Investigation.reconstitute`. O contrato de criação continua aceitando somente `CREATED` e versão 1; a reconstituição aceita os estados canônicos já armazenados, preserva `state_version` e reaplica as invariantes de tipos, UTC, ordem e coerência entre estado e timestamps. Isso não implementa transição de estado.
 
 ### `InvestigationSubject`
 
@@ -221,6 +225,8 @@ Campos: `id`, `workspace_id`, `actor_type`, `actor_id`, `action`, `target_type`,
 
 Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal desnecessário.
 
+A materialização mínima de `AuditEvent` e sua coordenação com autorização pertencem à F2.4. Os repositórios da F2.3 não geram auditoria por efeito colateral e não serão usados como substituto da decisão de serviço.
+
 ## 10. Índices e constraints iniciais
 
 - todos os acessos por raiz: índice começando por `workspace_id`;
@@ -234,6 +240,8 @@ Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal des
 - foreign keys sem cascade destrutivo sobre evidência, claim, avaliação e auditoria.
 
 Na F2.2, `Company(id, workspace_id)` possui chave unique técnica e `Investigation(confirmed_company_id, workspace_id)` usa foreign key composta. Assim, uma empresa confirmada nunca pertence a workspace diferente do agregado, inclusive em escrita SQL direta. Essa chave é redundante em relação à PK de empresa, mas torna o isolamento verificável no banco. Row Level Security permanece adiado e não foi substituído por essa constraint.
+
+Na F2.3, consultas de `Company` e `Investigation` também filtram simultaneamente por `workspace_id` e pelo ID forte. `Workspace` é consultado apenas por seu próprio ID porque ele é a raiz da fronteira. Esses filtros são defesa em profundidade e não substituem membership, autorização de caso de uso ou auditoria, que permanecem separadas para a F2.4.
 
 ## 11. Retenção e exclusão
 

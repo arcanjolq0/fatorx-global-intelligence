@@ -22,3 +22,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0008 | Accepted | workspace como fronteira obrigatória de autorização |
 | 0009 | Accepted | Python/FastAPI e React/TypeScript/Vite para a fundação executável |
 | 0010 | Accepted | SQLAlchemy Core síncrono, Alembic e isolamento relacional inicial |
+| 0011 | Accepted | portas, repositórios Core, Unit of Work e reconstituição de snapshots |

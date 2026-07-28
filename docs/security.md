@@ -27,6 +27,8 @@ Dados devem ser validados em cada fronteira; estar em rede interna não os torna
 - contas de serviço separadas por componente/ambiente;
 - sessões, revogação e MFA dependem da política organizacional a validar.
 
+Na F2.3, filtros compostos por `workspace_id` nos repositórios de empresa e investigação reforçam o isolamento relacional, mas não autenticam um ator nem comprovam membership. A F2.4 implementará o isolamento no nível dos serviços, memberships e auditoria mínima como fronteira própria. Repositórios não autorizam operações nem registram auditoria por efeito colateral.
+
 ## 4. Segredos
 
 - cofre/variáveis de ambiente com referências, nunca valores em código;
@@ -108,7 +110,7 @@ Dados devem ser validados em cada fronteira; estar em rede interna não os torna
 
 ### 11.1 Banco destrutivo de teste
 
-Testes que executam downgrade não confiam apenas em convenções de nome. Eles exigem consentimento pontual `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host de loopback em allowlist e nome dedicado no padrão `fatorx_test` ou `fatorx_test_<sufixo seguro>`. Query string e variáveis libpq capazes de alterar o alvo são rejeitadas. A validação precede engine, conexão e Alembic; qualquer falha retorna mensagem fixa sem URL ou credenciais. O consentimento não fica ativo em `.env.example` e nunca autoriza execução contra ambiente compartilhado.
+Testes que executam downgrade não confiam apenas em convenções de nome. Eles exigem consentimento pontual `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host de loopback em allowlist e nome dedicado no padrão `fatorx_test` ou `fatorx_test_<sufixo seguro>`. Query string e variáveis libpq capazes de alterar o alvo são rejeitadas. `PGOPTIONS` também é bloqueada porque pode mudar o `search_path` e redirecionar DDL para outro schema sem alterar host ou banco. A validação precede engine, conexão e Alembic; qualquer falha retorna mensagem fixa sem URL ou credenciais. O consentimento não fica ativo em `.env.example` e nunca autoriza execução contra ambiente compartilhado.
 
 ## 12. Modelo de ameaças prioritário
 

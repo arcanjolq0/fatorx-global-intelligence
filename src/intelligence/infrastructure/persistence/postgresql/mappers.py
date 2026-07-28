@@ -1,0 +1,244 @@
+"""Pure mappings between domain snapshots and relational values."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from datetime import date, datetime
+from decimal import Decimal
+from enum import StrEnum
+from uuid import UUID
+
+from intelligence.application.errors import PersistenceDataError
+from intelligence.domain.companies import Company, CompanyStatus
+from intelligence.domain.errors import DomainError
+from intelligence.domain.geography import CountryCode
+from intelligence.domain.identifiers import (
+    CompanyId,
+    InvestigationId,
+    UserId,
+    WorkspaceId,
+)
+from intelligence.domain.investigations import Investigation, InvestigationState
+from intelligence.domain.money import CurrencyCode, Money
+from intelligence.domain.workspaces import Workspace, WorkspaceStatus
+
+RelationalValues = Mapping[str, object]
+
+
+def workspace_to_values(workspace: Workspace) -> dict[str, object]:
+    """Map a workspace snapshot to values accepted by the Core table."""
+
+    return {
+        "id": workspace.id.value,
+        "name": workspace.name,
+        "status": workspace.status.value,
+        "retention_policy_version": workspace.retention_policy_version,
+        "created_at": workspace.created_at,
+        "updated_at": workspace.updated_at,
+    }
+
+
+def workspace_from_values(values: RelationalValues) -> Workspace:
+    """Reconstitute a workspace while validating every persisted value."""
+
+    try:
+        return Workspace(
+            id=WorkspaceId(_required(values, "id", UUID)),
+            name=_required(values, "name", str),
+            status=_enum(values, "status", WorkspaceStatus),
+            retention_policy_version=_required(values, "retention_policy_version", str),
+            created_at=_required_datetime(values, "created_at"),
+            updated_at=_required_datetime(values, "updated_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted Workspace data is invalid.") from error
+
+
+def company_to_values(company: Company) -> dict[str, object]:
+    """Map a company snapshot to values accepted by the Core table."""
+
+    return {
+        "id": company.id.value,
+        "workspace_id": company.workspace_id.value,
+        "legal_name": company.legal_name,
+        "trade_name": company.trade_name,
+        "country_code": company.country_code.value,
+        "legal_form": company.legal_form,
+        "status": company.status.value,
+        "incorporated_on": company.incorporated_on,
+        "dissolved_on": company.dissolved_on,
+        "official_domain": company.official_domain,
+        "created_at": company.created_at,
+        "updated_at": company.updated_at,
+    }
+
+
+def company_from_values(values: RelationalValues) -> Company:
+    """Reconstitute a company while validating every persisted value."""
+
+    try:
+        return Company(
+            id=CompanyId(_required(values, "id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            legal_name=_required(values, "legal_name", str),
+            trade_name=_optional(values, "trade_name", str),
+            country_code=CountryCode(_required(values, "country_code", str)),
+            legal_form=_optional(values, "legal_form", str),
+            status=_enum(values, "status", CompanyStatus),
+            incorporated_on=_optional_date(values, "incorporated_on"),
+            dissolved_on=_optional_date(values, "dissolved_on"),
+            official_domain=_optional(values, "official_domain", str),
+            created_at=_required_datetime(values, "created_at"),
+            updated_at=_required_datetime(values, "updated_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted Company data is invalid.") from error
+
+
+def investigation_to_values(investigation: Investigation) -> dict[str, object]:
+    """Map an investigation snapshot to values accepted by the Core table."""
+
+    budget_amount: Decimal | None = None
+    budget_currency: str | None = None
+    if investigation.budget is not None:
+        budget_amount = investigation.budget.amount
+        budget_currency = investigation.budget.currency.value
+
+    return {
+        "id": investigation.id.value,
+        "workspace_id": investigation.workspace_id.value,
+        "requested_by": investigation.requested_by.value,
+        "profile_code": investigation.profile_code,
+        "country_code": investigation.country_code.value,
+        "state": investigation.state.value,
+        "state_version": investigation.state_version,
+        "confirmed_company_id": (
+            investigation.confirmed_company_id.value
+            if investigation.confirmed_company_id is not None
+            else None
+        ),
+        "budget_amount": budget_amount,
+        "budget_currency": budget_currency,
+        "deadline_at": investigation.deadline_at,
+        "started_at": investigation.started_at,
+        "completed_at": investigation.completed_at,
+        "created_at": investigation.created_at,
+    }
+
+
+def investigation_from_values(values: RelationalValues) -> Investigation:
+    """Reconstitute any valid persisted state through the domain contract."""
+
+    try:
+        confirmed_company_uuid = _optional(values, "confirmed_company_id", UUID)
+        budget_amount = _optional(values, "budget_amount", Decimal)
+        budget_currency = _optional(values, "budget_currency", str)
+        if (budget_amount is None) != (budget_currency is None):
+            raise PersistenceDataError("Persisted Investigation budget data is incomplete.")
+        budget = (
+            Money(budget_amount, CurrencyCode(budget_currency))
+            if budget_amount is not None and budget_currency is not None
+            else None
+        )
+
+        return Investigation.reconstitute(
+            id=InvestigationId(_required(values, "id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            requested_by=UserId(_required(values, "requested_by", UUID)),
+            profile_code=_required(values, "profile_code", str),
+            country_code=CountryCode(_required(values, "country_code", str)),
+            state=_enum(values, "state", InvestigationState),
+            state_version=_required_integer(values, "state_version"),
+            confirmed_company_id=(
+                CompanyId(confirmed_company_uuid) if confirmed_company_uuid is not None else None
+            ),
+            budget=budget,
+            deadline_at=_optional_datetime(values, "deadline_at"),
+            started_at=_optional_datetime(values, "started_at"),
+            completed_at=_optional_datetime(values, "completed_at"),
+            created_at=_required_datetime(values, "created_at"),
+        )
+    except PersistenceDataError:
+        raise
+    except (DomainError, TypeError, ValueError) as error:
+        raise PersistenceDataError("Persisted Investigation data is invalid.") from error
+
+
+def _read(values: RelationalValues, field_name: str) -> object:
+    try:
+        return values[field_name]
+    except KeyError as error:
+        raise PersistenceDataError(
+            f"Persisted data is missing required field {field_name}."
+        ) from error
+
+
+def _required[Value](
+    values: RelationalValues,
+    field_name: str,
+    expected_type: type[Value],
+) -> Value:
+    value = _read(values, field_name)
+    if not isinstance(value, expected_type):
+        raise PersistenceDataError(f"Persisted field {field_name} has an invalid type.")
+    return value
+
+
+def _optional[Value](
+    values: RelationalValues,
+    field_name: str,
+    expected_type: type[Value],
+) -> Value | None:
+    value = _read(values, field_name)
+    if value is None:
+        return None
+    if not isinstance(value, expected_type):
+        raise PersistenceDataError(f"Persisted field {field_name} has an invalid type.")
+    return value
+
+
+def _required_integer(values: RelationalValues, field_name: str) -> int:
+    value = _read(values, field_name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise PersistenceDataError(f"Persisted field {field_name} has an invalid type.")
+    return value
+
+
+def _required_datetime(values: RelationalValues, field_name: str) -> datetime:
+    return _required(values, field_name, datetime)
+
+
+def _optional_datetime(values: RelationalValues, field_name: str) -> datetime | None:
+    return _optional(values, field_name, datetime)
+
+
+def _optional_date(values: RelationalValues, field_name: str) -> date | None:
+    value = _read(values, field_name)
+    if value is None:
+        return None
+    if not isinstance(value, date) or isinstance(value, datetime):
+        raise PersistenceDataError(f"Persisted field {field_name} has an invalid type.")
+    return value
+
+
+def _enum[EnumValue: StrEnum](
+    values: RelationalValues,
+    field_name: str,
+    enum_type: type[EnumValue],
+) -> EnumValue:
+    return enum_type(_required(values, field_name, str))
+
+
+__all__ = [
+    "RelationalValues",
+    "company_from_values",
+    "company_to_values",
+    "investigation_from_values",
+    "investigation_to_values",
+    "workspace_from_values",
+    "workspace_to_values",
+]
