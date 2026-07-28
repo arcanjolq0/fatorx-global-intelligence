@@ -97,7 +97,7 @@ Campos: `id`, `workspace_id`, `requested_by`, `profile_code`, `country_code`, `i
 
 `input_snapshot` é versionado e redigido; não deve virar depósito de segredos ou documentos.
 
-Na F2.2, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` não pode possuir `started_at`; pode referenciar empresa canônica previamente cadastrada no mesmo workspace; e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
+Na F2.2/F2.2.1, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` exige `started_at` nulo; todo estado posterior exige início preenchido. Estados terminais exigem `completed_at`, e estados não terminais o proíbem. A investigação pode referenciar empresa canônica previamente cadastrada no mesmo workspace, e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
 
 `requested_by` permanece UUID tipado sem foreign key na F2.2, pois `User` e `Membership` não foram materializados. A FK será adicionada por migration posterior somente depois que identidade e tenancy de usuário tiverem contrato aprovado; até lá, o UUID não implica existência nem autorização e não deve ser usado como prova de acesso.
 

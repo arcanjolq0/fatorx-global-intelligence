@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F2.2 da Fase 2 — Schema PostgreSQL e migrations iniciais. O código autorizado contém a fundação técnica da Fase 1, os tipos e entidades imutáveis da F2.1 e o schema versionado de `Workspace`, `Company` e `Investigation`. Até nova instrução, não iniciar a F2.3, repositórios, Unit of Work, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas.
+O projeto concluiu a F2.2.1 da Fase 2 — Hardening relacional anterior aos repositórios. O código autorizado contém a fundação técnica da Fase 1, os tipos e entidades imutáveis da F2.1, o schema versionado da F2.2 e as guardas de segurança e coerência documentadas na F2.2.1. Até nova instrução, não iniciar a F2.3, repositórios, Unit of Work, acesso ao banco pela API, transições de investigação, conectores reais ou integrações externas.
 
 ## Ordem de precedência documental
 

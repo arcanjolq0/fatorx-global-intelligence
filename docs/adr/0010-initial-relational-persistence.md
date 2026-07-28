@@ -34,3 +34,22 @@ Os testes relacionais usam PostgreSQL real e nunca SQLite. Desenvolvimento e CI 
 - A FK composta cria um índice unique redundante em relação à PK de empresa, em troca de isolamento relacional verificável.
 - Ausência de RLS significa que consultas futuras ainda deverão filtrar workspace; sua adoção exige ADR, política de conexão e testes próprios.
 - O pacote binário do Psycopg facilita reprodução multiplataforma, mas incorpora bibliotecas nativas que exigem atualização coordenada pelo lockfile.
+
+## Adendo F2.2.1 — hardening anterior aos repositórios
+
+Data: 2026-07-28.
+
+A coerência persistida entre estado e timestamps passa a ser obrigatória:
+
+- `CREATED` exige `started_at IS NULL`;
+- qualquer estado diferente de `CREATED` exige `started_at IS NOT NULL`;
+- `COMPLETED`, `PARTIALLY_COMPLETED`, `FAILED` e `CANCELLED` exigem `completed_at IS NOT NULL`;
+- qualquer estado não terminal exige `completed_at IS NULL`.
+
+`completed_at` representa o instante de terminalização, e não apenas conclusão bem-sucedida. As regras de ordem já adotadas continuam válidas: conclusão exige início e não pode antecedê-lo. No cancelamento direto `CREATED -> CANCELLED`, ainda não houve identificação; o início e a terminalização do ciclo são atômicos, portanto o snapshot usa `started_at = completed_at` no instante do cancelamento. Essas constraints protegem snapshots persistidos, mas não implementam comandos nem transições da máquina de estados.
+
+Os testes que executam `downgrade base` passam a exigir simultaneamente consentimento explícito em `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host de loopback e nome estrito `fatorx_test` ou `fatorx_test_<sufixo seguro>`. A URL não pode ter query string, e variáveis libpq capazes de alterar host, porta, serviço ou banco são rejeitadas. A validação ocorre antes de criar engine, abrir conexão ou chamar Alembic; mensagens de erro não reproduzem URL ou credenciais.
+
+A imagem de desenvolvimento e CI fica fixada como `postgres:18.4-bookworm@sha256:1961f96e6029a02c3812d7cb329a3b03a3ac2bb067058dec17b0f5596aca9296`. O digest foi confirmado no inventário local e no manifesto oficial de `docker.io/library/postgres:18.4-bookworm` em 2026-07-28.
+
+A revisão inicial `20260728_01` pode receber estas constraints porque não há registro de implantação em ambiente compartilhado: o repositório não possui remoto e as únicas execuções registradas ocorreram no banco local descartável. Depois de qualquer promoção compartilhada, a revisão torna-se imutável e mudanças exigem nova migration.

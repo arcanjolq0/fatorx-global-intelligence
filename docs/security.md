@@ -102,9 +102,13 @@ Dados devem ser validados em cada fronteira; estar em rede interna não os torna
 - lockfiles e builds reproduzíveis;
 - dependência justificada e com licença avaliada;
 - scanner de vulnerabilidades e atualização planejada;
-- imagens mínimas e identidade não root quando aplicável;
+- imagens mínimas, fixadas por digest quando validadas, e identidade não root quando aplicável;
 - artefatos de build assináveis/provenientes conforme maturidade;
 - nenhum script remoto executado sem pin/revisão.
+
+### 11.1 Banco destrutivo de teste
+
+Testes que executam downgrade não confiam apenas em convenções de nome. Eles exigem consentimento pontual `FATORX_ALLOW_DESTRUCTIVE_DATABASE_TESTS=1`, host de loopback em allowlist e nome dedicado no padrão `fatorx_test` ou `fatorx_test_<sufixo seguro>`. Query string e variáveis libpq capazes de alterar o alvo são rejeitadas. A validação precede engine, conexão e Alembic; qualquer falha retorna mensagem fixa sem URL ou credenciais. O consentimento não fica ativo em `.env.example` e nunca autoriza execução contra ambiente compartilhado.
 
 ## 12. Modelo de ameaças prioritário
 

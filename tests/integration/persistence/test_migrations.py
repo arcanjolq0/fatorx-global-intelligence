@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from intelligence.infrastructure.persistence.postgresql.configuration import (
@@ -26,6 +26,7 @@ from intelligence.infrastructure.persistence.postgresql.tables import (
     investigation_table,
     workspace_table,
 )
+from tests.support.destructive_database import require_safe_destructive_database_url
 
 pytestmark = pytest.mark.allow_hosts(["127.0.0.1", "::1", "localhost"])
 
@@ -52,14 +53,7 @@ class DatabaseHarness:
 
 
 def _safe_test_database_url() -> str:
-    database_url = require_database_url()
-    parsed = make_url(database_url)
-    allowed_hosts = {"127.0.0.1", "::1", "localhost"}
-    if parsed.host not in allowed_hosts or "test" not in (parsed.database or "").lower():
-        raise RuntimeError(
-            "Integration migrations require an explicit local database whose name contains test."
-        )
-    return database_url
+    return require_safe_destructive_database_url()
 
 
 def _alembic_config() -> Config:
@@ -365,17 +359,6 @@ def test_investigation_rejects_invalid_state_and_timestamps(
         _investigation_values(
             uuid4(),
             workspace_id,
-            started_at=CREATED_AT + timedelta(seconds=1),
-        ),
-        _investigation_values(
-            uuid4(),
-            workspace_id,
-            state="IDENTIFYING",
-            completed_at=CREATED_AT + timedelta(seconds=1),
-        ),
-        _investigation_values(
-            uuid4(),
-            workspace_id,
             state="IDENTIFYING",
             started_at=CREATED_AT + timedelta(seconds=2),
             completed_at=CREATED_AT + timedelta(seconds=1),
@@ -384,6 +367,155 @@ def test_investigation_rejects_invalid_state_and_timestamps(
     try:
         for values in invalid_investigations:
             _assert_rejected(engine, investigation_table.insert().values(**values))
+    finally:
+        engine.dispose()
+
+
+def test_identifying_without_started_at_is_rejected(database: DatabaseHarness) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        _assert_rejected(
+            engine,
+            investigation_table.insert().values(
+                **_investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    state="IDENTIFYING",
+                )
+            ),
+        )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("terminal_state", ["COMPLETED", "FAILED"])
+def test_terminal_state_without_completed_at_is_rejected(
+    database: DatabaseHarness,
+    terminal_state: str,
+) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        _assert_rejected(
+            engine,
+            investigation_table.insert().values(
+                **_investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    state=terminal_state,
+                    started_at=CREATED_AT + timedelta(seconds=1),
+                )
+            ),
+        )
+    finally:
+        engine.dispose()
+
+
+def test_non_terminal_state_with_completed_at_is_rejected(
+    database: DatabaseHarness,
+) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        _assert_rejected(
+            engine,
+            investigation_table.insert().values(
+                **_investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    state="IDENTIFYING",
+                    started_at=CREATED_AT + timedelta(seconds=1),
+                    completed_at=CREATED_AT + timedelta(seconds=2),
+                )
+            ),
+        )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "terminal_state",
+    ["COMPLETED", "PARTIALLY_COMPLETED", "FAILED", "CANCELLED"],
+)
+def test_terminal_state_with_valid_timestamps_is_accepted(
+    database: DatabaseHarness,
+    terminal_state: str,
+) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                investigation_table.insert(),
+                _investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    state=terminal_state,
+                    started_at=CREATED_AT + timedelta(seconds=1),
+                    completed_at=CREATED_AT + timedelta(seconds=2),
+                ),
+            )
+    finally:
+        engine.dispose()
+
+
+def test_created_without_timestamps_is_accepted(database: DatabaseHarness) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                investigation_table.insert(),
+                _investigation_values(uuid4(), workspace_id),
+            )
+    finally:
+        engine.dispose()
+
+
+def test_created_with_started_at_is_rejected(database: DatabaseHarness) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    try:
+        _assert_rejected(
+            engine,
+            investigation_table.insert().values(
+                **_investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    started_at=CREATED_AT + timedelta(seconds=1),
+                )
+            ),
+        )
+    finally:
+        engine.dispose()
+
+
+def test_direct_created_cancellation_uses_one_terminal_timestamp(
+    database: DatabaseHarness,
+) -> None:
+    engine = _upgrade_engine(database)
+    workspace_id = uuid4()
+    _insert_prerequisites(engine, workspace_id=workspace_id)
+    cancelled_at = CREATED_AT + timedelta(seconds=1)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                investigation_table.insert(),
+                _investigation_values(
+                    uuid4(),
+                    workspace_id,
+                    state="CANCELLED",
+                    started_at=cancelled_at,
+                    completed_at=cancelled_at,
+                ),
+            )
     finally:
         engine.dispose()
 

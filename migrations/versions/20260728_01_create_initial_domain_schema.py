@@ -189,8 +189,13 @@ def upgrade() -> None:
             name=op.f("ck_investigation_completed_at_order"),
         ),
         sa.CheckConstraint(
-            "state <> 'CREATED' OR started_at IS NULL",
-            name=op.f("ck_investigation_created_has_not_started"),
+            "(state = 'CREATED') = (started_at IS NULL)",
+            name=op.f("ck_investigation_state_start_consistency"),
+        ),
+        sa.CheckConstraint(
+            "(state IN ('COMPLETED', 'PARTIALLY_COMPLETED', 'FAILED', 'CANCELLED')) "
+            "= (completed_at IS NOT NULL)",
+            name=op.f("ck_investigation_state_completion_consistency"),
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"],

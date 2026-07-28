@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25 e F2.2 concluída em 2026-07-28**; aguardando nova instrução antes da F2.3.
-- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio e schema PostgreSQL versionado.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 e F2.2.1 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.3.
+- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio e schema PostgreSQL versionado com hardening relacional.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 concluída em 2026-07-25 e F2.2 concluída em 2026-07-28. Repositórios e round-trip de entidades não iniciados.**
+**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2 e F2.2.1 concluídas em 2026-07-28. Repositórios e round-trip de entidades não iniciados.**
 
 Escopo:
 
@@ -136,7 +136,33 @@ Evidências de conclusão:
 - nenhum repositório, Unit of Work, acesso da API ao banco, transição de investigação, autenticação ou integração externa foi implementado;
 - detalhes, falhas intermediárias e limitações constam em `docs/validation/f2.2-postgresql-migrations.md`.
 
-A F2.2 comprova a parcela de schema, migration e constraints do gate G2, mas não encerra o gate: o round-trip de persistência e as portas/adaptadores permanecem para a F2.3. Não iniciar a F2.3 sem nova instrução.
+A F2.2 comprova a parcela de schema, migration e constraints do gate G2. O hardening F2.2.1 foi posteriormente autorizado sem iniciar repositórios; o round-trip de persistência e as portas/adaptadores permanecem para a F2.3.
+
+#### F2.2.1 — Hardening relacional antes dos repositórios
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- consentimento destrutivo obrigatório e test-only para qualquer teste que execute `downgrade base`;
+- allowlist de loopback, padrão estrito `fatorx_test[_sufixo]`, proibição de query string e bloqueio de variáveis libpq que possam redirecionar o alvo;
+- coerência persistida entre estado, `started_at` e `completed_at`, incluindo cancelamento direto atômico;
+- imagem `postgres:18.4-bookworm` fixada pelo digest confirmado da validação F2.2;
+- anotações postergadas em `money.py`, sem mudança funcional ou dependência;
+- testes unitários da guarda, testes PostgreSQL das constraints e validação de aderência entre metadata e migration;
+- ADR-0010, ciclo de vida, segurança, desenvolvimento, estratégia de testes e registro de validação atualizados.
+
+Evidências de conclusão:
+
+- 36 testes unitários da guarda e 26 testes PostgreSQL passaram;
+- 146 testes Python e 1 teste web passaram, com cobertura Python de 97,77%;
+- lint, formatação, tipos, scanner, builds e `pnpm quality` foram aprovados;
+- a revisão `20260728_01` executou novamente `upgrade -> downgrade -> upgrade` e terminou em `head`;
+- a imagem executada correspondeu ao digest fixado no Compose e na CI;
+- nenhum repositório, interface de persistência, Unit of Work, mapper, CRUD, endpoint ou transição foi criado;
+- resultados e limitações constam em `docs/validation/f2.2.1-relational-hardening.md`.
+
+A revisão da migration inicial foi permitida porque não há registro de promoção compartilhada ou remoto; somente bancos locais descartáveis constam das validações. O gate G2 ainda aguarda round-trip por portas e adaptadores. Não iniciar a F2.3 sem nova instrução.
 
 ### Fase 3 — Framework de conectores simulados
 

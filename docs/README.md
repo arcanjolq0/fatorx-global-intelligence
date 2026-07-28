@@ -31,6 +31,7 @@
 
 - `validation/f1.2-clean-validation.md`: instalação limpa, gates locais, auditoria Git e limites da validação da Fase 1.
 - `validation/f2.2-postgresql-migrations.md`: schema, migrations, constraints e gates da F2.2 validados em PostgreSQL real.
+- `validation/f2.2.1-relational-hardening.md`: consentimento destrutivo, coerência de timestamps e pin da imagem PostgreSQL validados antes da F2.3.
 
 ## Decisões
 

@@ -6,7 +6,10 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from intelligence.domain.companies import CompanyStatus
-from intelligence.domain.investigations import InvestigationState
+from intelligence.domain.investigations import (
+    TERMINAL_INVESTIGATION_STATES,
+    InvestigationState,
+)
 from intelligence.domain.workspaces import WorkspaceStatus
 from intelligence.infrastructure.persistence.postgresql.metadata import metadata
 
@@ -15,6 +18,11 @@ def _sql_values(values: Iterable[str]) -> str:
     """Render trusted enum values for a static CHECK expression."""
 
     return ", ".join(f"'{value}'" for value in values)
+
+
+_TERMINAL_STATES_SQL = _sql_values(
+    state.value for state in InvestigationState if state in TERMINAL_INVESTIGATION_STATES
+)
 
 
 workspace_table = sa.Table(
@@ -168,8 +176,12 @@ investigation_table = sa.Table(
         name="completed_at_order",
     ),
     sa.CheckConstraint(
-        "state <> 'CREATED' OR started_at IS NULL",
-        name="created_has_not_started",
+        "(state = 'CREATED') = (started_at IS NULL)",
+        name="state_start_consistency",
+    ),
+    sa.CheckConstraint(
+        f"(state IN ({_TERMINAL_STATES_SQL})) = (completed_at IS NOT NULL)",
+        name="state_completion_consistency",
     ),
 )
 sa.Index(

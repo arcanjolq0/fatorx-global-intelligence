@@ -29,6 +29,18 @@
 
 Estados terminais: `COMPLETED`, `PARTIALLY_COMPLETED`, `FAILED`, `CANCELLED`.
 
+### 2.1 Timestamps persistidos
+
+- `started_at` é nulo somente em `CREATED` e passa a existir na transição `CREATED -> IDENTIFYING`;
+- todo estado diferente de `CREATED` exige `started_at`;
+- `completed_at` é o instante de entrada em um estado terminal, inclusive `FAILED` ou `CANCELLED`;
+- estados terminais exigem `completed_at`, enquanto estados não terminais o proíbem;
+- `completed_at` nunca antecede `started_at`.
+
+No cancelamento direto `CREATED -> CANCELLED`, a investigação não entra em identificação. O ciclo inicia e termina atomicamente no instante do cancelamento, registrado com `started_at = completed_at`. Isso preserva a coerência do snapshot sem afirmar que coleta ou análise começaram.
+
+Essas invariantes descrevem snapshots persistidos. Elas não autorizam alteração direta de estado nem substituem os futuros comandos transacionais e eventos de auditoria.
+
 ## 3. Fluxo
 
 ```mermaid

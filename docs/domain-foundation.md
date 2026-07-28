@@ -126,3 +126,9 @@ Uma investigação em `CREATED` não pode possuir `started_at`. O instante repre
 ### 7.5 Domínio corporativo
 
 `official_domain` recebe validação também no PostgreSQL, além da validação no domínio. A constraint aceita somente o formato canônico já persistível — minúsculas, labels DNS sem hífen nas extremidades e até 253 caracteres — e rejeita protocolo, porta, caminho e credenciais. Ela não comprova propriedade, atividade ou unicidade do domínio; essas conclusões continuam dependentes de política e evidência.
+
+### 7.6 Coerência persistida de estado e timestamps
+
+O hardening F2.2.1 define `started_at` como o instante em que a execução do ciclo deixa `CREATED` e `completed_at` como o instante em que entra em qualquer estado terminal. Normalmente, o início é atribuído em `CREATED -> IDENTIFYING`. Portanto, `CREATED` exige início nulo, qualquer outro estado exige início preenchido, estados terminais exigem término preenchido e estados não terminais proíbem término.
+
+Para `FAILED` e `CANCELLED`, `completed_at` significa terminalização, não sucesso. No cancelamento direto antes da identificação, `started_at` e `completed_at` recebem o mesmo instante: o ciclo inicia apenas para registrar sua terminalização atômica. A regra é aplicada no schema para proteger futuros snapshots reconstruídos e escritas diretas. O construtor de domínio existente continua limitado ao snapshot inicial em `CREATED`; nenhum método de transição ou reconstrução foi introduzido na F2.2.1.

@@ -1,5 +1,7 @@
 """Currency and monetary value objects without conversion or implicit rounding."""
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from decimal import Decimal, DecimalException, Inexact, localcontext
