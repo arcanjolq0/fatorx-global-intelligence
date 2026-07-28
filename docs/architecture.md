@@ -104,8 +104,9 @@ Na F2.3, somente as portas de repositório e Unit of Work foram materializadas. 
 ## 4. Consistência e mensageria
 
 - PostgreSQL é a fonte de verdade.
-- A Unit of Work síncrona abre uma conexão e uma transação, compartilha-as entre os repositórios e exige commit explícito; saída sem commit executa rollback.
-- Repositórios recebem a conexão da Unit of Work, não abrem transações e não executam commit.
+- A Unit of Work síncrona abre uma conexão e uma `RootTransaction`, compartilha um guard com os repositórios e exige commit explícito; saída sem commit executa rollback.
+- Antes de qualquer operação, o guard comprova conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
+- Repositórios recebem o guard da Unit of Work, não abrem transações e não executam commit.
 - Mudança de estado e evento a publicar usam transação única com outbox.
 - Workers usam chave de idempotência e inbox/registro de processamento.
 - Entrega pode ser ao menos uma vez; efeitos devem ser idempotentes.

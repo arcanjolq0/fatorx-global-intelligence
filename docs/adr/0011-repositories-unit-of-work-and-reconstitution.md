@@ -28,3 +28,19 @@ O filtro por workspace e as constraints compostas da F2.3 são defesa estrutural
 - O limite transacional é verificável e uma operação parcial não é persistida sem commit.
 - Consultas de empresa e investigação não recuperam registros de outro workspace, mas o chamador ainda precisará comprovar membership e permissão na F2.4.
 - Adicionar listagens, atualização de estado, delete, autorização, auditoria ou novos agregados exige caso de uso e decisão separados.
+
+## Adendo F2.3.1 — vínculo à transação original
+
+Data: 2026-07-28.
+
+A implementação inicial entregava somente a `Connection` aos repositórios e verificava `connection.closed`. Depois de `commit()` ou `rollback()`, a conexão permanecia aberta até a saída do contexto; uma referência de repositório já capturada poderia executar outra instrução e acionar o autobegin do SQLAlchemy fora da transação controlada pela Unit of Work.
+
+Os três repositórios passam a compartilhar um guard criado pela Unit of Work com a `Connection` e a `RootTransaction` originais. Antes de qualquer `INSERT` ou `SELECT`, o guard exige simultaneamente:
+
+- conexão não fechada;
+- `RootTransaction.is_active` verdadeiro;
+- `connection.get_transaction()` idêntica à `RootTransaction` original.
+
+`connection.in_transaction()` isoladamente não é suficiente porque não comprova identidade. Se qualquer condição falhar, a operação termina em `PersistenceStateError` antes de chamar `execute`, impedindo autobegin. A Unit of Work usa o mesmo guard para commit e rollback, continua sendo a única responsável pelo commit e define erros explícitos para chamadas duplicadas.
+
+Falhas SQLAlchemy de início, commit e rollback são traduzidas para `PersistenceError` com mensagens fixas; a causa técnica permanece encadeada sem integrar a mensagem pública. Nenhuma migration, dependência, transação aninhada, retry ou funcionalidade da F2.4 é introduzida.

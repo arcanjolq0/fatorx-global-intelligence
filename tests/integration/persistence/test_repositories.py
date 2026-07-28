@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.engine import Engine
@@ -15,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from intelligence.application.errors import (
     PersistenceConflictError,
+    PersistenceError,
     PersistenceStateError,
 )
 from intelligence.domain.companies import Company, CompanyStatus
@@ -145,6 +147,21 @@ def _persisted_investigation(
         completed_at=CREATED_AT + timedelta(minutes=2) if terminal else None,
         created_at=CREATED_AT,
     )
+
+
+def _terminate_unit_of_work_backend(
+    engine: Engine,
+    unit_of_work: PostgreSQLUnitOfWork,
+) -> None:
+    connection = unit_of_work._connection
+    assert connection is not None
+    backend_pid = connection.execute(sa.text("SELECT pg_backend_pid()")).scalar_one()
+    with engine.begin() as controller:
+        terminated = controller.execute(
+            sa.text("SELECT pg_terminate_backend(:backend_pid)"),
+            {"backend_pid": backend_pid},
+        ).scalar_one()
+    assert terminated is True
 
 
 def test_commit_persists_round_trip_for_all_three_entities(engine: Engine) -> None:
@@ -297,8 +314,14 @@ def test_repositories_share_one_uncommitted_transaction(engine: Engine) -> None:
     workspace = _workspace()
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        connection = unit_of_work._connection
+        original_transaction = unit_of_work._transaction
+        assert connection is not None
+        assert original_transaction is not None
+        assert connection.get_transaction() is original_transaction
         unit_of_work.workspaces.add(workspace)
         assert unit_of_work.workspaces.get(workspace.id) == workspace
+        assert connection.get_transaction() is original_transaction
         with PostgreSQLUnitOfWork(engine) as separate_unit_of_work:
             assert separate_unit_of_work.workspaces.get(workspace.id) is None
         unit_of_work.commit()
@@ -389,8 +412,152 @@ def test_repository_operation_after_context_fails_clearly(engine: Engine) -> Non
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         repository = unit_of_work.workspaces
 
-    with pytest.raises(PersistenceStateError, match="connection is closed"):
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
         repository.get(workspace.id)
+
+
+def test_captured_repository_rejects_read_after_commit_without_autobegin(
+    engine: Engine,
+) -> None:
+    workspace = _workspace()
+
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        repository = unit_of_work.workspaces
+        connection = unit_of_work._connection
+        original_transaction = unit_of_work._transaction
+        assert connection is not None
+        assert original_transaction is not None
+        repository.add(workspace)
+        unit_of_work.commit()
+
+        assert not original_transaction.is_active
+        assert connection.get_transaction() is None
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.get(workspace.id)
+        assert connection.get_transaction() is None
+
+
+def test_captured_repository_rejects_write_after_commit_without_autobegin(
+    engine: Engine,
+) -> None:
+    persisted_workspace = _workspace()
+    rejected_workspace = _workspace()
+
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        repository = unit_of_work.workspaces
+        connection = unit_of_work._connection
+        assert connection is not None
+        repository.add(persisted_workspace)
+        unit_of_work.commit()
+
+        assert connection.get_transaction() is None
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.add(rejected_workspace)
+        assert connection.get_transaction() is None
+
+    with PostgreSQLUnitOfWork(engine) as observer:
+        assert observer.workspaces.get(persisted_workspace.id) == persisted_workspace
+        assert observer.workspaces.get(rejected_workspace.id) is None
+
+
+def test_captured_repository_rejects_operations_after_rollback_without_autobegin(
+    engine: Engine,
+) -> None:
+    rolled_back_workspace = _workspace()
+    rejected_workspace = _workspace()
+
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        repository = unit_of_work.workspaces
+        connection = unit_of_work._connection
+        original_transaction = unit_of_work._transaction
+        assert connection is not None
+        assert original_transaction is not None
+        repository.add(rolled_back_workspace)
+        unit_of_work.rollback()
+
+        assert not original_transaction.is_active
+        assert connection.get_transaction() is None
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.get(rolled_back_workspace.id)
+        with pytest.raises(PersistenceStateError, match="transaction is not active"):
+            repository.add(rejected_workspace)
+        assert connection.get_transaction() is None
+
+    with PostgreSQLUnitOfWork(engine) as observer:
+        assert observer.workspaces.get(rolled_back_workspace.id) is None
+        assert observer.workspaces.get(rejected_workspace.id) is None
+
+
+def test_duplicate_commit_is_rejected_without_autobegin(engine: Engine) -> None:
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        connection = unit_of_work._connection
+        assert connection is not None
+        unit_of_work.commit()
+
+        with pytest.raises(PersistenceStateError, match="already been committed"):
+            unit_of_work.commit()
+        assert connection.get_transaction() is None
+
+
+def test_duplicate_rollback_is_rejected_without_autobegin(engine: Engine) -> None:
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        connection = unit_of_work._connection
+        assert connection is not None
+        unit_of_work.rollback()
+
+        with pytest.raises(PersistenceStateError, match="already been rolled back"):
+            unit_of_work.rollback()
+        assert connection.get_transaction() is None
+
+
+def test_real_postgresql_start_failure_is_translated_without_technical_details(
+    engine: Engine,
+) -> None:
+    missing_database = "fatorx_missing_f231"
+    unavailable_url = engine.url.set(database=missing_database).render_as_string(
+        hide_password=False
+    )
+    unavailable_engine = create_postgresql_engine({"DATABASE_URL": unavailable_url})
+
+    try:
+        with (
+            pytest.raises(PersistenceError) as captured,
+            PostgreSQLUnitOfWork(unavailable_engine),
+        ):
+            pytest.fail("The Unit of Work unexpectedly connected to a missing database.")
+    finally:
+        unavailable_engine.dispose()
+
+    assert str(captured.value) == "Unable to start the persistence transaction."
+    assert missing_database not in str(captured.value)
+
+
+def test_real_postgresql_commit_failure_is_translated_without_technical_details(
+    engine: Engine,
+) -> None:
+    with (
+        pytest.raises(PersistenceError) as captured,
+        PostgreSQLUnitOfWork(engine) as unit_of_work,
+    ):
+        _terminate_unit_of_work_backend(engine, unit_of_work)
+        unit_of_work.commit()
+
+    assert str(captured.value) == "Unable to commit the persistence transaction."
+    assert "pg_terminate_backend" not in str(captured.value)
+
+
+def test_real_postgresql_rollback_failure_is_translated_without_technical_details(
+    engine: Engine,
+) -> None:
+    with (
+        pytest.raises(PersistenceError) as captured,
+        PostgreSQLUnitOfWork(engine) as unit_of_work,
+    ):
+        _terminate_unit_of_work_backend(engine, unit_of_work)
+        unit_of_work.rollback()
+
+    assert str(captured.value) == "Unable to roll back the persistence transaction."
+    assert "pg_terminate_backend" not in str(captured.value)
 
 
 def test_repository_does_not_commit_implicitly(engine: Engine) -> None:

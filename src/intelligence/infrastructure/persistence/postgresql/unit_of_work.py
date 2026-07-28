@@ -6,7 +6,7 @@ from types import TracebackType
 from typing import Literal
 
 from sqlalchemy.engine import Connection, Engine, RootTransaction
-from sqlalchemy.exc import DBAPIError, IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from intelligence.application.errors import (
     PersistenceConflictError,
@@ -18,6 +18,9 @@ from intelligence.infrastructure.persistence.postgresql.repositories import (
     PostgreSQLInvestigationRepository,
     PostgreSQLWorkspaceRepository,
 )
+from intelligence.infrastructure.persistence.postgresql.transaction_guard import (
+    PostgreSQLTransactionGuard,
+)
 
 
 class PostgreSQLUnitOfWork:
@@ -27,12 +30,14 @@ class PostgreSQLUnitOfWork:
         self._engine = engine
         self._connection: Connection | None = None
         self._transaction: RootTransaction | None = None
+        self._transaction_guard: PostgreSQLTransactionGuard | None = None
         self._workspaces: PostgreSQLWorkspaceRepository | None = None
         self._companies: PostgreSQLCompanyRepository | None = None
         self._investigations: PostgreSQLInvestigationRepository | None = None
         self._entered = False
         self._closed = False
         self._committed = False
+        self._rolled_back = False
 
     @property
     def workspaces(self) -> PostgreSQLWorkspaceRepository:
@@ -71,16 +76,18 @@ class PostgreSQLUnitOfWork:
         try:
             connection = self._engine.connect()
             transaction = connection.begin()
-        except DBAPIError as error:
+        except SQLAlchemyError as error:
             if connection is not None:
                 connection.close()
             raise PersistenceError("Unable to start the persistence transaction.") from error
 
+        transaction_guard = PostgreSQLTransactionGuard(connection, transaction)
         self._connection = connection
         self._transaction = transaction
-        self._workspaces = PostgreSQLWorkspaceRepository(connection)
-        self._companies = PostgreSQLCompanyRepository(connection)
-        self._investigations = PostgreSQLInvestigationRepository(connection)
+        self._transaction_guard = transaction_guard
+        self._workspaces = PostgreSQLWorkspaceRepository(transaction_guard)
+        self._companies = PostgreSQLCompanyRepository(transaction_guard)
+        self._investigations = PostgreSQLInvestigationRepository(transaction_guard)
         self._entered = True
         return self
 
@@ -98,7 +105,7 @@ class PostgreSQLUnitOfWork:
             if transaction is not None and transaction.is_active:
                 try:
                     transaction.rollback()
-                except DBAPIError as error:
+                except SQLAlchemyError as error:
                     rollback_error = PersistenceError(
                         "Unable to roll back the persistence transaction."
                     )
@@ -120,29 +127,26 @@ class PostgreSQLUnitOfWork:
             transaction.commit()
         except IntegrityError as error:
             raise PersistenceConflictError("Persistence constraint conflict.") from error
-        except DBAPIError as error:
+        except SQLAlchemyError as error:
             raise PersistenceError("Unable to commit the persistence transaction.") from error
         self._committed = True
 
     def rollback(self) -> None:
+        if self._rolled_back:
+            raise PersistenceStateError("Unit of Work has already been rolled back.")
         transaction = self._require_active()
         try:
             transaction.rollback()
-        except DBAPIError as error:
+        except SQLAlchemyError as error:
             raise PersistenceError("Unable to roll back the persistence transaction.") from error
+        self._rolled_back = True
 
     def _require_active(self) -> RootTransaction:
-        connection = self._connection
         transaction = self._transaction
-        if (
-            not self._entered
-            or self._closed
-            or connection is None
-            or connection.closed
-            or transaction is None
-            or not transaction.is_active
-        ):
+        transaction_guard = self._transaction_guard
+        if not self._entered or self._closed or transaction is None or transaction_guard is None:
             raise PersistenceStateError("Unit of Work has no active transaction.")
+        transaction_guard.require_active()
         return transaction
 
 

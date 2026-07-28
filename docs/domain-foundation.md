@@ -113,7 +113,7 @@ Uma investigação em `CREATED` não pode possuir `started_at`. O instante repre
 
 ### 7.2 Empresa confirmada na criação
 
-`confirmed_company_id` pode ser informado em `CREATED` quando a pesquisa parte de uma empresa canônica já cadastrada no mesmo workspace. A referência não autoriza pular silenciosamente etapas do ciclo de vida: a F2.3 deverá definir se a identificação apenas valida essa empresa ou ainda produz candidatos. A foreign key composta do schema impede referência entre workspaces.
+`confirmed_company_id` pode ser informado em `CREATED` quando a pesquisa parte de uma empresa canônica já cadastrada no mesmo workspace. A referência não autoriza pular silenciosamente etapas do ciclo de vida. A decisão sobre apenas validar essa empresa ou também produzir candidatos pertence à futura resolução de entidades/orquestração, não à persistência da F2.3/F2.3.1. A foreign key composta do schema apenas impede referência entre workspaces.
 
 ### 7.3 Deadline
 

@@ -2,13 +2,14 @@
 
 ## 1. Escopo atual
 
-A fundação concluída pelas tarefas F1.1, F1.2, F2.1, F2.2, F2.2.1 e F2.3 oferece somente:
+A fundação concluída pelas tarefas F1.1, F1.2, F2.1, F2.2, F2.2.1, F2.3 e F2.3.1 oferece somente:
 
 - pacote Python independente em `src/intelligence`, com tipos fundamentais e entidades imutáveis do domínio;
 - metadata e primeira migration PostgreSQL para workspace, empresa e investigação;
 - portas de aplicação para os três repositórios e Unit of Work, sem dependência de infraestrutura;
 - factory explícita de engine, mapeadores puros e adaptadores SQLAlchemy Core para round-trip de `Workspace`, `Company` e `Investigation`;
-- Unit of Work síncrona com uma conexão/transação compartilhada, commit explícito e rollback padrão;
+- Unit of Work síncrona com uma conexão/`RootTransaction` compartilhada, commit explícito e rollback padrão;
+- guard transacional que vincula cada repositório à transação original e bloqueia leitura/escrita e autobegin após commit, rollback ou substituição da transação;
 - API FastAPI com `GET /health`;
 - shell React/Vite estático;
 - testes, lint, formatação, tipos, builds e scanner básico de segredos.
@@ -153,7 +154,7 @@ Comandos específicos usam os sufixos `:python` e `:web` quando disponíveis.
 
 Os testes unitários do domínio estão em `tests/unit/domain`. A política de sockets desabilitados também se aplica a eles. O teste em `tests/architecture/test_domain_boundaries.py` impede que o pacote de domínio importe frameworks, infraestrutura ou outras camadas internas.
 
-Mapeadores, engine e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence/test_repositories.py`. Os testes arquiteturais também impedem que aplicação importe infraestrutura, que portas importem SQLAlchemy/Alembic, que um módulo abra conexão no import e que repositórios executem commit.
+Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence/test_repositories.py`. A F2.3.1 verifica que um repositório capturado falha antes de `execute` quando a `RootTransaction` original terminou e confirma que `connection.get_transaction()` permanece nula, sem autobegin. Os testes arquiteturais também impedem que aplicação importe infraestrutura, que portas importem SQLAlchemy/Alembic, que um módulo abra conexão no import e que repositórios executem commit.
 
 ## 7. Política de rede em testes
 
@@ -180,6 +181,7 @@ Mapeadores, engine e ciclo de vida da Unit of Work possuem testes sem banco em `
 | PostgreSQL e gates locais da F2.2 | Executados e aprovados no Windows 10 em 2026-07-28; consulte `docs/validation/f2.2-postgresql-migrations.md`. |
 | Hardening relacional F2.2.1 | Executado e aprovado no Windows 10 em 2026-07-28; consulte `docs/validation/f2.2.1-relational-hardening.md`. |
 | Repositórios e Unit of Work F2.3 | Executados e aprovados no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3-persistence-round-trip.md`. |
+| Fronteira transacional F2.3.1 | Executada e aprovada no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3.1-transaction-boundary-hardening.md`. |
 | Builds locais Python e web | Executados e aprovados no Windows 10 em 2026-07-28. |
 | Workflow de CI | Configurada e revisada localmente. |
 | Execução no GitHub Actions | Não executada; o repositório não possui remoto e nenhum push foi realizado. |

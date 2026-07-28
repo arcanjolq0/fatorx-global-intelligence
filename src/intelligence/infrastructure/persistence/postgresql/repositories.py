@@ -4,13 +4,11 @@ from collections.abc import Mapping
 from typing import cast
 
 import sqlalchemy as sa
-from sqlalchemy.engine import Connection
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from intelligence.application.errors import (
     PersistenceConflictError,
     PersistenceError,
-    PersistenceStateError,
 )
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import CompanyId, InvestigationId, WorkspaceId
@@ -29,27 +27,28 @@ from intelligence.infrastructure.persistence.postgresql.tables import (
     investigation_table,
     workspace_table,
 )
+from intelligence.infrastructure.persistence.postgresql.transaction_guard import (
+    PostgreSQLTransactionGuard,
+)
 
 
 class PostgreSQLWorkspaceRepository:
     """Core adapter for workspace snapshots."""
 
-    def __init__(self, connection: Connection) -> None:
-        self._connection = connection
+    def __init__(self, transaction_guard: PostgreSQLTransactionGuard) -> None:
+        self._transaction_guard = transaction_guard
 
     def add(self, workspace: Workspace) -> None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         try:
-            self._connection.execute(
-                sa.insert(workspace_table).values(**workspace_to_values(workspace))
-            )
+            connection.execute(sa.insert(workspace_table).values(**workspace_to_values(workspace)))
         except IntegrityError as error:
             raise PersistenceConflictError("Persistence constraint conflict.") from error
         except DBAPIError as error:
             raise PersistenceError("Persistence operation failed.") from error
 
     def get(self, workspace_id: WorkspaceId) -> Workspace | None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         statement = sa.select(
             workspace_table.c.id,
             workspace_table.c.name,
@@ -59,7 +58,7 @@ class PostgreSQLWorkspaceRepository:
             workspace_table.c.updated_at,
         ).where(workspace_table.c.id == workspace_id.value)
         try:
-            values = self._connection.execute(statement).mappings().first()
+            values = connection.execute(statement).mappings().first()
         except DBAPIError as error:
             raise PersistenceError("Persistence operation failed.") from error
         return (
@@ -72,20 +71,20 @@ class PostgreSQLWorkspaceRepository:
 class PostgreSQLCompanyRepository:
     """Core adapter for workspace-scoped company snapshots."""
 
-    def __init__(self, connection: Connection) -> None:
-        self._connection = connection
+    def __init__(self, transaction_guard: PostgreSQLTransactionGuard) -> None:
+        self._transaction_guard = transaction_guard
 
     def add(self, company: Company) -> None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         try:
-            self._connection.execute(sa.insert(company_table).values(**company_to_values(company)))
+            connection.execute(sa.insert(company_table).values(**company_to_values(company)))
         except IntegrityError as error:
             raise PersistenceConflictError("Persistence constraint conflict.") from error
         except DBAPIError as error:
             raise PersistenceError("Persistence operation failed.") from error
 
     def get(self, workspace_id: WorkspaceId, company_id: CompanyId) -> Company | None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         statement = sa.select(
             company_table.c.id,
             company_table.c.workspace_id,
@@ -104,7 +103,7 @@ class PostgreSQLCompanyRepository:
             company_table.c.id == company_id.value,
         )
         try:
-            values = self._connection.execute(statement).mappings().first()
+            values = connection.execute(statement).mappings().first()
         except DBAPIError as error:
             raise PersistenceError("Persistence operation failed.") from error
         return (
@@ -115,13 +114,13 @@ class PostgreSQLCompanyRepository:
 class PostgreSQLInvestigationRepository:
     """Core adapter for workspace-scoped investigation snapshots."""
 
-    def __init__(self, connection: Connection) -> None:
-        self._connection = connection
+    def __init__(self, transaction_guard: PostgreSQLTransactionGuard) -> None:
+        self._transaction_guard = transaction_guard
 
     def add(self, investigation: Investigation) -> None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         try:
-            self._connection.execute(
+            connection.execute(
                 sa.insert(investigation_table).values(**investigation_to_values(investigation))
             )
         except IntegrityError as error:
@@ -134,7 +133,7 @@ class PostgreSQLInvestigationRepository:
         workspace_id: WorkspaceId,
         investigation_id: InvestigationId,
     ) -> Investigation | None:
-        _require_open(self._connection)
+        connection = self._transaction_guard.require_active()
         statement = sa.select(
             investigation_table.c.id,
             investigation_table.c.workspace_id,
@@ -155,7 +154,7 @@ class PostgreSQLInvestigationRepository:
             investigation_table.c.id == investigation_id.value,
         )
         try:
-            values = self._connection.execute(statement).mappings().first()
+            values = connection.execute(statement).mappings().first()
         except DBAPIError as error:
             raise PersistenceError("Persistence operation failed.") from error
         return (
@@ -163,11 +162,6 @@ class PostgreSQLInvestigationRepository:
             if values is not None
             else None
         )
-
-
-def _require_open(connection: Connection) -> None:
-    if connection.closed:
-        raise PersistenceStateError("Persistence connection is closed.")
 
 
 __all__ = [

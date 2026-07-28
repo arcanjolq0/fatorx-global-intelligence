@@ -53,6 +53,8 @@ Desde a F2.2, os testes relacionais usam exclusivamente PostgreSQL 18.4 real. Ca
 
 Na F2.3, testes unitários exercitam mapeadores válidos/inválidos, tipos fortes, `Decimal`, UTC, reconstituição e ciclo básico da Unit of Work com doubles controlados. Testes PostgreSQL reais comprovam `INSERT -> COMMIT -> SELECT` para as três entidades, todos os status aplicáveis, snapshots não iniciais e terminais, rollback padrão/em exceção, transação compartilhada, conflitos traduzidos e consultas isoladas por workspace. Um teste arquitetural por AST impede commit dentro dos repositórios e conexão durante import.
 
+Na F2.3.1, o guard transacional é testado contra conexão fechada, transação original inativa e identidade diferente em `connection.get_transaction()`. Testes PostgreSQL reais capturam repositórios antes de commit/rollback, tentam leitura e escrita depois do encerramento e confirmam que nenhuma nova transação aparece por autobegin. Doubles controlados provocam falhas SQLAlchemy de início, commit e rollback para validar tradução e mensagens públicas redigidas; esses doubles complementam, sem substituir, os testes PostgreSQL reais.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

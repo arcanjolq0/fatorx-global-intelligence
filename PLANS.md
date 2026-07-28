@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1 e F2.3 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
-- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado e round-trip por portas, repositórios Core e Unit of Work síncrona.
+- Status: **F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3 e F2.3.1 concluídas em 2026-07-28**; aguardando nova instrução antes da F2.4.
+- Código executável: API de saúde, shell web estático, ferramentas de qualidade, fundação imutável do domínio, schema PostgreSQL versionado, round-trip por portas e repositórios Core, e Unit of Work síncrona com fronteira transacional endurecida.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1 e F2.3 concluídas em 2026-07-28. F2.4 não iniciada.**
+**Status: em andamento; F2.1 concluída em 2026-07-25; F2.2, F2.2.1, F2.3 e F2.3.1 concluídas em 2026-07-28. F2.4 não iniciada.**
 
 Escopo:
 
@@ -190,6 +190,30 @@ Evidências de conclusão:
 - detalhes, inclusive uma falha intermediária de formatação corrigida, constam em `docs/validation/f2.3-persistence-round-trip.md`.
 
 A F2.3 conclui a parcela de round-trip do gate G2. A Fase 2 permanece aberta para a F2.4; não iniciar essa tarefa sem nova instrução.
+
+#### F2.3.1 — Hardening da fronteira transacional
+
+Status: **Concluída em 2026-07-28.**
+
+Entregas:
+
+- guarda compartilhada que vincula os três repositórios à `Connection` e à `RootTransaction` originalmente abertas pela Unit of Work;
+- validação, antes de toda leitura ou escrita, de conexão aberta, transação original ativa e identidade entre `connection.get_transaction()` e a transação original;
+- rejeição de repositório capturado depois de commit, rollback, fechamento ou substituição da transação, sem permitir `autobegin` acidental;
+- conexão e transação compartilhadas preservadas, com commit exclusivamente na Unit of Work;
+- semântica explícita para commit e rollback duplicados e tradução de falhas de início, commit e rollback sem detalhes técnicos nas mensagens públicas;
+- testes unitários e PostgreSQL reais, ADR-0011 e documentação operacional atualizados.
+
+Evidências de conclusão:
+
+- 225 testes Python e 1 teste web passaram, com cobertura Python total de 95,37%;
+- 58 testes PostgreSQL passaram, incluindo leitura e escrita depois de commit/rollback, ausência de `autobegin`, operação normal, fechamento, finalização duplicada e falhas reais de início/commit/rollback;
+- lint, formatação, tipos estritos, scanner de segredos, builds e `pnpm quality` foram aprovados;
+- `upgrade -> downgrade -> upgrade` terminou em `head`, e `alembic check` não encontrou operações novas;
+- nenhuma dependência, migration, funcionalidade da F2.4, endpoint ou integração foi adicionada;
+- resultados, falhas intermediárias e limitações constam em `docs/validation/f2.3.1-transaction-boundary-hardening.md`.
+
+A decisão sobre como tratar uma empresa já confirmada pertence à futura resolução de entidades/orquestração. A persistência somente mantém a referência tipada e a coerência relacional por workspace; a F2.3.1 não introduz essa política.
 
 #### F2.4 — Isolamento de serviços, memberships e auditoria mínima
 
