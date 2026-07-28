@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from dataclasses import dataclass
 from types import TracebackType
 from typing import Literal
 
@@ -213,4 +214,14 @@ class PostgreSQLUnitOfWork:
         return transaction
 
 
-__all__ = ["PostgreSQLUnitOfWork"]
+@dataclass(frozen=True, slots=True)
+class PostgreSQLUnitOfWorkFactory:
+    """Create one fresh PostgreSQL Unit of Work per service operation."""
+
+    engine: Engine
+
+    def __call__(self) -> PostgreSQLUnitOfWork:
+        return PostgreSQLUnitOfWork(self.engine)
+
+
+__all__ = ["PostgreSQLUnitOfWork", "PostgreSQLUnitOfWorkFactory"]

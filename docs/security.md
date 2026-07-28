@@ -27,7 +27,9 @@ Dados devem ser validados em cada fronteira; estar em rede interna não os torna
 - contas de serviço separadas por componente/ambiente;
 - sessões, revogação e MFA dependem da política organizacional a validar.
 
-Na F2.4.1, a identidade interna não contém credencial, membership não concede permissão por si só e a auditoria mínima não recebe payload arbitrário. Filtros tenant-first reforçam o isolamento relacional, mas não autenticam nem autorizam um ator. A F2.4.2 implementará contexto do ator e isolamento no nível dos serviços; repositórios não autorizam operações nem registram auditoria por efeito colateral.
+Na F2.4.2, `ActorContext` representa uma identidade já autenticada por camada futura, sem token ou sessão. O autorizador exige usuário e membership ativos no workspace do contexto e permissão fechada para o papel. Serviços nunca aceitam outro workspace; repositórios não autorizam nem auditam por efeito colateral. Em produção futura, somente a fronteira de autenticação poderá construir o contexto confiável.
+
+ADMIN administra somente ANALYST/VIEWER e nunca a própria membership. OWNER pode administrar owners, inclusive a si mesmo, somente quando outro owner ativo permanece. A retirada de owner bloqueia todas as linhas de owners ativos em ordem determinística, evitando a corrida de duas aprovações simultâneas.
 
 ## 4. Segredos
 
@@ -81,6 +83,10 @@ Na F2.4.1, a identidade interna não contém credencial, membership não concede
 - ambientes não produtivos usam dados sintéticos/redigidos.
 
 ## 9. Integridade e auditoria
+
+Os códigos de ação e razão da F2.4.2 são enums fechados; eventos não aceitam payload arbitrário. Sucesso de mutação e mudança compartilham commit. Negação persiste evento sem mutação e só depois retorna erro constante. Recurso de outro workspace aparece como ausente e seu ID não é copiado para o evento negado. Leituras bem-sucedidas não são auditadas nesta fase para evitar retenção prematura de alto volume.
+
+A FK obrigatória de `audit_event.actor_user_id` impede registrar `ACTOR_USER_NOT_FOUND`: o ator inexistente não pode ser referenciado sem violar o schema aprovado. Nesse único caso, a tentativa de auditoria falha, a negação original é preservada e nenhum detalhe técnico é exposto. Corrigir essa limitação exigiria decisão de schema própria; a F2.4.2 não cria migration silenciosa.
 
 - hash de artefato/evidência;
 - versões imutáveis de políticas, métodos e regras;

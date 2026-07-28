@@ -55,9 +55,9 @@ Relaciona um usuário interno a um workspace.
 
 Campos da F2.4.1: `id`, `workspace_id`, `user_id`, `role`, `status`, `created_at`, `updated_at`, `deactivated_at`.
 
-Papéis persistidos: `OWNER`, `ADMIN`, `ANALYST`, `VIEWER`. Estados: `ACTIVE`, `INACTIVE`. A combinação `(workspace_id, user_id)` é permanentemente única; reativação futura reutiliza a mesma linha. Esta fase não implementa mudança de papel/estado, permissões ou proteção do último owner.
+Papéis persistidos: `OWNER`, `ADMIN`, `ANALYST`, `VIEWER`. Estados: `ACTIVE`, `INACTIVE`. A combinação `(workspace_id, user_id)` é permanentemente única; reativação reutiliza a mesma linha. Na F2.4.2, `change_role`, `deactivate` e `reactivate` produzem snapshots imutáveis, preservam identidade/tenant e rejeitam regressão temporal. O serviço protege o último owner sob locks PostgreSQL; o repositório apenas persiste o snapshot autorizado.
 
-`UserAccount`, `WorkspaceMembership` e a persistência mínima de auditoria são materializados na F2.4.1. A existência de `requested_by`, de uma membership ou de um filtro `workspace_id` no repositório não prova autorização. Contexto do ator, matriz de permissões e isolamento nos serviços pertencem à F2.4.2.
+`UserAccount`, `WorkspaceMembership` e a persistência mínima de auditoria são materializados na F2.4.1. A F2.4.2 adiciona autorização no serviço: usuário e membership precisam existir, estar ativos e pertencer ao workspace do `ActorContext`; o papel precisa possuir permissão explícita. Filtros de repositório continuam sendo defesa em profundidade, não autorização autônoma.
 
 ## 4. Entidades empresariais
 
@@ -101,7 +101,7 @@ Campos: `id`, `workspace_id`, `requested_by`, `profile_code`, `country_code`, `i
 
 Na F2.2/F2.2.1, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` exige `started_at` nulo; todo estado posterior exige início preenchido. Estados terminais exigem `completed_at`, e estados não terminais o proíbem. A investigação pode referenciar empresa canônica previamente cadastrada no mesmo workspace, e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
 
-`requested_by` permanece UUID tipado sem foreign key também na F2.4.1. Bancos na revisão anterior podem conter investigações cujos UUIDs não correspondem a um `UserAccount`, e não existe backfill confiável. A migration não inventa identidades nem descarta ou altera investigações. A F2.4.2 validará ator e membership nos serviços; uma FK futura depende de reconciliação explícita dos dados existentes.
+`requested_by` permanece UUID tipado sem foreign key. Bancos na revisão anterior podem conter investigações cujos UUIDs não correspondem a um `UserAccount`, e não existe backfill confiável. A F2.4.2 valida novas criações no serviço e define `requested_by = actor.user_id` depois de autorizar usuário e membership. Uma FK futura ainda depende de reconciliação explícita dos dados existentes.
 
 `budget_amount` usa `NUMERIC` sem precisão ou escala fixadas e rejeita `NaN` e infinitos, preservando o contrato de `Money` finito sem arredondamento ou conversão. Valores negativos continuam estruturalmente possíveis porque a F2.1 não definiu semântica de limite orçamentário; eventual proibição exige regra de negócio explícita.
 
@@ -227,7 +227,7 @@ Resultados: `SUCCESS`, `DENIED`, `FAILURE`. Recursos iniciais: `WORKSPACE`, `USE
 
 Não registrar tokens, payload bruto, conteúdo de documento ou dado pessoal desnecessário.
 
-A materialização mínima de `AuditEvent` pertence à F2.4.1. O evento é imutável, e a porta possui somente `add`; correções futuras criam outro evento. Foreign keys de workspace e ator usam `RESTRICT`, sem cascata, para que eventos sobrevivam à desativação. A coordenação com autorização e a emissão automática por casos de uso pertencem à F2.4.2; repositórios não geram auditoria por efeito colateral.
+A materialização mínima de `AuditEvent` pertence à F2.4.1. Na F2.4.2, helpers explícitos criam eventos somente a partir do contexto confiável e de catálogos fechados. Sucesso de mutação é append na mesma transação; negação é commitada sem mutação antes do erro; falha conhecida usa `FAILURE` quando a transação permite. O repositório continua somente com `add`, sem efeito colateral oculto.
 
 ## 10. Índices e constraints iniciais
 
@@ -243,7 +243,7 @@ A materialização mínima de `AuditEvent` pertence à F2.4.1. O evento é imut�
 
 Na F2.2, `Company(id, workspace_id)` possui chave unique técnica e `Investigation(confirmed_company_id, workspace_id)` usa foreign key composta. Assim, uma empresa confirmada nunca pertence a workspace diferente do agregado, inclusive em escrita SQL direta. Essa chave é redundante em relação à PK de empresa, mas torna o isolamento verificável no banco. Row Level Security permanece adiado e não foi substituído por essa constraint.
 
-Consultas de `Company`, `Investigation` e `WorkspaceMembership` incluem `workspace_id`; `Workspace` é consultado apenas por seu próprio ID porque ele é a raiz da fronteira. Esses filtros são defesa em profundidade e não substituem contexto do ator, autorização de caso de uso ou emissão coordenada de auditoria, reservados à F2.4.2.
+Consultas de `Company`, `Investigation` e `WorkspaceMembership` incluem `workspace_id`; `Workspace` é consultado apenas por seu próprio ID porque ele é a raiz da fronteira. Os serviços da F2.4.2 obtêm esse valor somente de `ActorContext`, autorizam antes de acessar recursos e retornam ausência segura para outro workspace. Os filtros relacionais permanecem defesa em profundidade.
 
 ## 11. Retenção e exclusão
 

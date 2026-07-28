@@ -70,6 +70,22 @@ class WorkspaceMembershipRepository(Protocol):
     ) -> WorkspaceMembership | None:
         """Return the unique membership for a user within a workspace."""
 
+    def get_for_update(
+        self,
+        workspace_id: WorkspaceId,
+        user_id: UserId,
+    ) -> WorkspaceMembership | None:
+        """Lock and return the tenant-scoped membership when present."""
+
+    def list_active_owners_for_update(
+        self,
+        workspace_id: WorkspaceId,
+    ) -> list[WorkspaceMembership]:
+        """Lock active owners in deterministic order within one workspace."""
+
+    def update(self, membership: WorkspaceMembership) -> None:
+        """Persist a new snapshot without changing membership identity or scope."""
+
 
 class AuditEventRepository(Protocol):
     """Append-only persistence port for minimal audit events."""

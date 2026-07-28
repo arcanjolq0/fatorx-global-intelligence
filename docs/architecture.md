@@ -38,7 +38,7 @@ PostgreSQL + Object storage + Queue adapter
 - coordenação entre portas;
 - emissão de eventos e auditoria.
 
-Na F2.4.1, identidades internas, memberships e eventos mínimos de auditoria passam a ter domínio e persistência próprios. Isso não autentica atores, aplica permissões nem emite auditoria automaticamente: contexto do ator, autorização, serviços e coordenação de eventos permanecem reservados à F2.4.2.
+Na F2.4.2, a aplicação recebe um `ActorContext` já autenticado por uma camada futura, valida usuário e membership ativos na mesma Unit of Work e aplica uma matriz fechada de permissões. Os serviços de Membership, Company e Investigation usam exclusivamente o workspace do contexto. Isso não cria autenticação, sessão, token, middleware ou acesso ao banco pela API.
 
 ### Orquestração
 
@@ -108,6 +108,8 @@ Na F2.4.1, identidades internas, memberships e eventos mínimos de auditoria pas
 - Antes de qualquer operação, o guard comprova que não foi invalidado, conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
 - A Unit of Work invalida permanentemente o guard antes de tentar commit ou rollback. Falha do driver não reabre a fronteira; somente o `__exit__` pode executar rollback/close técnicos depois da invalidação.
 - Os seis repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
+- `UnitOfWorkFactory` cria uma instância single-use por operação; os serviços executam commit explícito, e o adaptador PostgreSQL não abre conexão durante import ou construção da factory.
+- O repositório de membership expõe somente os locks e a atualização necessários ao caso de uso. Políticas de ator, alvo e papel permanecem na aplicação.
 - Mudança de estado e evento a publicar usam transação única com outbox.
 - Workers usam chave de idempotência e inbox/registro de processamento.
 - Entrega pode ser ao menos uma vez; efeitos devem ser idempotentes.
@@ -129,8 +131,10 @@ O produto de fila/cache não está decidido. Sua escolha deve ser registrada e j
 
 - `workspace_id` é obrigatório em toda raiz agregada e chave de storage/cache.
 - Autorização é verificada no caso de uso e reforçada no adaptador de dados.
-- Na F2.3, `Company.get` e `Investigation.get` exigem `workspace_id`, e a relação investigação/empresa continua protegida por constraint composta. Isso reduz acesso acidental entre tenants, mas não comprova que um ator pertence ao workspace.
-- A F2.4.1 materializa memberships e auditoria mínima, mas não interpreta papéis. A F2.4.2 tratará contexto do ator, isolamento e autorização no nível dos serviços; essas verificações não são efeitos ocultos de `add`/`get`.
+- `CompanyService` e `InvestigationService` consultam sempre por `(actor.workspace_id, resource_id)`. Recurso ausente e recurso de outro tenant são indistinguíveis publicamente.
+- O autorizador contextual centraliza as consultas de usuário e membership; a política pura decide apenas papel/permissão. Restrições de alvo de ADMIN e proteção do último owner pertencem ao serviço de membership, nunca aos repositórios.
+- Remoção, desativação ou rebaixamento de owner bloqueia todas as memberships `OWNER`/`ACTIVE` do workspace em ordem de ID antes da decisão. Uma transação concorrente reavalia o estado depois do primeiro commit.
+- Eventos de sucesso compartilham a transação da mutação. Negações usam evento próprio e commit antes do erro seguro. Leituras bem-sucedidas não geram evento nesta fase; leituras negadas geram.
 - Coleta externa usa política de egress e resolução segura de DNS/redirecionamentos.
 - Browser, parsing e OCR executam isolados do núcleo e sem credenciais desnecessárias.
 - Logs contêm IDs, estados, durações e códigos; conteúdo e segredos são redigidos.

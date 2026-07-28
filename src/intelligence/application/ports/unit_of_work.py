@@ -58,4 +58,11 @@ class UnitOfWork(Protocol):
         """Roll back the active transaction explicitly."""
 
 
-__all__ = ["UnitOfWork"]
+class UnitOfWorkFactory(Protocol):
+    """Create a fresh single-use Unit of Work for each application operation."""
+
+    def __call__(self) -> UnitOfWork:
+        """Return a new, unopened Unit of Work instance."""
+
+
+__all__ = ["UnitOfWork", "UnitOfWorkFactory"]

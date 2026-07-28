@@ -2,13 +2,15 @@
 
 ## 1. Escopo atual
 
-A fundação concluída até a F2.4.1 oferece somente:
+A fundação concluída até a F2.4.2 oferece somente:
 
 - pacote Python independente em `src/intelligence`, com tipos fundamentais e entidades imutáveis do domínio;
 - metadata e duas migrations PostgreSQL para as seis tabelas aprovadas;
 - identidades internas sem credenciais, memberships por workspace e eventos mínimos de auditoria append-only;
 - portas de aplicação para seis repositórios e Unit of Work, sem dependência de infraestrutura;
 - factory explícita de engine, mapeadores puros e adaptadores SQLAlchemy Core para os seis snapshots persistidos;
+- `ActorContext`, autorização por matriz fechada e serviços mínimos de Membership, Company e Investigation;
+- factory de Unit of Work single-use, locks explícitos do último owner e auditoria coordenada por caso de uso;
 - Unit of Work síncrona com uma conexão/`RootTransaction` compartilhada, commit explícito e rollback padrão;
 - guard transacional que vincula cada repositório à transação original e bloqueia leitura/escrita e autobegin após commit, rollback ou substituição da transação;
 - invalidação irreversível do guard antes de qualquer tentativa de finalização; erros de commit/rollback não permitem reutilização pública, embora o `__exit__` ainda tente a limpeza técnica;
@@ -16,7 +18,7 @@ A fundação concluída até a F2.4.1 oferece somente:
 - shell React/Vite estático;
 - testes, lint, formatação, tipos, builds e scanner básico de segredos.
 
-Não há sessão ORM, acesso ao banco pela API, serviço de aplicação completo, transição de investigação, fila, autenticação, autorização, emissão automática de auditoria, modelo, conector, fonte externa ou processamento documental. Contexto do ator, matriz de permissões, serviços de membership, proteção do último owner e isolamento no nível dos serviços pertencem exclusivamente à F2.4.2.
+Não há sessão ORM, acesso ao banco pela API, transição de investigação, fila, autenticação real, sessão/token, modelo, conector, fonte externa ou processamento documental. Os serviços não estão conectados a endpoint e recebem `ActorContext` somente de chamadas internas/testes; uma futura camada de autenticação será a única autorizada a construir esse contexto em produção.
 
 ## 2. Runtimes e ferramentas
 
@@ -103,9 +105,11 @@ pnpm db:downgrade
 pnpm db:upgrade
 ```
 
-`alembic.ini` não contém URL. `migrations/env.py` exige a variável e usa o metadata em `src/intelligence/infrastructure/persistence/postgresql`. A revisão `20260728_01` cria `workspace`, `company` e `investigation`; a revisão `20260728_02` cria somente `user_account`, `workspace_membership` e `audit_event`. `alembic_version` é administrada pelo Alembic.
+`alembic.ini` não contém URL. `migrations/env.py` exige a variável e usa o metadata em `src/intelligence/infrastructure/persistence/postgresql`. A revisão `20260728_01` cria `workspace`, `company` e `investigation`; a revisão `20260728_02` cria somente `user_account`, `workspace_membership` e `audit_event`. A F2.4.2 não altera schema nem cria migration. `alembic_version` é administrada pelo Alembic.
 
-A aplicação constrói o engine por `create_postgresql_engine`, que valida a mesma `DATABASE_URL`, não conecta durante import e devolve ao chamador a responsabilidade de executar `dispose()`. Os seis repositórios só existem dentro de uma `PostgreSQLUnitOfWork` ativa e compartilham a transação original.
+A aplicação constrói o engine por `create_postgresql_engine`, que valida a mesma `DATABASE_URL`, não conecta durante import e devolve ao chamador a responsabilidade de executar `dispose()`. `PostgreSQLUnitOfWorkFactory` cria uma UoW nova e ainda fechada por operação. Os seis repositórios só existem dentro de uma `PostgreSQLUnitOfWork` ativa e compartilham a transação original.
+
+Os serviços recebem a factory, `ContextualAuthorizer` e `Clock` por construtor. Nenhum aceita `workspace_id` separado. Mutações chamam repositório e append de auditoria antes de um único `unit_of_work.commit()`. Leituras permitidas finalizam explicitamente a UoW sem evento; leituras negadas persistem evento redigido.
 
 ## 5. Execução local
 
@@ -156,7 +160,7 @@ Comandos específicos usam os sufixos `:python` e `:web` quando disponíveis.
 
 Os testes unitários do domínio estão em `tests/unit/domain`. A política de sockets desabilitados também se aplica a eles. O teste em `tests/architecture/test_domain_boundaries.py` impede que o pacote de domínio importe frameworks, infraestrutura ou outras camadas internas.
 
-Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence`. A F2.4.1 estende os cenários aos seis repositórios, incluindo e-mail único, membership tenant-first, auditoria append-only, falhas de finalização e ausência de autobegin. Os testes arquiteturais impedem imports entre camadas, conexão durante import, commit/rollback nos repositórios, métodos mutáveis de auditoria e antecipação de autenticação ou autorização.
+Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem banco em `tests/unit/infrastructure/persistence/postgresql`. Os round-trips e comportamentos transacionais reais ficam em `tests/integration/persistence`. A F2.4.2 adiciona fakes transacionais para serviços e PostgreSQL real para isolamento, atomicidade, `FOR UPDATE`, reavaliação após espera e corridas do último owner. Testes arquiteturais impedem imports entre camadas, SQL nos serviços, conexão durante import, commit/rollback nos repositórios, mutação da auditoria e antecipação de autenticação/API.
 
 ## 7. Política de rede em testes
 
@@ -186,6 +190,7 @@ Mapeadores, engine, guard e ciclo de vida da Unit of Work possuem testes sem ban
 | Fronteira transacional F2.3.1 | Executada e aprovada no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3.1-transaction-boundary-hardening.md`. |
 | Invalidação terminal F2.3.2 | Executada e aprovada no Windows 10 em 2026-07-28; consulte `docs/validation/f2.3.2-unit-of-work-poisoning.md`. |
 | Identidades, memberships e auditoria F2.4.1 | Executadas e aprovadas no Windows 10 em 2026-07-28; consulte `docs/validation/f2.4.1-identities-memberships-audit.md`. |
+| Autorização e isolamento nos serviços F2.4.2 | Executados e aprovados no Windows 10 em 2026-07-28; consulte `docs/validation/f2.4.2-service-authorization-isolation.md`. |
 | Builds locais Python e web | Executados e aprovados no Windows 10 em 2026-07-28. |
 | Workflow de CI | Configurada e revisada localmente. |
 | Execução no GitHub Actions | Não executada; o repositório não possui remoto e nenhum push foi realizado. |

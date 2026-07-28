@@ -4,7 +4,7 @@
 
 A tarefa F2.1 implementa somente tipos fundamentais, entidades imutáveis e invariantes de criação. O código está em `src/intelligence/domain` e depende exclusivamente da biblioteca padrão do Python.
 
-Não fazem parte desta fundação: persistência, migrations, repositórios, serviços de aplicação, transições de estado, API de negócio, autenticação, conectores, evidências, scoring, relatórios ou integrações externas. Esses limites são verificados por teste arquitetural.
+Não fazem parte da camada de domínio: persistência, migrations, repositórios, serviços de aplicação, API de negócio, autenticação, conectores, evidências, scoring, relatórios ou integrações externas. A F2.4.2 adiciona serviços na camada de aplicação sem alterar essa fronteira; testes arquiteturais continuam impedindo imports externos no domínio.
 
 ## 2. Decisões de representação
 
@@ -96,11 +96,11 @@ Permanecem para tarefas posteriores, sem implementação implícita:
 
 - catálogos oficiais e versionados de países e moedas;
 - definição de `JurisdictionCode` e registros subnacionais;
-- autenticação, contexto do ator e regras de autorização;
+- autenticação real, sessão, token e construção confiável do contexto na API;
 - aliases, endereços, identificadores externos e relações de empresas;
 - transições da investigação e comandos de domínio;
-- isolamento no nível dos serviços, mudanças de membership e autorização da F2.4.2;
-- emissão coordenada/automática de auditoria, retenção executável e concorrência otimista;
+- endpoints, transições de investigação e bootstrap do primeiro owner;
+- retenção executável, expurgo e concorrência otimista de agregados além da proteção do último owner;
 - contratos de conectores, evidências, risco e relatórios.
 
 ## 7. Decisões pré-schema da F2.2
@@ -139,7 +139,7 @@ O construtor comum de `Investigation` permanece sendo o contrato de criação: e
 
 `Investigation.reconstitute(...)` é o contrato explícito de leitura de snapshots persistidos. Ele aceita qualquer estado canônico, exige versão positiva e reaplica todos os tipos fortes, normalização UTC, deadline, ordem temporal e coerência de início/término. Estados diferentes de `CREATED` exigem `started_at`; estados terminais exigem `completed_at`; estados não terminais o proíbem. A implementação interna inicializa o snapshot imutável somente depois de receber todos os valores e o valida no próprio módulo de domínio. O mapper não altera atributos privados e não corrige dados inválidos.
 
-A reconstituição não representa comando, transição ou autorização. Os repositórios e a Unit of Work apenas persistem snapshots. A F2.4.1 materializa identidades, memberships e auditoria mínima; isolamento contextual, serviços e autorização continuam separados para a F2.4.2.
+A reconstituição não representa comando, transição ou autorização. Os repositórios e a Unit of Work apenas persistem snapshots. A F2.4.2 mantém essa separação: o autorizador e os serviços estão na aplicação, e os repositórios continuam livres de contexto do ator e permissões.
 
 ## 9. Decisões pré-schema da F2.4.1
 
@@ -149,12 +149,16 @@ A reconstituição não representa comando, transição ou autorização. Os rep
 
 ### 9.2 Membership única
 
-Existe no máximo uma `WorkspaceMembership` por `(workspace_id, user_id)`. O vínculo possui ID próprio, papel e estado, mas nenhum comando de mudança nesta fase. Uma futura reativação reutilizará a mesma linha; alteração de papel/estado, permissões e proteção do último owner pertencem à F2.4.2.
+Existe no máximo uma `WorkspaceMembership` por `(workspace_id, user_id)`. O vínculo possui ID próprio, papel e estado. Na F2.4.2, métodos imutáveis produzem novos snapshots para alteração de papel, desativação e reativação; a aplicação autoriza o comando e o PostgreSQL serializa a retirada de owners ativos por locks determinísticos.
 
 ### 9.3 Solicitante de investigação
 
-`Investigation.requested_by` não recebe foreign key na F2.4.1. A revisão anterior pode conter UUIDs sem identidade correspondente e não há backfill admissível. A validação de existência e membership ficará no serviço futuro da F2.4.2; uma FK exige reconciliação posterior explícita.
+`Investigation.requested_by` não recebe foreign key. A revisão anterior pode conter UUIDs sem identidade correspondente e não há backfill admissível. Para novas criações da F2.4.2, o serviço valida o ator e grava exatamente `actor.user_id`; uma FK ainda exige reconciliação posterior explícita.
 
 ### 9.4 Auditoria append-only e retenção
 
 `AuditEvent` é imutável, e sua persistência oferece apenas adição. Não existem update/delete nem trigger nesta fase; correção é outro evento. O schema não contém payload arbitrário. Foreign keys usam `RESTRICT`, não cascade, e eventos sobrevivem à desativação. Não há expurgo genérico; retenção futura depende de política aprovada e deve produzir registro auditável.
+
+## 10. Transições de membership na F2.4.2
+
+`WorkspaceMembership.change_role`, `deactivate` e `reactivate` preservam `id`, `workspace_id` e `user_id`, retornam nova instância e exigem instante UTC não regressivo. A entidade protege apenas estado e tempo. A matriz `OWNER`/`ADMIN`/`ANALYST`/`VIEWER`, as restrições de autoatendimento e a proteção do último owner permanecem na camada de aplicação.

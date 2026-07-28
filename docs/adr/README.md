@@ -24,3 +24,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0010 | Accepted | SQLAlchemy Core síncrono, Alembic e isolamento relacional inicial |
 | 0011 | Accepted | portas, repositórios Core, Unit of Work e reconstituição de snapshots |
 | 0012 | Accepted | identidades internas, membership única por workspace e auditoria append-only |
+| 0013 | Accepted | contexto do ator, autorização por papel, último owner e auditoria coordenada |

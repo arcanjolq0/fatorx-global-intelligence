@@ -293,33 +293,72 @@ def test_audit_repository_surfaces_are_append_only() -> None:
         assert methods.isdisjoint({"delete", "replace", "save", "update"})
 
 
-def test_f241_does_not_add_authentication_or_authorization_services() -> None:
-    """Actor context, authentication, and authorization remain deferred to F2.4.2."""
+def test_f242_application_services_do_not_import_sql_or_infrastructure() -> None:
+    """Tenant-scoped services coordinate ports without embedding persistence."""
 
-    forbidden_modules = {
-        "actor_context",
-        "auth",
-        "authentication",
-        "authorization",
-        "membership_service",
-        "permissions",
-    }
-    forbidden_classes = {
-        "ActorContext",
-        "AuthenticationService",
-        "AuthorizationService",
-        "MembershipService",
-        "PermissionMatrix",
-    }
-    source_root = Path(__file__).parents[2] / "src"
-    discovered_modules: set[str] = set()
-    discovered_classes: set[str] = set()
-    for path in sorted(source_root.rglob("*.py")):
-        discovered_modules.add(path.stem.lower())
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        discovered_classes.update(
-            node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-        )
+    services_root = APPLICATION_ROOT / "services"
+    violations: list[str] = []
+    for path in sorted(services_root.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        if "SELECT " in source.upper() or "UPDATE " in source.upper():
+            violations.append(f"{path.name} -> SQL text")
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] == "sqlalchemy" or module.startswith(
+                    "intelligence.infrastructure"
+                ):
+                    violations.append(f"{path.name} -> {module}")
 
-    assert discovered_modules.isdisjoint(forbidden_modules)
-    assert discovered_classes.isdisjoint(forbidden_classes)
+    assert violations == []
+
+
+def test_authorization_policy_has_no_io_or_repository_access() -> None:
+    """The role matrix remains a pure deterministic class."""
+
+    path = APPLICATION_ROOT / "authorization.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    policy = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "RolePermissionPolicy"
+    )
+    forbidden_calls = {
+        node.func.attr
+        for node in ast.walk(policy)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+    }
+
+    assert forbidden_calls.isdisjoint({"add", "commit", "execute", "get", "rollback"})
+
+
+def test_repositories_do_not_import_application_permissions_or_authorization() -> None:
+    """Repository adapters filter persistence vocabulary but never decide access."""
+
+    path = INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py"
+    source = path.read_text(encoding="utf-8")
+
+    assert "Permission" not in source
+    assert "AuthorizedActor" not in source
+    assert "ActorContext" not in source
+    assert "AuthorizationDeniedError" not in source
+
+
+def test_api_has_no_f242_services_authentication_or_new_endpoints() -> None:
+    """F2.4.2 is application-only and does not expose an HTTP surface."""
+
+    violations: list[str] = []
+    for path in sorted(API_ROOT.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if "intelligence.application.services" in source:
+            violations.append(f"{path.name} -> application services")
+        if any(marker in source.lower() for marker in ("jwt", "oauth", "middleware")):
+            violations.append(f"{path.name} -> authentication surface")
+
+    assert violations == []

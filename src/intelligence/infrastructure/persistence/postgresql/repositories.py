@@ -13,7 +13,13 @@ from intelligence.application.errors import (
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import CompanyId, InvestigationId, UserId, WorkspaceId
-from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
+from intelligence.domain.identities import (
+    EmailAddress,
+    MembershipRole,
+    MembershipStatus,
+    UserAccount,
+    WorkspaceMembership,
+)
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
 from intelligence.infrastructure.persistence.postgresql.mappers import (
@@ -240,20 +246,81 @@ class PostgreSQLWorkspaceMembershipRepository:
         workspace_id: WorkspaceId,
         user_id: UserId,
     ) -> WorkspaceMembership | None:
+        return self._find(workspace_id, user_id, for_update=False)
+
+    def get_for_update(
+        self,
+        workspace_id: WorkspaceId,
+        user_id: UserId,
+    ) -> WorkspaceMembership | None:
+        """Lock the requested membership inside the original UoW transaction."""
+
+        return self._find(workspace_id, user_id, for_update=True)
+
+    def list_active_owners_for_update(
+        self,
+        workspace_id: WorkspaceId,
+    ) -> list[WorkspaceMembership]:
+        """Lock active owners by stable membership ID order."""
+
         connection = self._transaction_guard.require_active()
-        statement = sa.select(
-            workspace_membership_table.c.id,
-            workspace_membership_table.c.workspace_id,
-            workspace_membership_table.c.user_id,
-            workspace_membership_table.c.role,
-            workspace_membership_table.c.status,
-            workspace_membership_table.c.created_at,
-            workspace_membership_table.c.updated_at,
-            workspace_membership_table.c.deactivated_at,
-        ).where(
+        statement = (
+            self._select_membership()
+            .where(
+                workspace_membership_table.c.workspace_id == workspace_id.value,
+                workspace_membership_table.c.status == MembershipStatus.ACTIVE.value,
+                workspace_membership_table.c.role == MembershipRole.OWNER.value,
+            )
+            .order_by(workspace_membership_table.c.id)
+            .with_for_update()
+        )
+        try:
+            values = connection.execute(statement).mappings().all()
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+        return [workspace_membership_from_values(cast(Mapping[str, object], row)) for row in values]
+
+    def update(self, membership: WorkspaceMembership) -> None:
+        """Update mutable snapshot fields while matching all stable identity fields."""
+
+        connection = self._transaction_guard.require_active()
+        statement = (
+            sa.update(workspace_membership_table)
+            .where(
+                workspace_membership_table.c.workspace_id == membership.workspace_id.value,
+                workspace_membership_table.c.user_id == membership.user_id.value,
+                workspace_membership_table.c.id == membership.id.value,
+            )
+            .values(
+                role=membership.role.value,
+                status=membership.status.value,
+                updated_at=membership.updated_at,
+                deactivated_at=membership.deactivated_at,
+            )
+        )
+        try:
+            result = connection.execute(statement)
+        except IntegrityError as error:
+            raise PersistenceConflictError("Persistence constraint conflict.") from error
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+        if result.rowcount != 1:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+
+    def _find(
+        self,
+        workspace_id: WorkspaceId,
+        user_id: UserId,
+        *,
+        for_update: bool,
+    ) -> WorkspaceMembership | None:
+        connection = self._transaction_guard.require_active()
+        statement = self._select_membership().where(
             workspace_membership_table.c.workspace_id == workspace_id.value,
             workspace_membership_table.c.user_id == user_id.value,
         )
+        if for_update:
+            statement = statement.with_for_update()
         try:
             values = connection.execute(statement).mappings().first()
         except DBAPIError as error:
@@ -262,6 +329,19 @@ class PostgreSQLWorkspaceMembershipRepository:
             workspace_membership_from_values(cast(Mapping[str, object], values))
             if values is not None
             else None
+        )
+
+    @staticmethod
+    def _select_membership() -> sa.Select[tuple[object, ...]]:
+        return sa.select(
+            workspace_membership_table.c.id,
+            workspace_membership_table.c.workspace_id,
+            workspace_membership_table.c.user_id,
+            workspace_membership_table.c.role,
+            workspace_membership_table.c.status,
+            workspace_membership_table.c.created_at,
+            workspace_membership_table.c.updated_at,
+            workspace_membership_table.c.deactivated_at,
         )
 
 

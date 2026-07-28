@@ -3,8 +3,8 @@
 ## 1. Estado
 
 - Fase atual: **Fase 2 — Domínio e persistência inicial**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.1 concluídas em 2026-07-28**; F2.4.2 não iniciada.
-- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core e Unit of Work síncrona endurecida. Identidades, memberships e auditoria mínima existem sem autenticação ou autorização.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 concluídas em 2026-07-28**; nenhuma fase posterior iniciada.
+- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida e serviços mínimos tenant-scoped. Identidades e memberships agora sustentam contexto do ator, autorização por papel, proteção concorrente do último owner e auditoria coordenada, sem autenticação ou acesso pela API.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: em andamento; F2.1 a F2.4.1 concluídas. F2.4.2 não iniciada.**
+**Status: concluída; F2.1 a F2.4.2 entregues. Nenhuma fase posterior foi iniciada.**
 
 Escopo:
 
@@ -264,17 +264,27 @@ Limites: identidade interna não é autenticação; papel persistido não aplica
 
 #### F2.4.2 — Contexto do ator, autorização e isolamento nos serviços
 
-Status: **Não iniciada e não autorizada por esta entrega.**
+Status: **Concluída em 2026-07-28.**
 
-Escopo reservado:
+Entregas:
 
-- comprovar workspace e membership do ator nos serviços/casos de uso;
-- aplicar matriz de permissões e proteção do último owner;
-- implementar serviços de membership e mudanças controladas de papel/estado;
-- registrar auditoria coordenada de ações permitidas e negadas;
-- validar `Investigation.requested_by` na aplicação antes de considerar uma futura foreign key.
+- `ActorContext` imutável, catálogo fechado de oito permissões e matriz pura para `OWNER`, `ADMIN`, `ANALYST` e `VIEWER`;
+- autorizador contextual que valida usuário e membership ativos na mesma Unit of Work do caso de uso;
+- serviços mínimos de Membership, Company e Investigation sem aceitar um segundo `workspace_id`;
+- mudanças imutáveis de papel/estado e proteção do último owner com `SELECT ... FOR UPDATE`, filtro tenant-first e ordem determinística;
+- `Investigation.requested_by` definido exclusivamente como o ator autorizado em novas criações;
+- auditoria coordenada: sucesso na mesma transação da mutação, negações persistidas antes do erro seguro e falhas conhecidas sem falso sucesso;
+- testes unitários, arquiteturais e PostgreSQL reais, inclusive corridas concorrentes, documentados em `docs/validation/f2.4.2-service-authorization-isolation.md`.
 
-Fora deste escopo permanecem endpoints de negócio, autenticação completa, transições da investigação, conectores e integrações externas.
+Evidências de conclusão:
+
+- 494 testes Python e 1 teste web passaram, com cobertura Python total de 95,54%;
+- 113 testes PostgreSQL reais passaram;
+- as corridas concorrentes de desativação e rebaixamento foram repetidas três vezes no gate dedicado;
+- instalações frozen, lint, formatação, tipos estritos, scanner, builds, `pnpm quality` e ciclo Alembic completo foram aprovados;
+- `alembic check` não detectou operação nova, confirmando ausência de migration na F2.4.2.
+
+Limites: `ActorContext` não autentica nem representa sessão/token; o bootstrap do primeiro owner permanece adiado; leituras bem-sucedidas não são auditadas nesta etapa; ator inexistente não pode produzir evento persistido devido à FK obrigatória de auditoria. Não foram criados endpoints, middleware, JWT/OAuth, migrations, dependências, transições de investigação, conectores ou integrações externas.
 
 ### Fase 3 — Framework de conectores simulados
 

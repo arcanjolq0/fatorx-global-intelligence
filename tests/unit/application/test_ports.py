@@ -2,6 +2,7 @@
 
 import pytest
 
+from intelligence.application.ports.clock import Clock
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
     CompanyRepository,
@@ -10,7 +11,7 @@ from intelligence.application.ports.repositories import (
     WorkspaceMembershipRepository,
     WorkspaceRepository,
 )
-from intelligence.application.ports.unit_of_work import UnitOfWork
+from intelligence.application.ports.unit_of_work import UnitOfWork, UnitOfWorkFactory
 
 
 @pytest.mark.parametrize(
@@ -22,7 +23,9 @@ from intelligence.application.ports.unit_of_work import UnitOfWork
         UserRepository,
         WorkspaceMembershipRepository,
         AuditEventRepository,
+        Clock,
         UnitOfWork,
+        UnitOfWorkFactory,
     ],
 )
 def test_persistence_ports_are_protocols_not_technical_implementations(
@@ -63,6 +66,22 @@ def test_audit_event_protocol_accepts_add_only_structural_adapter() -> None:
     repository = StructuralAuditEventRepository()
 
     assert _audit_event_repository(repository) is repository
+
+
+def test_clock_and_unit_of_work_factory_accept_structural_adapters() -> None:
+    class StructuralClock:
+        def now(self) -> object:
+            return object()
+
+    class StructuralFactory:
+        def __call__(self) -> object:
+            return object()
+
+    clock: Clock = StructuralClock()  # type: ignore[assignment]
+    factory: UnitOfWorkFactory = StructuralFactory()  # type: ignore[assignment]
+
+    assert clock.now() is not None
+    assert factory() is not None
 
 
 def _workspace_repository(repository: WorkspaceRepository) -> WorkspaceRepository:

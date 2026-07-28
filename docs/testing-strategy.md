@@ -59,6 +59,8 @@ Na F2.3.2, os doubles mantêm deliberadamente a `RootTransaction` ativa e sua id
 
 Na F2.4.1, testes unitários cobrem e-mail canônico, identidades, memberships, auditoria imutável, IDs fortes e mapeadores. PostgreSQL real comprova a nova revision a partir de banco vazio e da revision anterior — inclusive com `requested_by` órfão preservado —, constraints, downgrade de uma revision, re-upgrade e round-trip dos três novos snapshots. Os testes transacionais exigem o mesmo guard nos seis repositórios, rollback sem dados parciais, bloqueio depois de finalização/falha e nenhuma transação por autobegin.
 
+Na F2.4.2, uma tabela unitária exaustiva cobre cada combinação de quatro papéis e oito permissões. Fakes com estado transacional exercitam autorizador e serviços sem simular PostgreSQL. Integração real comprova escopo exclusivo do ator, `requested_by`, auditoria atômica, negações persistidas, falhas sem sucesso, locks da membership e terminalidade do guard. Corridas usam `Barrier`, `Event`, threads daemon, `lock_timeout` local e join limitado; sleeps arbitrários não são o mecanismo de sincronização.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;
@@ -70,7 +72,7 @@ Na F2.4.1, testes unitários cobrem e-mail canônico, identidades, memberships, 
 - rate limit, budget e payload excessivo;
 - corrida/idempotência e replay.
 
-O filtro relacional e a consulta tenant-first de membership são testados, mas autorização por papel, contexto do ator e auditoria automática de permissão/negação pertencem à F2.4.2. Esses testes serão adicionados no nível dos serviços, separados dos testes de round-trip dos repositórios.
+O filtro relacional e a consulta tenant-first de membership continuam testados separadamente. A F2.4.2 testa autorização por papel, contexto do ator e auditoria coordenada no nível dos serviços, sem transferir regras de acesso aos testes ou adaptadores de repositório.
 
 ### 3.5 Testes ponta a ponta
 

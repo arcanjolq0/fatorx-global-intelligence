@@ -254,3 +254,72 @@ def test_membership_is_immutable() -> None:
 
     with pytest.raises(FrozenInstanceError):
         membership.__setattr__("role", MembershipRole.VIEWER)
+
+
+def test_change_role_returns_new_snapshot_and_preserves_identity_and_state() -> None:
+    membership = _membership()
+    changed_at = datetime(2026, 7, 28, 14, tzinfo=UTC)
+
+    changed = membership.change_role(MembershipRole.VIEWER, updated_at=changed_at)
+
+    assert changed is not membership
+    assert changed.id == membership.id
+    assert changed.workspace_id == membership.workspace_id
+    assert changed.user_id == membership.user_id
+    assert changed.role is MembershipRole.VIEWER
+    assert changed.status is membership.status
+    assert changed.deactivated_at is membership.deactivated_at
+    assert changed.updated_at == changed_at
+    assert membership.role is MembershipRole.ANALYST
+
+
+def test_change_role_preserves_inactive_deactivation_snapshot() -> None:
+    deactivated_at = datetime(2026, 7, 28, 14, tzinfo=UTC)
+    membership = _membership(
+        status=MembershipStatus.INACTIVE,
+        updated_at=deactivated_at,
+        deactivated_at=deactivated_at,
+    )
+
+    changed = membership.change_role(
+        MembershipRole.VIEWER,
+        updated_at=deactivated_at + timedelta(minutes=1),
+    )
+
+    assert changed.status is MembershipStatus.INACTIVE
+    assert changed.deactivated_at == deactivated_at
+
+
+def test_deactivate_and_reactivate_return_new_consistent_snapshots() -> None:
+    membership = _membership()
+    deactivated_at = datetime(2026, 7, 28, 14, tzinfo=UTC)
+
+    inactive = membership.deactivate(updated_at=deactivated_at)
+    active = inactive.reactivate(updated_at=deactivated_at + timedelta(minutes=1))
+
+    assert inactive.id == membership.id == active.id
+    assert inactive.status is MembershipStatus.INACTIVE
+    assert inactive.deactivated_at == deactivated_at
+    assert active.status is MembershipStatus.ACTIVE
+    assert active.deactivated_at is None
+    assert active.updated_at == deactivated_at + timedelta(minutes=1)
+
+
+def test_membership_transitions_reject_invalid_state_role_and_regressive_time() -> None:
+    membership = _membership()
+    changed_at = datetime(2026, 7, 28, 14, tzinfo=UTC)
+    inactive = membership.deactivate(updated_at=changed_at)
+
+    with pytest.raises(InvariantViolationError, match="MembershipRole"):
+        membership.change_role(cast(MembershipRole, "VIEWER"), updated_at=changed_at)
+    with pytest.raises(InvariantViolationError, match="cannot regress"):
+        membership.change_role(
+            MembershipRole.VIEWER,
+            updated_at=membership.updated_at - timedelta(seconds=1),
+        )
+    with pytest.raises(InvariantViolationError, match="active membership"):
+        inactive.deactivate(updated_at=changed_at + timedelta(minutes=1))
+    with pytest.raises(InvariantViolationError, match="inactive membership"):
+        membership.reactivate(updated_at=changed_at)
+    with pytest.raises(InvalidDateTimeError):
+        membership.deactivate(updated_at=datetime(2026, 7, 28, 14))

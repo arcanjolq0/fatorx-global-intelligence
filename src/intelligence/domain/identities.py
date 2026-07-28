@@ -1,6 +1,6 @@
 """Internal identities and workspace membership snapshots."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
 from unicodedata import category
@@ -144,6 +144,45 @@ class WorkspaceMembership:
         object.__setattr__(self, "updated_at", updated_at)
         object.__setattr__(self, "deactivated_at", deactivated_at)
 
+    def change_role(
+        self,
+        new_role: MembershipRole,
+        *,
+        updated_at: datetime,
+    ) -> WorkspaceMembership:
+        """Return a new snapshot with another role and stable identity."""
+
+        if not isinstance(new_role, MembershipRole):
+            raise InvariantViolationError("New membership role must be a MembershipRole.")
+        changed_at = _non_regressive_timestamp(updated_at, current=self.updated_at)
+        return replace(self, role=new_role, updated_at=changed_at)
+
+    def deactivate(self, *, updated_at: datetime) -> WorkspaceMembership:
+        """Return an inactive snapshot without mutating the current one."""
+
+        if self.status is not MembershipStatus.ACTIVE:
+            raise InvariantViolationError("Only an active membership can be deactivated.")
+        changed_at = _non_regressive_timestamp(updated_at, current=self.updated_at)
+        return replace(
+            self,
+            status=MembershipStatus.INACTIVE,
+            updated_at=changed_at,
+            deactivated_at=changed_at,
+        )
+
+    def reactivate(self, *, updated_at: datetime) -> WorkspaceMembership:
+        """Return an active snapshot and clear the previous deactivation timestamp."""
+
+        if self.status is not MembershipStatus.INACTIVE:
+            raise InvariantViolationError("Only an inactive membership can be reactivated.")
+        changed_at = _non_regressive_timestamp(updated_at, current=self.updated_at)
+        return replace(
+            self,
+            status=MembershipStatus.ACTIVE,
+            updated_at=changed_at,
+            deactivated_at=None,
+        )
+
 
 def _validate_membership_types(membership: WorkspaceMembership) -> None:
     if not isinstance(membership.id, MembershipId):
@@ -156,6 +195,13 @@ def _validate_membership_types(membership: WorkspaceMembership) -> None:
         raise InvariantViolationError("WorkspaceMembership role must be a MembershipRole.")
     if not isinstance(membership.status, MembershipStatus):
         raise InvariantViolationError("WorkspaceMembership status must be a MembershipStatus.")
+
+
+def _non_regressive_timestamp(value: datetime, *, current: datetime) -> datetime:
+    normalized = normalize_utc(value)
+    if normalized < current:
+        raise InvariantViolationError("Membership transition timestamp cannot regress.")
+    return normalized
 
 
 def _required_text(value: str, *, field_name: str) -> str:

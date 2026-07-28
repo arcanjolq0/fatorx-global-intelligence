@@ -45,7 +45,7 @@ Essas invariantes descrevem snapshots persistidos. Elas não autorizam alteraç�
 
 Uma nova investigação continua sendo construída somente em `CREATED`, com `state_version = 1` e sem timestamps de início/término. A F2.3 introduz `Investigation.reconstitute(...)` para ler snapshots que já foram persistidos em outros estados. O método revalida o vocabulário, a versão positiva, os tipos e todas as regras temporais desta seção, sem executar uma transição e sem produzir evento.
 
-Somente o mapper de persistência usa esse contrato no round-trip atual. A F2.4.1 adiciona a fundação persistida de identidades, memberships e auditoria, mas não executa transições nem decide se `requested_by` é um ator autorizado. Essa validação, o contexto do ator e a emissão coordenada de auditoria pertencem à F2.4.2.
+Somente o mapper de persistência usa o contrato de reconstituição. A F2.4.2 adiciona criação mínima autorizada, ainda exclusivamente em `CREATED`: o workspace vem do `ActorContext`, `requested_by` é exatamente `actor.user_id` e o evento `INVESTIGATION_CREATED` compartilha a transação. Nenhuma transição de estado, planejamento, resolução de entidade ou conector foi adicionada.
 
 ## 3. Fluxo
 

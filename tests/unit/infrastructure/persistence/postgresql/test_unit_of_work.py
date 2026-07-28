@@ -9,7 +9,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from intelligence.application.errors import PersistenceError, PersistenceStateError
-from intelligence.application.ports.unit_of_work import UnitOfWork
+from intelligence.application.ports.unit_of_work import UnitOfWork, UnitOfWorkFactory
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.identifiers import UserId, WorkspaceId
 from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
@@ -21,6 +21,7 @@ from intelligence.infrastructure.persistence.postgresql.repositories import (
 )
 from intelligence.infrastructure.persistence.postgresql.unit_of_work import (
     PostgreSQLUnitOfWork,
+    PostgreSQLUnitOfWorkFactory,
 )
 
 
@@ -160,6 +161,19 @@ def test_concrete_unit_of_work_satisfies_the_application_port() -> None:
     application_port: UnitOfWork = unit_of_work
 
     assert application_port is unit_of_work
+
+
+def test_postgresql_factory_returns_a_fresh_unopened_unit_of_work_per_call() -> None:
+    engine = FakeEngine()
+    factory: UnitOfWorkFactory = PostgreSQLUnitOfWorkFactory(cast(Engine, engine))
+
+    first = factory()
+    second = factory()
+
+    assert isinstance(first, PostgreSQLUnitOfWork)
+    assert isinstance(second, PostgreSQLUnitOfWork)
+    assert first is not second
+    assert engine.connect_calls == 0
 
 
 def test_exit_without_explicit_commit_rolls_back_and_closes_connection() -> None:
