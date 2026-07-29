@@ -104,4 +104,12 @@ supply chain sem resolver necessidade desta etapa. Nenhum cliente HTTP, SDK de
 fonte, framework de descoberta, cache ou biblioteca de retry foi adicionado, e
 os lockfiles permanecem inalterados.
 
-Não foram adicionados Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de modelo, LangGraph, Playwright, scraper, conector, pacote de país, scoring, relatório, parser documental, ORM adicional ou framework de repositório.
+A F3.2 adiciona somente simulador sintético, fixtures e validadores usando
+biblioteca padrão e os tipos já aprovados. Não foram necessários framework
+assíncrono de testes, biblioteca de fixtures, gerador de dados, cliente de rede,
+relógio, retry ou plugin de descoberta; `uv.lock` e `pnpm-lock.yaml` permanecem
+inalterados.
+
+Não foram adicionados Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de
+modelo, LangGraph, Playwright, scraper, conector real, pacote de país, scoring,
+relatório, parser documental, ORM adicional ou framework de repositório.

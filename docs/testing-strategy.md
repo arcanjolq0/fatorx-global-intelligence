@@ -69,6 +69,16 @@ rede, banco, filesystem, descoberta dinâmica, simuladores e migrations novas.
 A suíte focada executa com sockets desabilitados e exige pelo menos 90% de
 branch coverage em `intelligence.connectors`.
 
+Na F3.2, uma suíte comum recebe factory, entradas sintéticas e expectativas
+tipadas, sem conhecer detalhes internos do conector. Ela compara execuções na
+mesma instância e em instâncias novas, valida tipos por operação, proveniência,
+status, imutabilidade e descritor estável. Doubles incompatíveis apenas nos
+testes provam rejeição de tipos incorretos, IDs divergentes, fonte divergente,
+não determinismo, descritor mutante e operação não declarada. Os onze cenários
+do registro empresarial usam somente valores fixos; AST bloqueia rede,
+filesystem, ambiente, subprocesso, relógio, aleatoriedade, importação dinâmica
+e componentes de F3.3. Sockets continuam desabilitados na suíte focada.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

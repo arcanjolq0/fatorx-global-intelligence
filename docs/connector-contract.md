@@ -223,4 +223,26 @@ bytes; referência não possui URL ou método de busca; cursor é redigido.
 uma vez, rejeita ID duplicado e major desconhecida e seleciona em ordem estável
 sem executar operação. Não usa singleton, importação dinâmica, entry points,
 filesystem, configuração externa, rede ou persistência. Simuladores e suíte
-reutilizável pertencem à F3.2; controles efetivos de execução pertencem à F3.3.
+reutilizável são materializados na seção seguinte; controles efetivos de
+execução pertencem à F3.3.
+
+## 15. Materialização da F3.2
+
+`intelligence.connectors.simulated` materializa o mesmo contrato `1.0.0` com um
+registro empresarial exclusivamente sintético. Seu descritor declara
+`COMPANY_IDENTITY`, `COMPANY_REGISTRY`, `SEARCH`, `FETCH_DETAILS` e suporte a
+`TEST`; `FETCH_DOCUMENT` não é declarado. A assinatura uniforme de documento
+retorna `UNSUPPORTED_OPERATION` caso seja chamada diretamente, sem executar I/O.
+
+O cenário é um enum fechado fornecido ao construtor imutável. Sucesso, nenhum
+resultado, múltiplos candidatos, parcial, rate limit, timeout, indisponibilidade,
+resposta inválida, cancelamento, bloqueio de política e budget excedido usam IDs,
+UTC, duração, custo, digest, itens e mensagens fixos. Esses outcomes demonstram
+somente a taxonomia; retry, timeout, cancelamento e budget operacionais continuam
+reservados à F3.3.
+
+A suíte reutilizável fica em `tests/connectors/contract_suite.py`, recebe factory,
+entradas e expectativas explícitas e valida Protocol, descritor, operações,
+determinismo, tipos, proveniência, status, imutabilidade e representação pública.
+Ela não descobre, registra nem executa conectores em produção. Doubles inválidos
+existem apenas nos testes para comprovar a detecção de violações.

@@ -33,11 +33,13 @@
 - `validation/f2.2-postgresql-migrations.md`: schema, migrations, constraints e gates da F2.2 validados em PostgreSQL real.
 - `validation/f2.2.1-relational-hardening.md`: consentimento destrutivo, coerência de timestamps e pin da imagem PostgreSQL validados antes da F2.3.
 - `validation/f3.1-connector-contracts-registry.md`: contratos versionados, registro explícito, testes, gates e limites da F3.1.
+- `validation/f3.2-simulators-contract-suite.md`: simuladores determinísticos, suíte comum, cobertura, gates e limites da F3.2.
 
 ## Tarefas da Fase 3
 
 - `tasks/f3/F3_ROADMAP.md`: contexto da decomposição da Fase 3; não autoriza execução integral.
 - `tasks/f3/F3_1_CONTRATOS_E_REGISTRO.md`: escopo executado exclusivamente na F3.1.
+- `tasks/f3/F3_2_SIMULADORES_E_SUITE_DE_CONTRATO.md`: escopo autorizado exclusivamente na F3.2.
 
 ## Decisões
 

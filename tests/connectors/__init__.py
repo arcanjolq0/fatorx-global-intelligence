@@ -1,1 +1,1 @@
-"""Unit tests for the F3.1 connector contract package."""
+"""Unit and reusable contract tests for the connector package."""

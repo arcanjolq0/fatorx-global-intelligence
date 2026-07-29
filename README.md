@@ -4,7 +4,7 @@ Plataforma de investigação empresarial internacional orientada por evidências
 
 ## Estado atual
 
-O repositório concluiu a **F2.2.1 — Hardening relacional antes dos repositórios**. Além da fundação técnica da Fase 1, do domínio imutável da F2.1 e do schema da F2.2, há consentimento explícito para testes destrutivos, alvos PostgreSQL estritos, imagem fixada por digest e coerência relacional entre estado e timestamps. Há uma API FastAPI apenas com `GET /health`, um shell React/Vite estático e gates de qualidade locais com workflow de CI configurada. Não há registro de execução no GitHub Actions, repositório, acesso da API ao banco, transição de investigação, fila, autenticação, modelo de IA, conector real, integração externa nem segredo.
+O repositório concluiu a **F3.2 — Simuladores determinísticos e suíte reutilizável de contrato**. Além da fundação técnica, domínio e persistência versionada, existem serviços mínimos tenant-scoped, contrato de conectores `1.0.0`, registro explícito e um simulador empresarial inteiramente sintético, sem I/O. Há uma API FastAPI apenas com `GET /health`, um shell React/Vite estático e gates de qualidade locais. Não há autenticação, acesso da API ao banco, runner de conectores, retry, timeout efetivo, idempotência, transição de investigação, fila, conector real, integração externa nem segredo. A F3.3 não foi iniciada.
 
 ## Como navegar
 
@@ -19,6 +19,7 @@ O repositório concluiu a **F2.2.1 — Hardening relacional antes dos repositór
 - [docs/validation/f1.2-clean-validation.md](docs/validation/f1.2-clean-validation.md): evidência da instalação e dos gates executados em ambiente limpo.
 - [docs/validation/f2.2-postgresql-migrations.md](docs/validation/f2.2-postgresql-migrations.md): evidência das migrations, constraints e gates executados com PostgreSQL real.
 - [docs/validation/f2.2.1-relational-hardening.md](docs/validation/f2.2.1-relational-hardening.md): evidência das guardas destrutivas, constraints temporais e imagem fixada.
+- [docs/validation/f3.2-simulators-contract-suite.md](docs/validation/f3.2-simulators-contract-suite.md): evidência dos simuladores, suíte comum, cobertura e gates da F3.2.
 
 As decisões aceitas em `docs/adr/` prevalecem sobre recomendações ainda não decididas no planejamento de entrada.
 

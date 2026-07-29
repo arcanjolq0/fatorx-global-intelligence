@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F2.4.2 da Fase 2 e a F3.1 da Fase 3 — contratos tipados, Protocol assíncrono e registro explícito de conectores, sem I/O. A plataforma mantém contexto do ator, autorização tenant-scoped, serviços mínimos, proteção concorrente do último owner e auditoria coordenada, sem autenticação, endpoints ou acesso ao banco pela API. Até nova instrução, não iniciar F3.2, F3.3, Fase 4, conectores simulados ou reais, HTTP, retries, timeout efetivo, idempotência, jobs, transições de investigação ou integrações externas. A camada F3.1 não persiste, não orquestra e não cria empresa, evidência, claim, risco ou relatório canônico.
+O projeto concluiu a F2.4.2 da Fase 2 e as F3.1 e F3.2 da Fase 3 — contratos tipados, Protocol assíncrono, registro explícito, simulador empresarial determinístico e suíte reutilizável de contrato, sem I/O. A plataforma mantém contexto do ator, autorização tenant-scoped, serviços mínimos, proteção concorrente do último owner e auditoria coordenada, sem autenticação, endpoints ou acesso ao banco pela API. Até nova instrução, não iniciar F3.3, Fase 4, conectores reais, HTTP, retries, timeout efetivo, cancelamento operacional, budget enforcement, idempotência, jobs, transições de investigação ou integrações externas. A F3.2 somente emite outcomes sintéticos fixos; não persiste, não orquestra e não cria empresa, evidência, claim, risco ou relatório canônico.
 
 ## Ordem de precedência documental
 
@@ -90,6 +90,11 @@ Todo conector deve cumprir `docs/connector-contract.md` e:
 - documentar limitações de armazenamento, exibição, retenção e redistribuição.
 
 Um conector não resolve definitivamente identidade, não cria claims canônicos, não calcula risco, não escreve relatórios e não persiste diretamente em tabelas do domínio.
+
+Na F3.2, deadline, timeout, cancelamento, rate limit e budget existem somente no
+vocabulário e nos outcomes determinísticos do simulador. Os controles efetivos,
+retry e idempotência dos requisitos acima pertencem à F3.3 e continuam proibidos
+sem autorização explícita.
 
 ## Evidências e claims
 

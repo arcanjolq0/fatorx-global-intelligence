@@ -1,5 +1,12 @@
 # Fase 3 — Framework de conectores simulados
 
+## Estado de execução
+
+- F3.1 concluída em 2026-07-28;
+- F3.2 concluída em 2026-07-29;
+- F3.3 não iniciada e não autorizada;
+- gate G3 permanece aberto para os controles operacionais exclusivos da F3.3.
+
 ## 1. Objetivo
 
 Construir uma fronteira tipada, segura e testável entre o núcleo da aplicação e
@@ -178,12 +185,14 @@ conectores.
 
 # F3.2 — Simuladores determinísticos e suíte de contrato
 
+Status: **concluída em 2026-07-29**.
+
 ## Objetivo
 
 Provar que o contrato consegue representar comportamentos normais e falhas, e
 criar uma suíte reutilizável que qualquer futuro conector deverá passar.
 
-## Entregas previstas
+## Entregas implementadas
 
 - connector simulado de registro empresarial;
 - fixtures exclusivamente sintéticas;
@@ -219,6 +228,8 @@ criar uma suíte reutilizável que qualquer futuro conector deverá passar.
 `test: add deterministic connector simulators and contract suite`
 
 # F3.3 — Controles de execução de uma operação
+
+Status: **não iniciada; exige autorização explícita**.
 
 ## Objetivo
 

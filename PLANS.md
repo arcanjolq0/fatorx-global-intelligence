@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 3 — Framework de conectores simulados, limitada à F3.1**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 concluídas em 2026-07-28; F3.1 implementada em 2026-07-28**. F3.2, F3.3 e fases posteriores não foram iniciadas.
-- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped e contratos puros de conectores `1.0.0` com registro explícito. Não há autenticação, acesso pela API, simulador, executor ou I/O de conector.
+- Fase atual: **Fase 3 — Framework de conectores simulados, concluída até a F3.2**.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 e F3.1 concluídas em 2026-07-28; F3.2 concluída em 2026-07-29**. F3.3 e fases posteriores não foram iniciadas.
+- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped, contratos de conectores `1.0.0`, registro explícito e simulador empresarial sintético com suíte comum de contrato. Não há autenticação, acesso pela API, executor ou I/O de conector.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -288,7 +288,7 @@ Limites: `ActorContext` não autentica nem representa sessão/token; o bootstrap
 
 ### Fase 3 — Framework de conectores simulados
 
-**Status: em andamento; somente F3.1 concluída. O gate G3 permanece aberto para F3.2 e F3.3.**
+**Status: em andamento; F3.1 e F3.2 concluídas. O gate G3 permanece aberto exclusivamente para F3.3.**
 
 Escopo:
 
@@ -321,11 +321,42 @@ Evidências de conclusão:
 - instalações frozen, lint, formatação, tipos estritos, scanner, builds e `pnpm quality` foram aprovados;
 - `alembic check` não detectou operação nova e a revisão permaneceu `20260728_02 (head)`.
 
-Limites: não há simulador, suíte comum de conectores, runner, retry, deadline
+Limites no encerramento da F3.1: não havia simulador, suíte comum de conectores, runner, retry, deadline
 efetivo, cancelamento efetivo, idempotência, cache, HTTP, rede, persistência,
 job, transição, orquestração, resolução, evidência, claim, scoring ou relatório.
-F3.2 e F3.3 exigem autorização e tarefas próprias; a conclusão da F3.1 não
-fecha o gate G3.
+F3.2 e F3.3 exigiam autorização e tarefas próprias; a conclusão da F3.1 não
+fechou o gate G3.
+
+#### F3.2 — Simuladores determinísticos e suíte reutilizável de contrato
+
+Status: **Concluída em 2026-07-29.**
+
+Entregas:
+
+- `SimulatedBusinessRegistryConnector` imutável, explícito e sem I/O;
+- onze cenários com IDs, UTC, custos, durações, digests, itens e mensagens fixos;
+- busca tipada, detalhes com seis observações neutras e rejeição documental não declarada;
+- suíte comum por factory, entradas e expectativas, independente dos internos do simulador;
+- sete doubles incompatíveis apenas nos testes para provar detecção de violações;
+- AST bloqueando rede, arquivos, ambiente, subprocessos, relógio, aleatoriedade e F3.3;
+- documentação de tarefa, contrato, testes, dependências e validação.
+
+Evidências de conclusão:
+
+- 715 testes Python e 1 teste web passaram, com cobertura Python total de 95,17%;
+- 237 testes focados/arquiteturais comprovaram 94,65% de branch coverage em
+  `intelligence.connectors`; o módulo principal do simulador atingiu 97%;
+- 113 testes PostgreSQL reais passaram sem alteração de schema;
+- instalações frozen, lint, formatação, tipos estritos, scanner, builds e
+  `pnpm quality` foram aprovados;
+- `alembic check` não detectou operação nova e a revisão permaneceu
+  `20260728_02 (head)`.
+
+Limites: outcomes de rate limit, timeout, cancelamento e budget são somente
+tipados. Não há runner, retry, deadline/cancelamento efetivos, enforcement de
+budget, idempotência, cache, HTTP, rede, persistência, job, transição,
+orquestração, resolução, evidência, claim, scoring ou relatório. F3.3 exige
+nova autorização e mantém o gate G3 aberto.
 
 ### Fase 4 — Orquestração e resolução de entidades
 

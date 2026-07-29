@@ -10,6 +10,7 @@ DOMAIN_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "domain"
 APPLICATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "application"
 INFRASTRUCTURE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "infrastructure"
 CONNECTORS_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "connectors"
+SIMULATED_CONNECTORS_ROOT = CONNECTORS_ROOT / "simulated"
 API_ROOT = Path(__file__).parents[2] / "apps" / "api"
 ALLOWED_INTERNAL_PREFIX = "intelligence.domain"
 ALLOWED_INFRASTRUCTURE_IMPORTS = {
@@ -28,8 +29,11 @@ FORBIDDEN_CONNECTOR_IMPORT_PREFIXES = {
     "sqlalchemy",
     "intelligence.application",
     "intelligence.claims",
+    "intelligence.documents",
+    "intelligence.entity_resolution",
     "intelligence.evidence",
     "intelligence.infrastructure",
+    "intelligence.orchestration",
     "intelligence.reporting",
     "intelligence.risk",
 }
@@ -122,14 +126,16 @@ def test_connectors_import_only_standard_library_domain_and_own_contracts() -> N
 
 
 def test_connectors_have_no_network_database_or_import_time_io_surface() -> None:
-    """F3.1 contracts cannot open sockets, engines, files, or dynamic modules."""
+    """Connector contracts and simulators cannot open external I/O surfaces."""
 
     forbidden_import_roots = FORBIDDEN_NETWORK_IMPORTS | {
         "alembic",
         "importlib",
+        "os",
         "pathlib",
         "pkgutil",
         "sqlalchemy",
+        "subprocess",
     }
     forbidden_calls = {
         "connect",
@@ -169,10 +175,10 @@ def test_connectors_have_no_network_database_or_import_time_io_surface() -> None
     assert violations == []
 
 
-def test_f31_contains_contracts_only_and_preserves_existing_migrations() -> None:
-    """No simulator, runner, HTTP adapter, or schema change is introduced in F3.1."""
+def test_f32_allows_only_simulators_and_preserves_existing_migrations() -> None:
+    """F3.2 permits simulators while runners, real adapters, and schema stay absent."""
 
-    forbidden_parts = {"adapters", "execution", "http", "real", "simulated"}
+    forbidden_parts = {"adapters", "execution", "http", "real", "runner"}
     assert all(
         forbidden_parts.isdisjoint(path.relative_to(CONNECTORS_ROOT).parts)
         for path in CONNECTORS_ROOT.rglob("*")
@@ -183,6 +189,117 @@ def test_f31_contains_contracts_only_and_preserves_existing_migrations() -> None
         "20260728_01_create_initial_domain_schema.py",
         "20260728_02_create_identities_memberships_audit.py",
     }
+
+
+def test_simulated_connectors_use_no_io_clock_environment_or_randomness() -> None:
+    """Synthetic outcomes use fixed values and never invoke F3.3 or external mechanisms."""
+
+    forbidden_import_roots = {
+        "alembic",
+        "asyncio",
+        "http",
+        "httpx",
+        "importlib",
+        "os",
+        "pathlib",
+        "pkgutil",
+        "psycopg",
+        "random",
+        "requests",
+        "secrets",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+        "time",
+        "urllib",
+        "uuid",
+    }
+    forbidden_calls = {
+        "Popen",
+        "call",
+        "check_call",
+        "check_output",
+        "connect",
+        "create_engine",
+        "entry_points",
+        "getenv",
+        "glob",
+        "iterdir",
+        "monotonic",
+        "now",
+        "open",
+        "perf_counter",
+        "popen",
+        "read_bytes",
+        "read_text",
+        "rglob",
+        "run",
+        "sleep",
+        "socket",
+        "system",
+        "time",
+        "timeout",
+        "today",
+        "utcnow",
+        "uuid1",
+        "uuid4",
+        "wait_for",
+        "write_bytes",
+        "write_text",
+    }
+    violations: list[str] = []
+    for path in sorted(SIMULATED_CONNECTORS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_import_roots:
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Attribute) and node.attr == "environ":
+                violations.append(f"{path.name} -> environment access")
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            else:
+                continue
+            if call_name in forbidden_calls or call_name.startswith(("rand", "urandom")):
+                violations.append(f"{path.name} -> call {call_name}")
+
+    assert violations == []
+
+
+def test_simulated_connectors_have_no_mutable_module_level_fixture_collections() -> None:
+    """Scenario fixtures cannot accumulate state through mutable module globals."""
+
+    violations: list[str] = []
+    for path in sorted(SIMULATED_CONNECTORS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for statement in tree.body:
+            if isinstance(statement, (ast.Assign, ast.AnnAssign)) and isinstance(
+                statement.value,
+                (ast.Dict, ast.List, ast.Set),
+            ):
+                targets = (
+                    statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+                )
+                assigned_names = {
+                    node.id
+                    for target in targets
+                    for node in ast.walk(target)
+                    if isinstance(node, ast.Name)
+                }
+                if assigned_names != {"__all__"}:
+                    violations.append(f"{path.name}:{statement.lineno}")
+
+    assert violations == []
 
 
 def test_boundary_checker_rejects_external_and_cross_layer_imports(tmp_path: Path) -> None:

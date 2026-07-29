@@ -53,12 +53,19 @@ Na F2.4.2, a aplicação recebe um `ActorContext` já autenticado por uma camada
 - devolvem envelopes tipados e artefatos originais/referências;
 - não conhecem tabelas, score ou relatório.
 
-Na F3.1, somente a fronteira tipada existe em `intelligence.connectors`. Ela
-usa biblioteca padrão e pode importar IDs, país, moeda, dinheiro e UTC estáveis
-do domínio; domínio, aplicação e infraestrutura não dependem da camada. O
-contrato `1.0.0` define descritor, cobertura global explícita, contexto, query,
+Desde a F3.1, a fronteira tipada existe em `intelligence.connectors`. Ela usa
+biblioteca padrão e pode importar IDs, país, moeda, dinheiro e UTC estáveis do
+domínio; domínio, aplicação e infraestrutura não dependem da camada. O contrato
+`1.0.0` define descritor, cobertura global explícita, contexto, query,
 candidatos, observações, artefatos, outcomes, Protocol assíncrono e registro
-instanciável. Não há adaptador, fonte, simulador, rede, execução ou persistência.
+instanciável.
+
+Na F3.2, `intelligence.connectors.simulated` contém exclusivamente um adaptador
+sintético, imutável e determinístico de registro empresarial. Cenários são
+selecionados explicitamente no construtor e produzem envelopes fixos, sem rede,
+filesystem, ambiente, relógio, aleatoriedade ou persistência. A suíte comum
+permanece em `tests/`; não existe runner, controle operacional ou composição de
+produção.
 
 ### Resolução de entidades
 
@@ -202,7 +209,7 @@ Esta é uma proposta; diretórios de código serão criados somente na fase de i
 |---|---|---|---|
 | API | FastAPI + Pydantic | contratos tipados e ecossistema Python | Fase 1 |
 | Persistência | SQLAlchemy Core 2.x + Alembic + Psycopg 3 síncrono | metadata/migrations explícitas e adaptadores sem ORM; Unit of Work controla a transação | Fase 2 — ADR-0010 e ADR-0011 |
-| HTTP | não decidido | F3.1 não possui rede; cliente exige fonte aprovada e decisão posterior | após F3.1/G6 |
+| HTTP | não decidido | F3.2 não possui rede; cliente exige fonte aprovada e decisão posterior | após G6 |
 | Web | React + TypeScript + Vite | UI tipada e separada | Fase 1 |
 | Banco | PostgreSQL | transação, JSONB e busca textual | Fase 2 |
 | Objetos | API compatível com S3 | artefatos grandes e retenção | Fase 5 |
