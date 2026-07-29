@@ -11,6 +11,8 @@ APPLICATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "applica
 INFRASTRUCTURE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "infrastructure"
 CONNECTORS_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "connectors"
 SIMULATED_CONNECTORS_ROOT = CONNECTORS_ROOT / "simulated"
+EXECUTION_CONNECTORS_ROOT = CONNECTORS_ROOT / "execution"
+EXECUTION_CONNECTOR_TESTS_ROOT = Path(__file__).parents[1] / "connectors" / "execution"
 API_ROOT = Path(__file__).parents[2] / "apps" / "api"
 ALLOWED_INTERNAL_PREFIX = "intelligence.domain"
 ALLOWED_INFRASTRUCTURE_IMPORTS = {
@@ -175,10 +177,10 @@ def test_connectors_have_no_network_database_or_import_time_io_surface() -> None
     assert violations == []
 
 
-def test_f32_allows_only_simulators_and_preserves_existing_migrations() -> None:
-    """F3.2 permits simulators while runners, real adapters, and schema stay absent."""
+def test_f33_allows_simulation_and_single_operation_execution_without_later_phases() -> None:
+    """F3.3 permits its local runner while real adapters and schema stay absent."""
 
-    forbidden_parts = {"adapters", "execution", "http", "real", "runner"}
+    forbidden_parts = {"adapters", "http", "real"}
     assert all(
         forbidden_parts.isdisjoint(path.relative_to(CONNECTORS_ROOT).parts)
         for path in CONNECTORS_ROOT.rglob("*")
@@ -189,6 +191,119 @@ def test_f32_allows_only_simulators_and_preserves_existing_migrations() -> None:
         "20260728_01_create_initial_domain_schema.py",
         "20260728_02_create_identities_memberships_audit.py",
     }
+
+
+def test_execution_controls_have_no_external_io_or_forbidden_mechanisms() -> None:
+    """The F3.3 runner uses only local asyncio and the explicitly allowed monotonic clock."""
+
+    forbidden_import_roots = {
+        "alembic",
+        "http",
+        "httpx",
+        "importlib",
+        "logging",
+        "os",
+        "pathlib",
+        "pkgutil",
+        "psycopg",
+        "random",
+        "requests",
+        "secrets",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+        "urllib",
+    }
+    forbidden_calls = {
+        "Popen",
+        "basicConfig",
+        "call",
+        "check_call",
+        "check_output",
+        "connect",
+        "create_engine",
+        "entry_points",
+        "getenv",
+        "glob",
+        "iterdir",
+        "open",
+        "perf_counter",
+        "popen",
+        "read_bytes",
+        "read_text",
+        "rglob",
+        "socket",
+        "system",
+        "time",
+        "time_ns",
+        "write_bytes",
+        "write_text",
+    }
+    violations: list[str] = []
+    for path in sorted(EXECUTION_CONNECTORS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_import_roots or module.startswith("tests"):
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Attribute) and node.attr == "environ":
+                violations.append(f"{path.name} -> environment access")
+            if isinstance(node, ast.Name) and node.id == "Any":
+                violations.append(f"{path.name} -> Any")
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            else:
+                continue
+            if call_name in forbidden_calls or call_name.startswith(("rand", "urandom")):
+                violations.append(f"{path.name} -> call {call_name}")
+            if (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in {"date", "datetime", "time"}
+                and node.func.attr in {"now", "today", "utcnow"}
+            ):
+                violations.append(f"{path.name} -> wall-clock call {node.func.attr}")
+            if (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "asyncio"
+                and node.func.attr == "sleep"
+                and path.name != "ports.py"
+            ):
+                violations.append(f"{path.name} -> direct asyncio.sleep")
+
+    assert violations == []
+
+
+def test_execution_tests_use_events_and_never_real_sleep_calls() -> None:
+    """Race tests synchronize by asyncio primitives without timing guesses."""
+
+    violations: list[str] = []
+    for path in sorted(EXECUTION_CONNECTOR_TESTS_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            else:
+                continue
+            if call_name == "sleep":
+                violations.append(f"{path.name}:{node.lineno}")
+
+    assert violations == []
 
 
 def test_simulated_connectors_use_no_io_clock_environment_or_randomness() -> None:

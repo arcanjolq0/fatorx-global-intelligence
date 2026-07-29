@@ -64,8 +64,16 @@ Na F3.2, `intelligence.connectors.simulated` contém exclusivamente um adaptador
 sintético, imutável e determinístico de registro empresarial. Cenários são
 selecionados explicitamente no construtor e produzem envelopes fixos, sem rede,
 filesystem, ambiente, relógio, aleatoriedade ou persistência. A suíte comum
-permanece em `tests/`; não existe runner, controle operacional ou composição de
-produção.
+permanece em `tests/`.
+
+Na F3.3, `intelligence.connectors.execution` controla uma única operação de um
+conector fornecido explicitamente. Requests discriminadas preservam a tipagem de
+busca, detalhes e documento; relógio monotônico, sleeper, jitter e idempotência
+são portas injetáveis. O runner aplica preflight, deadline/cancelamento, retry,
+budget, uma página, validação runtime, fingerprint, digest e eventos estruturais.
+O store disponível é somente em memória e por instância. Não há seleção ou
+paralelismo de conectores, planner, job, fila, persistência, HTTP ou composição
+de Fase 4.
 
 ### Resolução de entidades
 
@@ -209,7 +217,7 @@ Esta é uma proposta; diretórios de código serão criados somente na fase de i
 |---|---|---|---|
 | API | FastAPI + Pydantic | contratos tipados e ecossistema Python | Fase 1 |
 | Persistência | SQLAlchemy Core 2.x + Alembic + Psycopg 3 síncrono | metadata/migrations explícitas e adaptadores sem ORM; Unit of Work controla a transação | Fase 2 — ADR-0010 e ADR-0011 |
-| HTTP | não decidido | F3.2 não possui rede; cliente exige fonte aprovada e decisão posterior | após G6 |
+| HTTP | não decidido | F3.3 não possui rede; cliente exige fonte aprovada e decisão posterior | após G6 |
 | Web | React + TypeScript + Vite | UI tipada e separada | Fase 1 |
 | Banco | PostgreSQL | transação, JSONB e busca textual | Fase 2 |
 | Objetos | API compatível com S3 | artefatos grandes e retenção | Fase 5 |

@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 3 — Framework de conectores simulados, concluída até a F3.2**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 e F3.1 concluídas em 2026-07-28; F3.2 concluída em 2026-07-29**. F3.3 e fases posteriores não foram iniciadas.
-- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped, contratos de conectores `1.0.0`, registro explícito e simulador empresarial sintético com suíte comum de contrato. Não há autenticação, acesso pela API, executor ou I/O de conector.
+- Fase atual: **Fase 3 — Framework de conectores simulados, implementada até a F3.3 e aguardando revisão independente**.
+- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 e F3.1 concluídas em 2026-07-28; F3.2 concluída e F3.3 implementada em 2026-07-29**. O gate G3 não foi aceito e a Fase 4 não foi iniciada.
+- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped, contratos de conectores `1.0.0`, registro explícito, simulador empresarial sintético, suíte comum e runner local de uma única operação com controles injetáveis. Não há autenticação, acesso pela API, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -288,7 +288,7 @@ Limites: `ActorContext` não autentica nem representa sessão/token; o bootstrap
 
 ### Fase 3 — Framework de conectores simulados
 
-**Status: em andamento; F3.1 e F3.2 concluídas. O gate G3 permanece aberto exclusivamente para F3.3.**
+**Status: F3.1 e F3.2 concluídas; F3.3 IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE. O gate G3 permanece não aceito.**
 
 Escopo:
 
@@ -352,11 +352,36 @@ Evidências de conclusão:
 - `alembic check` não detectou operação nova e a revisão permaneceu
   `20260728_02 (head)`.
 
-Limites: outcomes de rate limit, timeout, cancelamento e budget são somente
-tipados. Não há runner, retry, deadline/cancelamento efetivos, enforcement de
-budget, idempotência, cache, HTTP, rede, persistência, job, transição,
-orquestração, resolução, evidência, claim, scoring ou relatório. F3.3 exige
-nova autorização e mantém o gate G3 aberto.
+Limites registrados no encerramento da F3.2: outcomes de rate limit, timeout,
+cancelamento e budget eram somente tipados; runner, controles efetivos e
+idempotência ainda exigiam a autorização própria posteriormente concedida para
+a F3.3. Cache, HTTP, rede, persistência, job, transição, orquestração, resolução,
+evidência, claim, scoring e relatório continuam ausentes.
+
+#### F3.3 — Controles de execução de uma única operação
+
+Status: **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**.
+
+Entregas:
+
+- requests discriminadas e runner tipado para uma operação de um conector;
+- preflight de contrato, suporte, entrada, credencial, contexto e moeda sem I/O;
+- deadline monotônico efetivo, cancelamento cooperativo e bloqueio de resultado tardio;
+- retry limitado por política, `retry_after`, backoff e jitter injetáveis;
+- budget precheck, accounting acumulado e ausência de conversão monetária;
+- fingerprint canônico, digest estrutural e eventos por allowlist;
+- idempotência atômica em memória, replay, espera concorrente e colisão tipada;
+- uma página por tentativa, limites de conteúdo e validação runtime;
+- ADR-0015, testes determinísticos e guardas arquiteturais.
+
+Evidências e comandos finais constam em
+`docs/validation/f3.3-connector-execution-controls.md`.
+
+Limites: o runner não seleciona nem agrega conectores; store e accounting não
+são persistidos; jitter padrão é zero; nenhuma próxima página é seguida. Não há
+HTTP, rede, banco, migration, job, worker, fila, transição de investigação,
+resolução, evidência, claim, scoring, relatório, endpoint ou frontend. A própria
+entrega não aceita G3 e não autoriza a Fase 4.
 
 ### Fase 4 — Orquestração e resolução de entidades
 

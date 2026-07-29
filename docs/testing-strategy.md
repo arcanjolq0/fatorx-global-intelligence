@@ -77,7 +77,19 @@ testes provam rejeição de tipos incorretos, IDs divergentes, fonte divergente,
 não determinismo, descritor mutante e operação não declarada. Os onze cenários
 do registro empresarial usam somente valores fixos; AST bloqueia rede,
 filesystem, ambiente, subprocesso, relógio, aleatoriedade, importação dinâmica
-e componentes de F3.3. Sockets continuam desabilitados na suíte focada.
+e, naquela entrega, componentes ainda não autorizados de F3.3. Sockets continuam
+desabilitados na suíte focada.
+
+Na F3.3, testes de um runner de operação única usam relógio, sleeper, jitter,
+sinal de cancelamento, conector e idempotência controlados. `asyncio.Event`
+sincroniza timeout, cancelamento e replay concorrente; sleeps arbitrários são
+proibidos por AST. A suíte cobre preflight com zero chamadas/esperas, as três
+operações, retry e `retry_after`, budget entre tentativas, fingerprint/digest,
+replay de sucesso/falha, corrida com exatamente uma chamada, colisão, liberação
+de owner cancelado, uma página, truncamento e outcomes incompatíveis. A área
+`intelligence.connectors.execution` exige pelo menos 90% de branch coverage,
+com sockets bloqueados salvo o loopback interno necessário ao event loop do
+Windows; nenhum teste ou código abre conexão de rede.
 
 ### 3.4 Testes de segurança
 

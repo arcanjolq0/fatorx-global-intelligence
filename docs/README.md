@@ -34,12 +34,14 @@
 - `validation/f2.2.1-relational-hardening.md`: consentimento destrutivo, coerência de timestamps e pin da imagem PostgreSQL validados antes da F2.3.
 - `validation/f3.1-connector-contracts-registry.md`: contratos versionados, registro explícito, testes, gates e limites da F3.1.
 - `validation/f3.2-simulators-contract-suite.md`: simuladores determinísticos, suíte comum, cobertura, gates e limites da F3.2.
+- `validation/f3.3-connector-execution-controls.md`: controles de uma operação, corridas determinísticas, cobertura, gates e limites da F3.3.
 
 ## Tarefas da Fase 3
 
 - `tasks/f3/F3_ROADMAP.md`: contexto da decomposição da Fase 3; não autoriza execução integral.
 - `tasks/f3/F3_1_CONTRATOS_E_REGISTRO.md`: escopo executado exclusivamente na F3.1.
 - `tasks/f3/F3_2_SIMULADORES_E_SUITE_DE_CONTRATO.md`: escopo autorizado exclusivamente na F3.2.
+- `tasks/f3/F3_3_CONTROLES_DE_EXECUCAO.md`: escopo implementado exclusivamente na F3.3 e aguardando revisão independente.
 
 ## Decisões
 
@@ -58,6 +60,7 @@
 - `adr/0012-internal-identities-memberships-and-audit.md`: identidades internas, memberships e auditoria append-only.
 - `adr/0013-service-authorization-and-coordinated-audit.md`: contexto do ator, autorização, último owner e auditoria coordenada.
 - `adr/0014-connector-contracts-and-explicit-registry.md`: contrato `1.0.0`, cobertura e registro explícitos.
+- `adr/0015-single-connector-operation-execution-controls.md`: deadline, retry, budget e idempotência locais para uma operação.
 
 ## Regra de consistência
 

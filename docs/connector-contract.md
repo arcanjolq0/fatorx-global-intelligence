@@ -58,13 +58,13 @@ fase é estritamente `MAJOR.MINOR.PATCH`, sem prerelease ou build metadata.
 
 - `workspace_id`, `investigation_id`, `operation_id`, `attempt`;
 - `correlation_id` e `request_id`;
-- `MonotonicDeadline` absoluto, a ser interpretado por relógio monotônico na F3.3;
+- `MonotonicDeadline` absoluto, interpretado pelo relógio monotônico injetado na F3.3;
 - orçamento restante e moeda;
 - locale/idiomas aceitos;
 - versão da política da fonte;
 - modo `TEST` ou `PRODUCTION`;
 - handle opaco para credencial de menor privilégio, definido por `Protocol`, excluído de `repr`/igualdade/hash e nunca serializado;
-- sinal cooperativo de cancelamento por `Protocol`, sem espera ou efeito na F3.1.
+- sinal cooperativo de cancelamento por `Protocol`, aplicado pelo runner F3.3.
 
 ### `CompanyQuery`
 
@@ -232,17 +232,48 @@ execução pertencem à F3.3.
 registro empresarial exclusivamente sintético. Seu descritor declara
 `COMPANY_IDENTITY`, `COMPANY_REGISTRY`, `SEARCH`, `FETCH_DETAILS` e suporte a
 `TEST`; `FETCH_DOCUMENT` não é declarado. A assinatura uniforme de documento
-retorna `UNSUPPORTED_OPERATION` caso seja chamada diretamente, sem executar I/O.
+  retorna `UNSUPPORTED_OPERATION` caso seja chamada diretamente, sem executar I/O.
 
 O cenário é um enum fechado fornecido ao construtor imutável. Sucesso, nenhum
 resultado, múltiplos candidatos, parcial, rate limit, timeout, indisponibilidade,
 resposta inválida, cancelamento, bloqueio de política e budget excedido usam IDs,
 UTC, duração, custo, digest, itens e mensagens fixos. Esses outcomes demonstram
-somente a taxonomia; retry, timeout, cancelamento e budget operacionais continuam
-reservados à F3.3.
+  somente a taxonomia; controles operacionais são responsabilidade exclusiva do
+  runner descrito na seção seguinte, não do simulador.
 
 A suíte reutilizável fica em `tests/connectors/contract_suite.py`, recebe factory,
 entradas e expectativas explícitas e valida Protocol, descritor, operações,
 determinismo, tipos, proveniência, status, imutabilidade e representação pública.
 Ela não descobre, registra nem executa conectores em produção. Doubles inválidos
 existem apenas nos testes para comprovar a detecção de violações.
+
+## 16. Materialização da F3.3
+
+`intelligence.connectors.execution` recebe um objeto `Connector` explícito e uma
+request imutável de `SEARCH`, `FETCH_DETAILS` ou `FETCH_DOCUMENT`. O runner não
+seleciona fontes nem executa mais de uma operação lógica. Antes de I/O, valida
+Protocol, descritor estável, major, suporte, modo, entrada, vínculo de candidato,
+referência pública de credencial, contexto, política, moeda e fingerprint.
+
+Deadline usa valor monotônico absoluto e cancela/aguarda a tarefa em curso.
+Cancelamento cooperativo é consultado antes e depois de chamadas e esperas;
+resultado tardio nunca é publicado. Retry ocorre somente para `FAILED` e códigos
+explicitamente permitidos, com no máximo cinco tentativas, `retry_after`,
+backoff/jitter limitados e rechecagem de deadline, cancelamento e budget.
+
+Budget configurado exige estimativa por tentativa na mesma moeda. Custo real é
+acumulado; quando ausente, a estimativa é contabilizada conservadoramente. Não
+há câmbio nem persistência. Uma tentativa lê no máximo uma página, aplica o menor
+limite entre política e descritor, redige cursor e representa conteúdo limitado
+como `PARTIAL`.
+
+Fingerprint e digest usam SHA-256 sobre campos canônicos allowlisted. Eventos
+contêm somente identidade, fase, códigos, contagens, custo e digests. Query,
+candidato, documento, conteúdo, mensagem, cursor, credencial, segredo e stack
+ficam excluídos.
+
+`InMemoryIdempotencyStore` é instance-scoped: coordena chamadas iguais, preserva
+replay, rejeita colisão de `operation_id` e libera owner cancelado. Não oferece
+durabilidade ou coordenação distribuída. Multi-page, múltiplos conectores,
+planner, jobs, filas, lifecycle, rate limiter global, circuit breaker e
+persistência continuam fora da F3.3.

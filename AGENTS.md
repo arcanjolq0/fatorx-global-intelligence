@@ -6,7 +6,7 @@ Este repositório contém o Fator X Global Intelligence, uma plataforma de inves
 
 ## Estado da fase atual
 
-O projeto concluiu a F2.4.2 da Fase 2 e as F3.1 e F3.2 da Fase 3 — contratos tipados, Protocol assíncrono, registro explícito, simulador empresarial determinístico e suíte reutilizável de contrato, sem I/O. A plataforma mantém contexto do ator, autorização tenant-scoped, serviços mínimos, proteção concorrente do último owner e auditoria coordenada, sem autenticação, endpoints ou acesso ao banco pela API. Até nova instrução, não iniciar F3.3, Fase 4, conectores reais, HTTP, retries, timeout efetivo, cancelamento operacional, budget enforcement, idempotência, jobs, transições de investigação ou integrações externas. A F3.2 somente emite outcomes sintéticos fixos; não persiste, não orquestra e não cria empresa, evidência, claim, risco ou relatório canônico.
+O projeto concluiu a F2.4.2 da Fase 2 e implementou as F3.1, F3.2 e F3.3 da Fase 3 — contratos tipados, Protocol assíncrono, registro explícito, simulador determinístico, suíte reutilizável e controles locais de uma única operação, sem I/O externo. A F3.3 está **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**; o gate G3 e a Fase 3 não estão aceitos. A plataforma mantém contexto do ator, autorização tenant-scoped, serviços mínimos, proteção concorrente do último owner e auditoria coordenada, sem autenticação, endpoints ou acesso ao banco pela API. Até nova instrução, não iniciar Fase 4, múltiplos conectores, planner, jobs, filas, workers, persistência de runs, conectores reais, HTTP, transições de investigação ou integrações externas. A execução F3.3 não persiste, não orquestra e não cria empresa, evidência, claim, risco ou relatório canônico.
 
 ## Ordem de precedência documental
 
@@ -91,10 +91,11 @@ Todo conector deve cumprir `docs/connector-contract.md` e:
 
 Um conector não resolve definitivamente identidade, não cria claims canônicos, não calcula risco, não escreve relatórios e não persiste diretamente em tabelas do domínio.
 
-Na F3.2, deadline, timeout, cancelamento, rate limit e budget existem somente no
-vocabulário e nos outcomes determinísticos do simulador. Os controles efetivos,
-retry e idempotência dos requisitos acima pertencem à F3.3 e continuam proibidos
-sem autorização explícita.
+Na F3.3, deadline monotônico, cancelamento, retry, backoff/jitter, budget,
+idempotência, limites e observabilidade são aplicados somente a uma operação de
+um conector explicitamente fornecido. Não existe seleção, execução paralela,
+rate limiter compartilhado, circuit breaker, persistência ou lifecycle. O
+simulador F3.2 permanece determinístico e os controles F3.3 permanecem locais.
 
 ## Evidências e claims
 

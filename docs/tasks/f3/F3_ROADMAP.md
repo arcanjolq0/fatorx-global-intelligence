@@ -4,8 +4,8 @@
 
 - F3.1 concluída em 2026-07-28;
 - F3.2 concluída em 2026-07-29;
-- F3.3 não iniciada e não autorizada;
-- gate G3 permanece aberto para os controles operacionais exclusivos da F3.3.
+- F3.3 **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE** em 2026-07-29;
+- gate G3 permanece não aceito até revisão independente; Fase 4 não autorizada.
 
 ## 1. Objetivo
 
@@ -229,7 +229,7 @@ criar uma suíte reutilizável que qualquer futuro conector deverá passar.
 
 # F3.3 — Controles de execução de uma operação
 
-Status: **não iniciada; exige autorização explícita**.
+Status: **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**.
 
 ## Objetivo
 
@@ -317,4 +317,5 @@ Somente depois do gate G3, a Fase 4 poderá:
 - aplicar política de resolução;
 - pausar para revisão humana.
 
-Nada disso pertence à Fase 3.
+Nada disso pertence à Fase 3. A implementação da F3.3 não constitui aceite do
+gate G3 nem autorização para iniciar qualquer item desta seção.
