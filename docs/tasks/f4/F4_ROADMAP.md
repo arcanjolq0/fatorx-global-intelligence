@@ -1,0 +1,146 @@
+# Fase 4 — Orquestração e resolução de entidades
+
+## Estado
+
+- Fase 3 e gate G3: **CONCLUÍDOS E ACEITOS**;
+- F4.1: **ACEITA APÓS REVISÃO INDEPENDENTE**;
+- F4.2/F4.2.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
+- F4.3/F4.3.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
+- F4.4/F4.4.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
+- F4.5/F4.5.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
+- F4.6 e demais subfases: **NÃO AUTORIZADAS**.
+
+A Fase 4 permanece em andamento e seu gate não está aceito. Este roadmap
+registra decomposição e fronteiras; não autoriza a execução de uma subfase.
+
+## F4.1 — Lifecycle transacional inicial
+
+A fundação aceita materializa entrada de identificação imutável,
+`CREATED -> IDENTIFYING`, cancelamento de estado não terminal, CAS tenant-scoped,
+idempotência durável, ledger append-only e auditoria coordenada.
+
+## F4.2 — Candidatos, matching e pausa para confirmação
+
+Esta entrega materializa exclusivamente:
+
+- lote explícito de um a 100 candidatos imutáveis e não confiáveis;
+- identidade e origem fechadas, versionadas e acompanhadas por digests;
+- política `ENTITY_MATCH_V1` reconstruível por snapshot e digest;
+- normalização Unicode NFKC, `casefold`, substituição de pontuação/símbolos por
+  espaço e colapso de whitespace, sem transliteração;
+- sete dimensões determinísticas: identificador, nome, domínio, geografia,
+  endereço, administradores e temporal;
+- conflitos fortes por identificador comparável divergente e país divergente;
+- score inteiro em basis points, cobertura dos pesos disponíveis, explicações e
+  ranking estável;
+- lote, candidatos e scores dimensionais append-only e tenant-scoped;
+- `RequestEntityConfirmation`, apenas de `IDENTIFYING` para
+  `WAITING_FOR_ENTITY_CONFIRMATION`;
+- CAS, replay/collision, ledger, auditoria e persistência do lote no mesmo commit;
+- migration `20260729_04`, reversível e sucessora da F4.1.
+
+Os pesos V1 são: identificador 3500, nome 2500, domínio 1200, geografia 1000,
+endereço 800, administradores 700 e temporal 300. `HIGH` exige 8500 bps,
+`MEDIUM` exige 6000 bps, abaixo disso é `LOW`; conflito forte resulta em
+`EXCLUDED` independentemente do score.
+
+Score mede compatibilidade segundo a política, não probabilidade, crédito ou
+risco. Cobertura mede a soma dos pesos das dimensões comparáveis; ausência de
+dado não é confirmação. Candidato não é empresa canônica, evidência ou claim e
+nenhum candidato foi confirmado nesta entrega.
+
+### Correção F4.2.1
+
+A reconstituição agora recalcula política, candidatos, dimensões, avaliações,
+submission digest, digest agregado e ranking, falhando fechado diante de
+qualquer inconsistência. Somente `NAME_NORMALIZATION_V1` é suportada. A ordem
+canônica do submission digest é por `candidate_key`; matching, pesos,
+thresholds, tabelas, migration e lifecycle não mudaram.
+
+## F4.3 — Confirmação humana e Company canônica
+
+A F4.3 implementa exclusivamente a decisão humana positiva: valida o lote ativo,
+bloqueia `EXCLUDED`, aplica regras fechadas de override, cria nova Company pela
+política V1, persiste decisão append-only e avança para `PLANNING` no mesmo
+commit. Não escolhe por score, não vincula Company existente e não cria plano.
+
+### Correção F4.3.1
+
+O replay agora ancora a confirmação na transição histórica imutável
+`WAITING_FOR_ENTITY_CONFIRMATION -> PLANNING`, com versão, comando, digest,
+decisão, Company, lote, candidato, políticas e timestamp correlacionados. O
+snapshot atual é validado separadamente e pode ter avançado ou sido cancelado,
+desde que preserve a Company confirmada, mantenha o lote ativo nulo e tenha
+versão não inferior à transição. O mesmo comando íntegro é apenas devolvido:
+não há relógio, novos IDs, CAS, restauração de estado, ledger ou auditoria nova.
+Persistência parcial ou internamente divergente falha fechada; colisão permanece
+reservada a conflito semântico contra histórico íntegro.
+
+A correção não criou migration, dependência, lockfile, transição ou capacidade
+nova. A F4.4 foi autorizada posteriormente por instrução específica.
+
+## F4.4 — Plano determinístico de investigação
+
+A F4.4 persiste um único plano `READY` por Investigation em `PLANNING`, sem
+alterar estado ou `state_version`. A política `INVESTIGATION_PLANNING_V1` usa a
+Company confirmada, perfil, país, orçamento/deadline e cópias imutáveis dos
+descritores admitidos no registro explícito. Ela não chama conectores.
+
+As dez capacidades existentes são representadas, com indisponibilidade opcional
+explícita. Registro e identidade empresarial são obrigatórios; `OWNERSHIP`
+depende de `COMPANY_REGISTRY`. A migration `20260801_06` cria
+`investigation_plan`, `planned_capability` e `planned_connector_option`, com FKs
+tenant-scoped, unicidades, checks fechados e downgrade que recusa apagar planos.
+
+### Correção F4.4.1
+
+A continuidade histórica aceita o plano após avanço para os estados
+pós-confirmação autorizados, desde que Company e contexto imutável sejam
+preservados, o lote ativo continue nulo e a versão não regrida. As três leituras
+e o replay usam a mesma validação fail-closed. Capacidades
+`OPTIONAL_UNAVAILABLE` permanecem no plano, mas somente `READY` participa do
+caminho crítico. A migration `20260801_07` torna atômico o conjunto tipado de
+custo da auditoria, sem modificar a migration F4.4.
+
+## F4.5 — Ativação do plano e manifesto de coleta
+
+A F4.5 cria `CollectionRun` e uma `CollectionOperation` para cada capacidade
+`READY`, selecionando exclusivamente a opção persistida rank 1. Dependências
+são convertidas para operações do mesmo run. O manifesto é append-only,
+tenant-scoped e inicia em `PENDING`; não representa job nem resultado.
+
+O serviço avança somente `PLANNING -> COLLECTING` com CAS, ledger e auditoria no
+mesmo commit. Replay íntegro não lê clock, gera IDs, executa CAS ou escreve. A
+migration `20260802_08` cria as três tabelas de manifesto e FKs compostas.
+Registry, simuladores, runner e conectores não são chamados.
+
+### Correção F4.5.1
+
+A ativação revalida o deadline com o caminho crítico das operações derivadas
+somente de capacidades `READY`, aceitando igualdade e rejeitando insuficiência
+antes de materializar o run. Toda leitura correlaciona o run com a transição
+histórica exata, inclusive ator, instante, Company e plano. A migration
+`20260802_09` adiciona apenas os dois vínculos históricos necessários; F4.6
+permanece não autorizada.
+
+## Exclusões e próximas subfases
+
+Não foram implementados:
+
+- rejeição de candidato ou de todos os candidatos;
+- associação, deduplicação ou merge de `Company`;
+- qualquer transição posterior a `COLLECTING`;
+- descoberta ou execução de conector;
+- execução do manifesto, jobs, filas, workers, outbox ou fan-out/fan-in;
+- evidência, claim, risco, relatório, endpoint ou frontend novo.
+
+Esses itens, inclusive a F4.6, exigem instrução e revisão próprias. Conectores
+reais continuam condicionados ao gate G6 e às aprovações técnica, jurídica e
+comercial por fonte.
+
+## Gate da Fase 4
+
+A F4.2 isoladamente não conclui a Fase 4. O gate futuro deverá provar o lifecycle
+completo autorizado, retomada sob decisão humana, isolamento, concorrência,
+idempotência, resolução de homônimos e comportamento determinístico com fontes
+simuladas, sem relaxar proveniência ou admissibilidade.

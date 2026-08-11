@@ -35,13 +35,35 @@
 - `validation/f3.1-connector-contracts-registry.md`: contratos versionados, registro explícito, testes, gates e limites da F3.1.
 - `validation/f3.2-simulators-contract-suite.md`: simuladores determinísticos, suíte comum, cobertura, gates e limites da F3.2.
 - `validation/f3.3-connector-execution-controls.md`: controles de uma operação, corridas determinísticas, cobertura, gates e limites da F3.3.
+- `validation/f4.1-investigation-lifecycle-foundation.md`: CAS, replay durável, concorrência PostgreSQL, migrations, cobertura e limites da F4.1.
+- `validation/f4.2-entity-candidate-review-foundation.md`: matching determinístico, persistência tenant-scoped, concorrência, migration e limites da F4.2.
+- `validation/f4.2.1-persisted-evaluation-integrity.md`: reconstrução canônica, testes de adulteração e gates da correção F4.2.1.
+- `validation/f4.3-entity-confirmation-and-company-materialization.md`: confirmação humana, Company canônica, replay, migration e limites da F4.3.
+- `validation/f4.3.1-durable-confirmation-replay.md`: separação entre fato histórico e estado atual, replay após avanço/cancelamento e classificação fail-closed.
+- `validation/f4.4-investigation-plan.md`: política determinística, persistência, replay, concorrência, migration e limites da F4.4.
+- `validation/f4.5-collection-activation-manifest.md`: ativação, manifesto, replay, atomicidade e limites da F4.5.
+- `validation/f4.5.1-collection-activation-integrity.md`: revalidação de prazo, vínculo histórico exato e pacote portátil da F4.5.1.
+- `validation/f4.4.1-plan-continuity.md`: continuidade histórica, caminho crítico executável e constraint de custo corrigida.
 
 ## Tarefas da Fase 3
 
 - `tasks/f3/F3_ROADMAP.md`: contexto da decomposição da Fase 3; não autoriza execução integral.
 - `tasks/f3/F3_1_CONTRATOS_E_REGISTRO.md`: escopo executado exclusivamente na F3.1.
 - `tasks/f3/F3_2_SIMULADORES_E_SUITE_DE_CONTRATO.md`: escopo autorizado exclusivamente na F3.2.
-- `tasks/f3/F3_3_CONTROLES_DE_EXECUCAO.md`: escopo implementado exclusivamente na F3.3 e aguardando revisão independente.
+- `tasks/f3/F3_3_CONTROLES_DE_EXECUCAO.md`: escopo aceito da F3.3, após revisão independente, que concluiu o gate G3 e a Fase 3.
+
+## Tarefas da Fase 4
+
+- `tasks/f4/F4_ROADMAP.md`: decomposição da Fase 4; F4.5/F4.5.1 aceitas após revisão independente.
+- `tasks/f4/F4_1_LIFECYCLE_TRANSACIONAL_INICIAL.md`: escopo, contratos, persistência e exclusões da F4.1.
+- `tasks/f4/F4_2_CANDIDATOS_MATCHING_CONFIRMACAO.md`: escopo, política, transação e exclusões da F4.2.
+- `tasks/f4/F4_2_1_CORRECAO_INTEGRIDADE_RECONSTITUICAO.md`: causa, algoritmo e limites da correção de integridade F4.2.1.
+- `tasks/f4/F4_3_CONFIRMACAO_ENTIDADE_CANONICA.md`: comando humano, materialização, decisão e exclusões da F4.3.
+- `tasks/f4/F4_3_1_REPLAY_HISTORICO_CONFIRMACAO.md`: correção do replay histórico durável sem efeitos colaterais.
+- `tasks/f4/F4_4_PLANO_INVESTIGACAO.md`: política, plano imutável, persistência e exclusões da F4.4.
+- `tasks/f4/F4_4_1_CORRECAO_CONTINUIDADE_PLANO.md`: correção curta da continuidade, prazo e auditoria da F4.4.
+- `tasks/f4/F4_5_ATIVACAO_MANIFESTO_COLETA.md`: ativação transacional e manifesto persistente sem execução.
+- `tasks/f4/F4_5_1_CORRECAO_PRAZO_E_INTEGRIDADE.md`: correção curta de prazo, integridade histórica e empacotamento.
 
 ## Decisões
 
@@ -61,6 +83,12 @@
 - `adr/0013-service-authorization-and-coordinated-audit.md`: contexto do ator, autorização, último owner e auditoria coordenada.
 - `adr/0014-connector-contracts-and-explicit-registry.md`: contrato `1.0.0`, cobertura e registro explícitos.
 - `adr/0015-single-connector-operation-execution-controls.md`: deadline, retry, budget e idempotência locais para uma operação.
+- `adr/0016-transactional-investigation-lifecycle-foundation.md`: comandos fechados, CAS, idempotência durável, ledger e auditoria transacional da F4.1.
+- `adr/0017-entity-candidate-matching-and-review-pause.md`: política V1, matching determinístico, candidatos append-only e pausa para revisão.
+- `adr/0018-persisted-matching-evaluation-integrity.md`: reconstituição oficial fail-closed e digest de submissão independente da ordem incidental.
+- `adr/0019-human-entity-confirmation-and-company-materialization.md`: confirmação exclusivamente humana, nova Company, decisão append-only e atomicidade.
+- `adr/0020-deterministic-investigation-plan.md`: política pura, descritores estáticos e persistência imutável do plano F4.4.
+- `adr/0021-collection-activation-manifest.md`: seleção rank 1, lifecycle e persistência imutável do manifesto F4.5.
 
 ## Regra de consistência
 

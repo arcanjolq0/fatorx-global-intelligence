@@ -59,8 +59,8 @@ class CompanyService:
                 company = Company(
                     id=CompanyId.new(),
                     workspace_id=actor.workspace_id,
-                    legal_name=legal_name,
-                    trade_name=trade_name,
+                    legal_name=legal_name.strip(),
+                    trade_name=trade_name.strip() if trade_name is not None else None,
                     country_code=country_code,
                     legal_form=legal_form,
                     status=status,

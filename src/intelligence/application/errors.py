@@ -56,15 +56,159 @@ class InvalidOperationError(ApplicationError):
         super().__init__("Operation is invalid in the current state.")
 
 
+class InvestigationTransitionError(ApplicationError):
+    """A lifecycle command is invalid for the current investigation state."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation transition is invalid.")
+
+
+class ConcurrentInvestigationUpdateError(ApplicationError):
+    """Optimistic locking rejected a stale expected state version."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation state version is stale.")
+
+
+class InvestigationCommandCollisionError(ApplicationError):
+    """A durable command ID was reused for different allowlisted content."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation command identifier conflicts with prior content.")
+
+
+class CandidateInputDigestMismatchError(ApplicationError):
+    """Candidate submission does not target the persisted identification input."""
+
+    def __init__(self) -> None:
+        super().__init__("Candidate batch does not match the identification input.")
+
+
+class CandidateReviewError(ApplicationError):
+    """Candidate batch or matching policy cannot be evaluated safely."""
+
+    def __init__(self) -> None:
+        super().__init__("Candidate review request is invalid.")
+
+
+class InactiveCandidateBatchError(ApplicationError):
+    """A confirmation command does not target the investigation's active batch."""
+
+    def __init__(self) -> None:
+        super().__init__("Candidate batch is not active for this investigation.")
+
+
+class CandidateNotInBatchError(ApplicationError):
+    """The selected candidate is absent from the tenant-scoped active batch."""
+
+    def __init__(self) -> None:
+        super().__init__("Selected candidate was not found in the active batch.")
+
+
+class CandidateExcludedError(ApplicationError):
+    """A matching hard conflict makes the selected candidate ineligible."""
+
+    def __init__(self) -> None:
+        super().__init__("Excluded candidates cannot be confirmed.")
+
+
+class EntityConfirmationReasonError(ApplicationError):
+    """The closed human-review reason is incompatible with rank/classification."""
+
+    def __init__(self) -> None:
+        super().__init__("Entity confirmation reason is incompatible with the candidate.")
+
+
+class InvalidMaterializationPolicyError(ApplicationError):
+    """The requested Company materialization policy is unsupported."""
+
+    def __init__(self) -> None:
+        super().__init__("Company materialization policy is invalid.")
+
+
+class InvalidInvestigationPlanningError(ApplicationError):
+    """Persisted inputs or the supplied policy cannot produce a safe plan."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation planning request is invalid.")
+
+
+class RequiredPlanningCapabilityUnavailableError(ApplicationError):
+    """A required policy capability has no statically eligible connector."""
+
+    def __init__(self) -> None:
+        super().__init__("A required investigation capability is unavailable.")
+
+
+class InvestigationPlanningBudgetError(ApplicationError):
+    """Known plan cost is incompatible with the persisted budget."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation plan exceeds the available budget.")
+
+
+class InvestigationPlanningDeadlineError(ApplicationError):
+    """The deterministic critical path cannot fit before the deadline."""
+
+    def __init__(self) -> None:
+        super().__init__("Investigation plan is incompatible with the deadline.")
+
+
+class InvestigationPlanAlreadyExistsError(ApplicationError):
+    """Another command already created the sole plan for an investigation."""
+
+    def __init__(self) -> None:
+        super().__init__("An investigation plan already exists.")
+
+
+class InvalidCollectionActivationError(ApplicationError):
+    """The persisted plan or activation policy cannot produce a safe manifest."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection activation request is invalid.")
+
+
+class CollectionActivationDeadlineError(ApplicationError):
+    """The READY-operation critical path no longer fits before the persisted deadline."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection activation exceeds the investigation deadline.")
+
+
+class CollectionRunAlreadyExistsError(ApplicationError):
+    """Another command already activated collection for this investigation or plan."""
+
+    def __init__(self) -> None:
+        super().__init__("A collection run already exists.")
+
+
 __all__ = [
     "ApplicationError",
     "AuthorizationDeniedError",
+    "CandidateExcludedError",
+    "CandidateInputDigestMismatchError",
+    "CandidateNotInBatchError",
+    "CandidateReviewError",
+    "CollectionActivationDeadlineError",
+    "CollectionRunAlreadyExistsError",
+    "ConcurrentInvestigationUpdateError",
+    "EntityConfirmationReasonError",
+    "InactiveCandidateBatchError",
+    "InvalidCollectionActivationError",
+    "InvalidInvestigationPlanningError",
+    "InvalidMaterializationPolicyError",
     "InvalidOperationError",
+    "InvestigationCommandCollisionError",
+    "InvestigationPlanAlreadyExistsError",
+    "InvestigationPlanningBudgetError",
+    "InvestigationPlanningDeadlineError",
+    "InvestigationTransitionError",
     "LastOwnerProtectionError",
     "MembershipConflictError",
     "PersistenceConflictError",
     "PersistenceDataError",
     "PersistenceError",
     "PersistenceStateError",
+    "RequiredPlanningCapabilityUnavailableError",
     "ResourceNotFoundError",
 ]

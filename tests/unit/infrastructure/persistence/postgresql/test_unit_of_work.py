@@ -9,13 +9,19 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from intelligence.application.errors import PersistenceError, PersistenceStateError
+from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
 from intelligence.application.ports.unit_of_work import UnitOfWork, UnitOfWorkFactory
 from intelligence.domain.audit import AuditEvent
-from intelligence.domain.identifiers import UserId, WorkspaceId
+from intelligence.domain.identifiers import (
+    InvestigationCommandId,
+    UserId,
+    WorkspaceId,
+)
 from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
 from intelligence.domain.workspaces import Workspace
 from intelligence.infrastructure.persistence.postgresql.repositories import (
     PostgreSQLAuditEventRepository,
+    PostgreSQLInvestigationTransitionRepository,
     PostgreSQLUserRepository,
     PostgreSQLWorkspaceMembershipRepository,
 )
@@ -125,11 +131,13 @@ def _capture_new_repositories(
     PostgreSQLUserRepository,
     PostgreSQLWorkspaceMembershipRepository,
     PostgreSQLAuditEventRepository,
+    PostgreSQLInvestigationTransitionRepository,
 ]:
     return (
         unit_of_work.users,
         unit_of_work.memberships,
         unit_of_work.audit_events,
+        unit_of_work.investigation_transitions,
     )
 
 
@@ -138,9 +146,10 @@ def _assert_new_repositories_reject_operations(
         PostgreSQLUserRepository,
         PostgreSQLWorkspaceMembershipRepository,
         PostgreSQLAuditEventRepository,
+        PostgreSQLInvestigationTransitionRepository,
     ],
 ) -> None:
-    users, memberships, audit_events = repositories
+    users, memberships, audit_events, transitions = repositories
 
     with pytest.raises(PersistenceStateError, match="transaction is not active"):
         users.get(UserId.new())
@@ -154,6 +163,12 @@ def _assert_new_repositories_reject_operations(
         memberships.add(cast(WorkspaceMembership, None))
     with pytest.raises(PersistenceStateError, match="transaction is not active"):
         audit_events.add(cast(AuditEvent, None))
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        transitions.acquire_command_lock(WorkspaceId.new(), InvestigationCommandId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        transitions.get_by_command(WorkspaceId.new(), InvestigationCommandId.new())
+    with pytest.raises(PersistenceStateError, match="transaction is not active"):
+        transitions.add(cast(InvestigationTransitionRecord, None))
 
 
 def test_concrete_unit_of_work_satisfies_the_application_port() -> None:
@@ -215,6 +230,7 @@ def test_repositories_share_the_connection_opened_by_the_unit_of_work() -> None:
             id(unit_of_work.users._transaction_guard),
             id(unit_of_work.memberships._transaction_guard),
             id(unit_of_work.audit_events._transaction_guard),
+            id(unit_of_work.investigation_transitions._transaction_guard),
         }
         guard = unit_of_work.workspaces._transaction_guard
 
@@ -284,6 +300,7 @@ def test_unit_of_work_and_repositories_reject_use_after_close() -> None:
         "users",
         "memberships",
         "audit_events",
+        "investigation_transitions",
     ):
         with pytest.raises(PersistenceStateError):
             getattr(unit_of_work, repository_name)
@@ -299,6 +316,7 @@ def test_unit_of_work_and_repositories_reject_use_after_close() -> None:
         "users",
         "memberships",
         "audit_events",
+        "investigation_transitions",
     ):
         with pytest.raises(PersistenceStateError):
             getattr(unit_of_work, repository_name)

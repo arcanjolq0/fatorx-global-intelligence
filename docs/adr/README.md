@@ -27,3 +27,9 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0013 | Accepted | contexto do ator, autorização por papel, último owner e auditoria coordenada |
 | 0014 | Accepted | contratos versionados de conectores, cobertura e registro explícitos |
 | 0015 | Accepted | controles locais de uma única operação de conector |
+| 0016 | Accepted | entrada versionada, CAS e ledger durável do lifecycle inicial |
+| 0017 | Accepted | matching determinístico versionado e pausa transacional para revisão humana |
+| 0018 | Accepted | reconstituição canônica fail-closed das avaliações persistidas |
+| 0019 | Accepted | confirmação humana, materialização determinística e replay ancorado na transição histórica |
+| 0020 | Accepted | política e persistência do plano determinístico, corrigida pela F4.4.1 |
+| 0021 | Accepted | ativação transacional e manifesto imutável de coleta F4.5/F4.5.1 |

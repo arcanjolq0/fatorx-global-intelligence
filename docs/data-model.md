@@ -97,15 +97,34 @@ Substitui o conceito estreito de `SearchRun`.
 
 Campos: `id`, `workspace_id`, `requested_by`, `profile_code`, `country_code`, `input_snapshot`, `state`, `state_version`, `confirmed_company_id`, `methodology_version_id`, `budget_amount`, `budget_currency`, `deadline_at`, `started_at`, `completed_at`, `created_at`.
 
-`input_snapshot` é versionado e redigido; não deve virar depósito de segredos ou documentos.
+`input_snapshot` é versionado e redigido; não deve virar depósito de segredos ou documentos. A F4.1 materializou o envelope fechado `IdentificationInput` schema `1`; a F4.2 preserva compatibilidade e admite o schema `2` opt-in para administradores e data de constituição. Ambos usam JSONB fechado, `input_schema_version` e digest SHA-256 canônico.
 
-Na F2.2/F2.2.1, somente os campos já representados pelo domínio são criados; `input_snapshot` e `methodology_version_id` permanecem adiados. Uma linha em `CREATED` exige `started_at` nulo; todo estado posterior exige início preenchido. Estados terminais exigem `completed_at`, e estados não terminais o proíbem. A investigação pode referenciar empresa canônica previamente cadastrada no mesmo workspace, e `deadline_at` não pode anteceder `created_at`. A presença inicial da empresa não altera por si só o estado nem implementa transição.
+Na F2.2/F2.2.1, `input_snapshot` e `methodology_version_id` foram adiados. A F4.1 materializa somente o snapshot de entrada; `methodology_version_id` continua ausente. Uma linha em `CREATED` exige entrada e `started_at` nulos; todo estado posterior exige início preenchido. Estados terminais exigem `completed_at`, e estados não terminais o proíbem. Estados iniciados novos exigem entrada. A F4.3 proíbe Company antes da confirmação e a exige entre `PLANNING` e os estados de conclusão; FAILED/CANCELLED podem tê-la conforme o momento. Constraints `NOT VALID` preservam linhas históricas sem fabricar conteúdo, mas protegem novas escritas. `deadline_at` não pode anteceder `created_at`.
 
 `requested_by` permanece UUID tipado sem foreign key. Bancos na revisão anterior podem conter investigações cujos UUIDs não correspondem a um `UserAccount`, e não existe backfill confiável. A F2.4.2 valida novas criações no serviço e define `requested_by = actor.user_id` depois de autorizar usuário e membership. Uma FK futura ainda depende de reconciliação explícita dos dados existentes.
 
 `budget_amount` usa `NUMERIC` sem precisão ou escala fixadas e rejeita `NaN` e infinitos, preservando o contrato de `Money` finito sem arredondamento ou conversão. Valores negativos continuam estruturalmente possíveis porque a F2.1 não definiu semântica de limite orçamentário; eventual proibição exige regra de negócio explícita.
 
-Na F2.3, snapshots persistidos retornam ao domínio por `Investigation.reconstitute`. O contrato de criação continua aceitando somente `CREATED` e versão 1; a reconstituição aceita os estados canônicos já armazenados, preserva `state_version` e reaplica as invariantes de tipos, UTC, ordem e coerência entre estado e timestamps. Isso não implementa transição de estado.
+Na F2.3, snapshots persistidos retornam ao domínio por `Investigation.reconstitute`. O contrato de criação continua aceitando somente `CREATED` e versão 1. Na F4.1–F4.5, a reconstituição também valida entrada, lote ativo e coerência da Company confirmada. `start_identification`, `request_entity_confirmation`, `confirm_entity`, `start_collection` e `cancel` são transições específicas e imutáveis. A criação de plano F4.4 não é transição; a ativação F4.5 incrementa uma vez e entra em `COLLECTING`.
+
+### `InvestigationTransition`
+
+Ledger append-only materializado na F4.1. Campos: `id`, `workspace_id`,
+`investigation_id`, `command_id`, `command_type`, `state_before`,
+`version_before`, `state_after`, `version_after`, `actor_user_id`, `reason_code`,
+`occurred_at`, `command_digest`, `correlation_id` e, para F4.2,
+`candidate_batch_id`, `candidate_count`, `top_classification`, `policy_id` e
+`policy_version`. A F4.3 acrescenta IDs de decisão, Company, lote e candidato,
+motivo, classificação/rank e IDs/versões das políticas de matching e
+materialização. A F4.5 acrescenta run, quantidade de operações e ID/versão da
+política de ativação. A F4.5.1 acrescenta à mesma transição os IDs da Company e
+do plano, permitindo validar o vínculo histórico exato contra o run.
+
+`command_type` aceita `START_IDENTIFICATION`, `CANCEL_INVESTIGATION`,
+`REQUEST_ENTITY_CONFIRMATION`, `CONFIRM_ENTITY_CANDIDATE` e `START_COLLECTION`. A versão posterior é exatamente a anterior + 1.
+`(workspace_id, command_id)` é único e a FK composta
+`(investigation_id, workspace_id)` impede vínculo cross-tenant. O repositório
+não expõe update/delete.
 
 ### `InvestigationSubject`
 
@@ -113,17 +132,82 @@ Preserva os valores apresentados pelo usuário antes da confirmação: nomes, id
 
 ### `EntityCandidate`
 
-Campos: `id`, `investigation_id`, `candidate_key`, dados normalizados, origem, scores por dimensão, `policy_version`, `decision`, `decision_reason`, `decided_by`, `decided_at`.
+Materializado na F4.2 como três tabelas. `entity_candidate_batch` contém escopo,
+comando/autor, versão, digests e snapshot integral da política.
+`entity_candidate` contém chave, identidade/origem fechadas, rank, total,
+cobertura, classificação, conflito, digest e decisão obrigatoriamente
+`PENDING_REVIEW`. `entity_candidate_dimension_score` contém dimensão, score,
+peso, contribuição, disponibilidade, conflito e explicação.
 
-Scores separados: identificador, nome, endereço, domínio, geografia, administradores e temporalidade. Não armazenar somente um score total opaco.
+Scores separados: identificador, nome, domínio, geografia, endereço,
+administradores e temporalidade. FKs compostas incluem workspace; lote é único
+por investigação/comando e não há update/delete. Candidatos não são evidência,
+claim ou empresa. `active_candidate_batch_id` aponta o lote da pausa; a
+constraint de linhas novas é `NOT VALID` apenas para preservar histórico sem
+fabricar dados.
 
-### `InvestigationPlan`
+A F4.2.1 não altera essas tabelas. Na reconstituição, o cabeçalho fornece
+política e input digest obrigatórios para cada candidato; identidade, origem,
+dimensões e avaliações são reconstruídas em seus contratos oficiais. Pesos,
+total, cobertura, classificação, conflitos, digests e ranking precisam
+corresponder exatamente. A serialização canônica do lote ordena candidatos por
+`candidate_key`, pois ordem de submissão não é coluna nem semântica do matching.
+O mapper falha fechado com erro redigido e nunca corrige a linha adulterada.
 
-Campos: `id`, `investigation_id`, `version`, `country_pack_version`, `profile_version`, `created_at`, `created_by`, `budget_snapshot`, `deadline_at`.
+### `EntityResolutionDecision`
 
-### `PlannedCapability`
+Materializado na F4.3 em tabela append-only. Liga workspace, investigação,
+comando, lote, candidato, nova Company e revisor; persiste motivo fechado,
+rank/classificação, digests da avaliação, snapshot/digest da política de
+materialização e digests da Company/decisão. FKs compostas protegem escopo e
+unicidades impõem uma decisão por investigação, comando e Company no workspace.
+O repositório reconstitui decisão, Company, Investigation, lote e candidato e
+recalcula os digests; qualquer divergência falha fechado. Não há update/delete.
+O candidato permanece `PENDING_REVIEW`.
 
-Campos: `plan_id`, `capability`, `required`, `connector_definition_id`, `reason`, `estimated_cost`, `status`.
+### `InvestigationPlan`, `PlannedCapability` e `PlannedConnectorOption`
+
+Materializados na F4.4 em três tabelas append-only. `investigation_plan` liga
+workspace, Investigation e Company confirmada; preserva perfil, país, orçamento,
+deadline, versão/status, política canônica, digests de entrada/Company/plano,
+comando, ator e instante. Há um plano por Investigation e um comando por
+workspace. Os campos `command_id` e `command_digest` formam o registro durável
+do comando de planejamento, separado do ledger de transições porque não há
+mudança de lifecycle.
+
+`planned_capability` mantém capacidade, requisito, prioridade, motivo fechado,
+dependências tipadas, custo/prazo e status. `planned_connector_option` mantém a
+cópia imutável do descritor relevante, operações, rank de elegibilidade e
+estimativas. FKs compostas propagam workspace/Investigation por todo o agregado;
+unicidades impedem capacidades, ranks e conectores duplicados. O repositório
+reconstitui política, grafo, custos e todos os digests, falhando fechado diante
+de ausência ou adulteração. Não há update/delete público.
+
+A F4.4.1 mantém o agregado histórico legível quando a Investigation atual
+avança por estados pós-confirmação autorizados e conserva Company, ausência de
+lote ativo e versão monotônica. As três chaves de leitura compartilham essa
+validação. A migration `20260801_07` reforça na auditoria que comando e custo
+estejam todos ausentes ou formem um conjunto `UNKNOWN`/`KNOWN` completo.
+
+### `CollectionRun`, `CollectionOperation` e dependências
+
+Materializados na F4.5 em três tabelas append-only. `collection_run` liga
+workspace, Investigation, Company e plano; registra versões, status `PENDING`,
+política canônica/digest, digests do plano/Company/comando/run, orçamento,
+deadline, custo agregado, ator e instante. Há um run por Investigation e plano.
+
+`collection_operation` copia a capacidade e a opção rank 1 persistida, incluindo
+conector, versões, fonte, operações declaradas, cobertura, acesso, custo,
+duração, status `PENDING`, tentativa zero e digest. A tabela de dependências usa
+FKs compostas para limitar ambas as pontas ao mesmo run e conserva ordem
+canônica. Reconstituição recalcula digests e confronta o manifesto com o plano;
+não há update/delete público. Esses registros não são jobs, resultados,
+evidências ou claims.
+
+A migration `20260802_09` reforça a FK da transição para o conjunto run,
+workspace, Investigation, Company e plano. Na leitura por comando,
+Investigation, plano ou ID, run sem transição e transição F4.5 sem run são dados
+inválidos, nunca ausência comum.
 
 ### `ConnectorRun`
 
@@ -232,7 +316,8 @@ A materialização mínima de `AuditEvent` pertence à F2.4.1. Na F2.4.2, helper
 ## 10. Índices e constraints iniciais
 
 - todos os acessos por raiz: índice começando por `workspace_id`;
-- `Investigation(workspace_id, state)` para consultas de raiz na F2.2; ordenação temporal será avaliada quando `updated_at` ou eventos persistidos forem introduzidos;
+- `Investigation(workspace_id, state)` para consultas de raiz;
+- `InvestigationTransition(workspace_id, investigation_id, version_after)` e `(workspace_id, occurred_at)` para histórico e auditoria operacional;
 - `ConnectorRun(operation_id, connector_id, operation_kind)` único;
 - `Artifact(workspace_id, sha256, source_policy_version_id)` para deduplicação permitida;
 - `Evidence(investigation_id, subject_ref, admissibility_status)`;

@@ -7,6 +7,7 @@ from intelligence.application.ports.repositories import (
     AuditEventRepository,
     CompanyRepository,
     InvestigationRepository,
+    InvestigationTransitionRepository,
     UserRepository,
     WorkspaceMembershipRepository,
     WorkspaceRepository,
@@ -20,6 +21,7 @@ from intelligence.application.ports.unit_of_work import UnitOfWork, UnitOfWorkFa
         WorkspaceRepository,
         CompanyRepository,
         InvestigationRepository,
+        InvestigationTransitionRepository,
         UserRepository,
         WorkspaceMembershipRepository,
         AuditEventRepository,
@@ -56,6 +58,16 @@ def test_audit_event_repository_is_an_append_only_protocol() -> None:
     }
 
     assert public_operations == {"add"}
+
+
+def test_investigation_transition_repository_is_append_only_with_command_lookup() -> None:
+    public_operations = {
+        name
+        for name, member in InvestigationTransitionRepository.__dict__.items()
+        if not name.startswith("_") and callable(member)
+    }
+
+    assert public_operations == {"acquire_command_lock", "add", "get_by_command"}
 
 
 def test_audit_event_protocol_accepts_add_only_structural_adapter() -> None:

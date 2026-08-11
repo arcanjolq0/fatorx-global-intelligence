@@ -38,8 +38,10 @@ def _company(**overrides: object) -> Company:
 def test_company_normalizes_text_domain_and_timestamps() -> None:
     company = _company()
 
-    assert company.legal_name == "Fator X Ltda."
-    assert company.trade_name == "Fator X"
+    assert company.legal_name == "  Fator X Ltda.  "
+    assert company.trade_name == "  Fator X  "
+    assert "Fator X" not in repr(company)
+    assert "example" not in repr(company)
     assert company.legal_form == "Limitada"
     assert company.official_domain == "fatorx.example"
     assert company.created_at == datetime(2026, 7, 25, 12, tzinfo=UTC)

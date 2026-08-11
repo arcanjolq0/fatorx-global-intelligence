@@ -66,6 +66,46 @@ class InvestigationId(_UUIDIdentifier):
     """Identifier for an investigation aggregate."""
 
 
+class InvestigationCommandId(_UUIDIdentifier):
+    """Opaque idempotency identifier for one investigation command."""
+
+
+class InvestigationTransitionId(_UUIDIdentifier):
+    """Identifier for an append-only investigation transition record."""
+
+
+class EntityCandidateBatchId(_UUIDIdentifier):
+    """Identifier for one immutable entity-candidate evaluation batch."""
+
+
+class EntityCandidateId(_UUIDIdentifier):
+    """Identifier for one candidate snapshot inside an evaluation batch."""
+
+
+class EntityResolutionDecisionId(_UUIDIdentifier):
+    """Identifier for one immutable human entity-resolution decision."""
+
+
+class InvestigationPlanId(_UUIDIdentifier):
+    """Identifier for one immutable investigation plan."""
+
+
+class PlannedCapabilityId(_UUIDIdentifier):
+    """Identifier for one capability inside an investigation plan."""
+
+
+class PlannedConnectorOptionId(_UUIDIdentifier):
+    """Identifier for one eligible connector option inside a planned capability."""
+
+
+class CollectionRunId(_UUIDIdentifier):
+    """Identifier for one immutable collection activation manifest."""
+
+
+class CollectionOperationId(_UUIDIdentifier):
+    """Identifier for one operation prepared by a collection manifest."""
+
+
 class MembershipId(_UUIDIdentifier):
     """Identifier for one user membership within a workspace."""
 
@@ -80,10 +120,20 @@ class CorrelationId(_UUIDIdentifier):
 
 __all__ = (
     "AuditEventId",
+    "CollectionOperationId",
+    "CollectionRunId",
     "CompanyId",
     "CorrelationId",
+    "EntityCandidateBatchId",
+    "EntityCandidateId",
+    "EntityResolutionDecisionId",
+    "InvestigationCommandId",
     "InvestigationId",
+    "InvestigationPlanId",
+    "InvestigationTransitionId",
     "MembershipId",
+    "PlannedCapabilityId",
+    "PlannedConnectorOptionId",
     "UserId",
     "WorkspaceId",
 )

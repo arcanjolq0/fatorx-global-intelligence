@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from intelligence.application.actor_context import ActorContext
+from intelligence.application.entity_confirmation import EntityConfirmationReason
 from intelligence.application.errors import PersistenceError
 from intelligence.application.ports.unit_of_work import UnitOfWork
 from intelligence.domain.audit import (
@@ -12,7 +13,18 @@ from intelligence.domain.audit import (
     AuditResourceId,
     AuditResourceType,
 )
-from intelligence.domain.identifiers import AuditEventId
+from intelligence.domain.identifiers import (
+    AuditEventId,
+    CollectionRunId,
+    CompanyId,
+    EntityCandidateBatchId,
+    EntityCandidateId,
+    EntityResolutionDecisionId,
+    InvestigationCommandId,
+    InvestigationPlanId,
+)
+from intelligence.domain.money import Money
+from intelligence.entity_resolution.policy import MatchClassification
 
 
 class AuditActionCode(StrEnum):
@@ -24,6 +36,12 @@ class AuditActionCode(StrEnum):
     MEMBERSHIP_REACTIVATED = "MEMBERSHIP_REACTIVATED"
     COMPANY_CREATED = "COMPANY_CREATED"
     INVESTIGATION_CREATED = "INVESTIGATION_CREATED"
+    INVESTIGATION_IDENTIFICATION_STARTED = "INVESTIGATION_IDENTIFICATION_STARTED"
+    INVESTIGATION_CANCELLED = "INVESTIGATION_CANCELLED"
+    INVESTIGATION_ENTITY_CONFIRMATION_REQUESTED = "INVESTIGATION_ENTITY_CONFIRMATION_REQUESTED"
+    INVESTIGATION_ENTITY_CANDIDATE_CONFIRMED = "INVESTIGATION_ENTITY_CANDIDATE_CONFIRMED"
+    INVESTIGATION_PLAN_CREATED = "INVESTIGATION_PLAN_CREATED"
+    INVESTIGATION_COLLECTION_STARTED = "INVESTIGATION_COLLECTION_STARTED"
     COMPANY_READ_DENIED = "COMPANY_READ_DENIED"
     INVESTIGATION_READ_DENIED = "INVESTIGATION_READ_DENIED"
 
@@ -48,6 +66,30 @@ class AuditReasonCode(StrEnum):
     VALIDATION_FAILURE = "VALIDATION_FAILURE"
     PERSISTENCE_CONFLICT = "PERSISTENCE_CONFLICT"
     PERSISTENCE_FAILURE = "PERSISTENCE_FAILURE"
+    STATE_VERSION_CONFLICT = "STATE_VERSION_CONFLICT"
+    COMMAND_ID_COLLISION = "COMMAND_ID_COLLISION"
+    INVALID_TRANSITION = "INVALID_TRANSITION"
+    INPUT_DIGEST_MISMATCH = "INPUT_DIGEST_MISMATCH"
+    CANDIDATE_REVIEW_INVALID = "CANDIDATE_REVIEW_INVALID"
+    CANDIDATE_BATCH_INACTIVE = "CANDIDATE_BATCH_INACTIVE"
+    CANDIDATE_NOT_IN_BATCH = "CANDIDATE_NOT_IN_BATCH"
+    CANDIDATE_EXCLUDED = "CANDIDATE_EXCLUDED"
+    CONFIRMATION_REASON_INCOMPATIBLE = "CONFIRMATION_REASON_INCOMPATIBLE"
+    MATERIALIZATION_POLICY_INVALID = "MATERIALIZATION_POLICY_INVALID"
+    PLANNING_POLICY_INVALID = "PLANNING_POLICY_INVALID"
+    PLANNING_CONTEXT_INVALID = "PLANNING_CONTEXT_INVALID"
+    REQUIRED_CAPABILITY_UNAVAILABLE = "REQUIRED_CAPABILITY_UNAVAILABLE"
+    PLANNING_BUDGET_EXCEEDED = "PLANNING_BUDGET_EXCEEDED"
+    PLANNING_DEADLINE_EXCEEDED = "PLANNING_DEADLINE_EXCEEDED"
+    INVESTIGATION_PLAN_ALREADY_EXISTS = "INVESTIGATION_PLAN_ALREADY_EXISTS"
+    COLLECTION_ACTIVATION_POLICY_INVALID = "COLLECTION_ACTIVATION_POLICY_INVALID"
+    COLLECTION_CONTEXT_INVALID = "COLLECTION_CONTEXT_INVALID"
+    COLLECTION_DEADLINE_EXCEEDED = "COLLECTION_DEADLINE_EXCEEDED"
+    COLLECTION_RUN_ALREADY_EXISTS = "COLLECTION_RUN_ALREADY_EXISTS"
+    CANCELLATION_USER_REQUESTED = "CANCELLATION_USER_REQUESTED"
+    CANCELLATION_DUPLICATE_REQUEST = "CANCELLATION_DUPLICATE_REQUEST"
+    CANCELLATION_NO_LONGER_REQUIRED = "CANCELLATION_NO_LONGER_REQUIRED"
+    CANCELLATION_POLICY_REQUIRED = "CANCELLATION_POLICY_REQUIRED"
 
 
 def build_audit_event(
@@ -59,6 +101,38 @@ def build_audit_event(
     outcome: AuditOutcome,
     reason: AuditReasonCode | None,
     occurred_at: datetime,
+    command_id: InvestigationCommandId | None = None,
+    policy_id: str | None = None,
+    policy_version: int | None = None,
+    candidate_count: int | None = None,
+    top_classification: MatchClassification | None = None,
+    confirmation_command_id: InvestigationCommandId | None = None,
+    entity_resolution_decision_id: EntityResolutionDecisionId | None = None,
+    confirmed_company_id: CompanyId | None = None,
+    confirmed_candidate_batch_id: EntityCandidateBatchId | None = None,
+    confirmed_candidate_id: EntityCandidateId | None = None,
+    confirmation_reason: EntityConfirmationReason | None = None,
+    confirmed_candidate_classification: MatchClassification | None = None,
+    confirmed_candidate_rank: int | None = None,
+    matching_policy_id: str | None = None,
+    matching_policy_version: int | None = None,
+    materialization_policy_id: str | None = None,
+    materialization_policy_version: int | None = None,
+    planning_command_id: InvestigationCommandId | None = None,
+    investigation_plan_id: InvestigationPlanId | None = None,
+    planned_capability_count: int | None = None,
+    planned_connector_option_count: int | None = None,
+    planning_policy_id: str | None = None,
+    planning_policy_version: int | None = None,
+    planning_maximum_estimated_cost_kind_code: str | None = None,
+    planning_maximum_estimated_cost: Money | None = None,
+    collection_command_id: InvestigationCommandId | None = None,
+    collection_run_id: CollectionRunId | None = None,
+    collection_operation_count: int | None = None,
+    collection_activation_policy_id: str | None = None,
+    collection_activation_policy_version: int | None = None,
+    collection_maximum_estimated_cost_kind_code: str | None = None,
+    collection_maximum_estimated_cost: Money | None = None,
 ) -> AuditEvent:
     """Build one minimal event using only trusted context and closed codes."""
 
@@ -79,6 +153,46 @@ def build_audit_event(
         reason_code=reason.value if reason is not None else None,
         correlation_id=actor.correlation_id,
         occurred_at=occurred_at,
+        command_id=command_id,
+        policy_id=policy_id,
+        policy_version=policy_version,
+        candidate_count=candidate_count,
+        top_classification_code=(
+            top_classification.value if top_classification is not None else None
+        ),
+        confirmation_command_id=confirmation_command_id,
+        entity_resolution_decision_id=entity_resolution_decision_id,
+        confirmed_company_id=confirmed_company_id,
+        confirmed_candidate_batch_id=confirmed_candidate_batch_id,
+        confirmed_candidate_id=confirmed_candidate_id,
+        confirmation_reason_code=(
+            confirmation_reason.value if confirmation_reason is not None else None
+        ),
+        confirmed_candidate_classification_code=(
+            confirmed_candidate_classification.value
+            if confirmed_candidate_classification is not None
+            else None
+        ),
+        confirmed_candidate_rank=confirmed_candidate_rank,
+        matching_policy_id=matching_policy_id,
+        matching_policy_version=matching_policy_version,
+        materialization_policy_id=materialization_policy_id,
+        materialization_policy_version=materialization_policy_version,
+        planning_command_id=planning_command_id,
+        investigation_plan_id=investigation_plan_id,
+        planned_capability_count=planned_capability_count,
+        planned_connector_option_count=planned_connector_option_count,
+        planning_policy_id=planning_policy_id,
+        planning_policy_version=planning_policy_version,
+        planning_maximum_estimated_cost_kind_code=(planning_maximum_estimated_cost_kind_code),
+        planning_maximum_estimated_cost=planning_maximum_estimated_cost,
+        collection_command_id=collection_command_id,
+        collection_run_id=collection_run_id,
+        collection_operation_count=collection_operation_count,
+        collection_activation_policy_id=collection_activation_policy_id,
+        collection_activation_policy_version=collection_activation_policy_version,
+        collection_maximum_estimated_cost_kind_code=(collection_maximum_estimated_cost_kind_code),
+        collection_maximum_estimated_cost=collection_maximum_estimated_cost,
     )
 
 
@@ -92,6 +206,38 @@ def append_audit_event(
     outcome: AuditOutcome,
     reason: AuditReasonCode | None,
     occurred_at: datetime,
+    command_id: InvestigationCommandId | None = None,
+    policy_id: str | None = None,
+    policy_version: int | None = None,
+    candidate_count: int | None = None,
+    top_classification: MatchClassification | None = None,
+    confirmation_command_id: InvestigationCommandId | None = None,
+    entity_resolution_decision_id: EntityResolutionDecisionId | None = None,
+    confirmed_company_id: CompanyId | None = None,
+    confirmed_candidate_batch_id: EntityCandidateBatchId | None = None,
+    confirmed_candidate_id: EntityCandidateId | None = None,
+    confirmation_reason: EntityConfirmationReason | None = None,
+    confirmed_candidate_classification: MatchClassification | None = None,
+    confirmed_candidate_rank: int | None = None,
+    matching_policy_id: str | None = None,
+    matching_policy_version: int | None = None,
+    materialization_policy_id: str | None = None,
+    materialization_policy_version: int | None = None,
+    planning_command_id: InvestigationCommandId | None = None,
+    investigation_plan_id: InvestigationPlanId | None = None,
+    planned_capability_count: int | None = None,
+    planned_connector_option_count: int | None = None,
+    planning_policy_id: str | None = None,
+    planning_policy_version: int | None = None,
+    planning_maximum_estimated_cost_kind_code: str | None = None,
+    planning_maximum_estimated_cost: Money | None = None,
+    collection_command_id: InvestigationCommandId | None = None,
+    collection_run_id: CollectionRunId | None = None,
+    collection_operation_count: int | None = None,
+    collection_activation_policy_id: str | None = None,
+    collection_activation_policy_version: int | None = None,
+    collection_maximum_estimated_cost_kind_code: str | None = None,
+    collection_maximum_estimated_cost: Money | None = None,
 ) -> AuditEvent:
     """Append an event to the caller's active transaction without committing it."""
 
@@ -103,6 +249,38 @@ def append_audit_event(
         outcome=outcome,
         reason=reason,
         occurred_at=occurred_at,
+        command_id=command_id,
+        policy_id=policy_id,
+        policy_version=policy_version,
+        candidate_count=candidate_count,
+        top_classification=top_classification,
+        confirmation_command_id=confirmation_command_id,
+        entity_resolution_decision_id=entity_resolution_decision_id,
+        confirmed_company_id=confirmed_company_id,
+        confirmed_candidate_batch_id=confirmed_candidate_batch_id,
+        confirmed_candidate_id=confirmed_candidate_id,
+        confirmation_reason=confirmation_reason,
+        confirmed_candidate_classification=confirmed_candidate_classification,
+        confirmed_candidate_rank=confirmed_candidate_rank,
+        matching_policy_id=matching_policy_id,
+        matching_policy_version=matching_policy_version,
+        materialization_policy_id=materialization_policy_id,
+        materialization_policy_version=materialization_policy_version,
+        planning_command_id=planning_command_id,
+        investigation_plan_id=investigation_plan_id,
+        planned_capability_count=planned_capability_count,
+        planned_connector_option_count=planned_connector_option_count,
+        planning_policy_id=planning_policy_id,
+        planning_policy_version=planning_policy_version,
+        planning_maximum_estimated_cost_kind_code=(planning_maximum_estimated_cost_kind_code),
+        planning_maximum_estimated_cost=planning_maximum_estimated_cost,
+        collection_command_id=collection_command_id,
+        collection_run_id=collection_run_id,
+        collection_operation_count=collection_operation_count,
+        collection_activation_policy_id=collection_activation_policy_id,
+        collection_activation_policy_version=collection_activation_policy_version,
+        collection_maximum_estimated_cost_kind_code=(collection_maximum_estimated_cost_kind_code),
+        collection_maximum_estimated_cost=collection_maximum_estimated_cost,
     )
     unit_of_work.audit_events.add(event)
     return event

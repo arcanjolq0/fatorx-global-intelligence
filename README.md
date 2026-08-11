@@ -4,7 +4,7 @@ Plataforma de investigação empresarial internacional orientada por evidências
 
 ## Estado atual
 
-O repositório concluiu a **F3.2 — Simuladores determinísticos e suíte reutilizável de contrato**. Além da fundação técnica, domínio e persistência versionada, existem serviços mínimos tenant-scoped, contrato de conectores `1.0.0`, registro explícito e um simulador empresarial inteiramente sintético, sem I/O. Há uma API FastAPI apenas com `GET /health`, um shell React/Vite estático e gates de qualidade locais. Não há autenticação, acesso da API ao banco, runner de conectores, retry, timeout efetivo, idempotência, transição de investigação, fila, conector real, integração externa nem segredo. A F3.3 não foi iniciada.
+O repositório concluiu a Fase 3; F4.1 a F4.5/F4.5.1 foram aceitas após revisão independente. A F4.5/F4.5.1 revalida o prazo, ativa um plano `READY`, persiste run/operações imutáveis e avança somente `PLANNING -> COLLECTING`, sem executar conectores. Permanecem a API FastAPI somente com `GET /health`, o shell React/Vite estático e conectores simulados sem I/O externo. Não há autenticação, acesso da API ao banco, execução do manifesto, jobs, filas, workers, vínculo com Company existente, conector real ou integração externa. **F4.6 — NÃO AUTORIZADA** e a Fase 4 permanece em andamento.
 
 ## Como navegar
 

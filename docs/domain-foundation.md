@@ -78,7 +78,7 @@ Suas invariantes são:
 - conclusão exige início e não pode antecedê-lo;
 - um snapshot novo não pode declarar estado diferente de `CREATED`, versão diferente de `1` nem `completed_at`.
 
-O enum implementa exatamente os estados de `docs/investigation-lifecycle.md`. Os estados terminais são `COMPLETED`, `PARTIALLY_COMPLETED`, `FAILED` e `CANCELLED`. A lista de transições permitidas, condições, comandos e atualização atômica de `state_version` não foi implementada.
+O enum implementa exatamente os estados de `docs/investigation-lifecycle.md`. Os estados terminais são `COMPLETED`, `PARTIALLY_COMPLETED`, `FAILED` e `CANCELLED`. F4.1 materializou `CREATED -> IDENTIFYING` e não terminal `-> CANCELLED`; F4.2 materializou `IDENTIFYING -> WAITING_FOR_ENTITY_CONFIRMATION`; F4.3 materializa `WAITING_FOR_ENTITY_CONFIRMATION -> PLANNING`. As demais transições permanecem documentais.
 
 ## 4. Erros
 
@@ -98,8 +98,8 @@ Permanecem para tarefas posteriores, sem implementação implícita:
 - definição de `JurisdictionCode` e registros subnacionais;
 - autenticação real, sessão, token e construção confiável do contexto na API;
 - aliases, endereços, identificadores externos e relações de empresas;
-- transições da investigação e comandos de domínio;
-- endpoints, transições de investigação e bootstrap do primeiro owner;
+- rejeição de candidato, retorno à identificação e transições posteriores a `PLANNING`;
+- endpoints, execução futura F4.6 e bootstrap do primeiro owner;
 - retenção executável, expurgo e concorrência otimista de agregados além da proteção do último owner;
 - contratos de conectores, evidências, risco e relatórios.
 
@@ -111,9 +111,13 @@ Estas decisões alinham o domínio e o primeiro schema PostgreSQL. A motivação
 
 Uma investigação em `CREATED` não pode possuir `started_at`. O instante representa o início operacional e será atribuído pela futura transição `CREATED -> IDENTIFYING`. A F2.2 somente aplica a invariante; não implementa a transição.
 
-### 7.2 Empresa confirmada na criação
+### 7.2 Empresa confirmada após decisão humana
 
-`confirmed_company_id` pode ser informado em `CREATED` quando a pesquisa parte de uma empresa canônica já cadastrada no mesmo workspace. A referência não autoriza pular silenciosamente etapas do ciclo de vida. A decisão sobre apenas validar essa empresa ou também produzir candidatos pertence à futura resolução de entidades/orquestração, não à persistência da F2.3/F2.3.1. A foreign key composta do schema apenas impede referência entre workspaces.
+`confirmed_company_id` é proibido em `CREATED`, `IDENTIFYING` e na espera. A F4.3
+o preenche somente após escolha humana de candidato do lote ativo. Estados de
+`PLANNING` até conclusão exigem a referência; terminais FAILED/CANCELLED podem
+ter ou não Company, conforme o momento da terminalização. Vínculo com Company
+existente não foi implementado.
 
 ### 7.3 Deadline
 
@@ -162,3 +166,43 @@ Existe no máximo uma `WorkspaceMembership` por `(workspace_id, user_id)`. O ví
 ## 10. Transições de membership na F2.4.2
 
 `WorkspaceMembership.change_role`, `deactivate` e `reactivate` preservam `id`, `workspace_id` e `user_id`, retornam nova instância e exigem instante UTC não regressivo. A entidade protege apenas estado e tempo. A matriz `OWNER`/`ADMIN`/`ANALYST`/`VIEWER`, as restrições de autoatendimento e a proteção do último owner permanecem na camada de aplicação.
+
+## 11. Fundação de lifecycle da F4.1
+
+`IdentificationInput` é um contrato fechado, congelado e versionado. Seus
+valores originais e normalizados permanecem separados, o país é tipado e a
+representação pública não expõe o conteúdo integral. A serialização canônica e
+o digest são revalidados na reconstituição.
+
+`Investigation.start_identification` e `Investigation.cancel` retornam
+`InvestigationTransitionResult` com novo agregado e transição tipada. A
+instância original não é mutada; horário e UUID são fornecidos pelas camadas
+externas. Não há API genérica de destino, autorização ou persistência no
+domínio.
+
+A aplicação valida versão esperada e coordena CAS, ledger e auditoria. O
+domínio valida estado de origem, entrada, ordem temporal, terminalidade e
+incremento exato. Essa separação evita duplicar concorrência no agregado e
+impede que adaptadores decidam regras de negócio.
+
+## 12. Candidatos e matching da F4.2
+
+`Investigation.request_entity_confirmation` exige origem `IDENTIFYING`, entrada
+congelada, ausência de empresa confirmada e `EntityCandidateBatchId` forte.
+Retorna novo snapshot em `WAITING_FOR_ENTITY_CONFIRMATION`, incrementa a versão
+uma vez e preserva a instância original.
+
+O pacote puro `entity_resolution` define lote, identidade, origem, política,
+scores e ranking imutáveis. Política V1, normalização, conflitos e aritmética
+inteira constam do ADR-0017. O domínio não importa persistência/conectores e não
+converte candidato em `Company`, evidência ou claim.
+
+## 13. Confirmação e materialização da F4.3
+
+`Investigation.confirm_entity` exige a espera, o lote ativo exato e ausência de
+Company. Ele produz novo snapshot em `PLANNING`, com Company preenchida, lote
+limpo e versão incrementada uma vez. A política pura
+`COMPANY_MATERIALIZATION_V1` materializa somente os campos allowlisted e mapeia
+status de origem sem inventar data. A aplicação, não o domínio, escolhe IDs,
+autoriza, carrega o candidato e coordena persistência. A decisão é append-only;
+candidato e decisão continuam separados de evidência e claims.

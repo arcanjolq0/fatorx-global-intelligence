@@ -91,6 +91,75 @@ de owner cancelado, uma página, truncamento e outcomes incompatíveis. A área
 com sockets bloqueados salvo o loopback interno necessário ao event loop do
 Windows; nenhum teste ou código abre conexão de rede.
 
+Na F4.1, unitários exercitam o envelope de identificação, operações puras,
+comandos, matriz de autorização, erros, clock, replay, colisão e rollback em
+cada estágio coordenado. PostgreSQL real comprova JSONB canônico, CAS correto e
+desatualizado, isolamento/FK tenant-scoped, unique de comando, replay após novo
+UoW, rollback integral e migration reversível. Corridas usam `Barrier` e duas
+transações reais, sem `sleep`: comandos distintos na mesma versão deixam um
+único vencedor; o mesmo comando deixa um efeito e um replay. Guardas AST
+bloqueiam runner F3.3, I/O, ambiente, API genérica de transição, pacote de fase
+posterior, mutação do ledger e snapshot na auditoria.
+
+Na F4.2, unitários cobrem contratos/schemas fechados, normalização Unicode, sete
+dimensões, pesos, thresholds, conflitos fortes, score/cobertura inteiros,
+ranking estável, redaction, autorização, replay/collision e falhas coordenadas.
+PostgreSQL real comprova três tabelas tenant-scoped, round-trip da política,
+identidade/origem e dimensões, CAS, ausência de órfãos, rollback e migration
+reversível. Duas corridas com `Barrier` provam um vencedor para comandos
+distintos e um efeito/replay para o mesmo comando. Guardas AST bloqueiam float,
+I/O/conector, criação de Company, transição a `PLANNING` e mutação de candidatos.
+`entity_resolution` exige ao menos 95% e a aplicação/persistência específica da
+F4.2 ao menos 90% de branch coverage.
+
+Na F4.2.1, testes de integridade alteram valores ainda formalmente válidos e
+exigem rejeição semântica de total, cobertura, classificação, conflito,
+dimensão, peso, score, contribuição, disponibilidade, explicação, digests,
+contexto e ranking. Testes PostgreSQL modificam diretamente batch, candidato,
+snapshot e dimensão em transações controladas, carregam pelo repositório e
+restauram a linha em `finally`. Normalizações diferentes de
+`NAME_NORMALIZATION_V1` são rejeitadas. A suíte também preserva round-trip,
+tenant isolation, replay, concorrência, rollback e migrations da F4.2.
+
+Na F4.3, unitários cobrem política/digest de materialização, todos os status,
+invariantes da Investigation, permissão, motivos/override, bloqueio de
+`EXCLUDED`, replay sem relógio, collision, CAS e rollback por estágio. Testes
+PostgreSQL cobrem a tabela append-only, FKs/unique tenant-scoped, round-trip,
+adulteração de decisão/Company/política, concorrência e downgrade que recusa
+`UNKNOWN`. Guardas arquiteturais proíbem confirmação automática, mutação do
+candidato, planner, plano, I/O, ambiente, subprocesso e escopos posteriores.
+Materialização exige 95%; serviço e persistência F4.3 exigem 90% de branch
+coverage.
+
+Na F4.4, unitários cobrem política/digests, ordenação país/global, capacidades
+required/optional, grafo, orçamento/deadline, autorização, replay sem relógio ou
+IDs, colisão e rollback por estágio. PostgreSQL real cobre as três tabelas,
+round-trip completo, tenant isolation, adulteração, concorrência sem sleeps,
+ausência de mudança em estado/versão e migration reversível/fail-safe. Guardas
+arquiteturais mantêm planejamento puro e proíbem execução de conectores, HTTP,
+jobs, filas, workers e transição a `COLLECTING`.
+
+Na F4.4.1, unitários e PostgreSQL cobrem os dez estados de continuidade, versão
+maior/menor, estados anteriores, troca de Company, lote ativo reintroduzido e as
+três chaves de leitura. O deadline é testado com opcionais indisponíveis, sem
+sleep. A migration sucessora testa combinações parciais de custo, conjuntos
+tipados válidos, upgrade, downgrade e convergência do metadata.
+
+Na F4.5, unitários cobrem política/digests, rank 1, opcionais indisponíveis,
+dependências, grafo, contexto, lifecycle, autorização, replay sem clock/IDs/CAS,
+collision e rollback em cada estágio. PostgreSQL real cobre round-trip das três
+tabelas, isolamento tenant, adulteração, concorrência sem sleeps, unicidades e
+migration upgrade/downgrade/refusal/check. A guarda arquitetural proíbe imports
+ou chamadas de registry, simuladores, runner e mecanismos operacionais.
+
+Na F4.5.1, unitários e PostgreSQL real cobrem prazo suficiente, insuficiente e
+exatamente no limite, sempre com caminho crítico formado somente por operações
+`READY`. As três leituras validam o par run/transição; ausência de qualquer lado
+e divergência de ator, instante, run, Company, plano, política ou contagem falham
+fechado. Replay em nova UoW e colisão verdadeira continuam separados. A
+migration sucessora cobre backfill, FK composta, upgrade, downgrade e
+`alembic check`; o ZIP é validado por nomes POSIX e `unzip -t`.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;
@@ -161,7 +230,7 @@ Ordem pode otimizar feedback, sem remover gates.
 
 ## 6. Metas de cobertura
 
-- módulos críticos (`evidence`, `claims`, `risk`, `entity_resolution`, `orchestration` e contrato de conectores): pelo menos 90% de branch coverage;
+- módulos críticos (`evidence`, `claims`, `risk`, `entity_resolution`, lifecycle/orchestration e contrato de conectores): pelo menos 90% de branch coverage;
 - total do código de aplicação: pelo menos 80% de line coverage;
 - 100% das transições e invariantes críticas exercitadas;
 - código gerado, migrations declarativas e fixtures podem ser excluídos apenas por configuração justificada.

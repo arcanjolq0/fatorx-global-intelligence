@@ -179,18 +179,7 @@ def _seed_workspace_and_user(engine: Engine) -> tuple[Workspace, UserAccount]:
 
 
 def _fetch_audit_event(engine: Engine, event_id: AuditEventId) -> AuditEvent | None:
-    statement = sa.select(
-        audit_event_table.c.id,
-        audit_event_table.c.workspace_id,
-        audit_event_table.c.actor_user_id,
-        audit_event_table.c.action_code,
-        audit_event_table.c.resource_type,
-        audit_event_table.c.resource_id,
-        audit_event_table.c.outcome,
-        audit_event_table.c.reason_code,
-        audit_event_table.c.correlation_id,
-        audit_event_table.c.occurred_at,
-    ).where(audit_event_table.c.id == event_id.value)
+    statement = sa.select(audit_event_table).where(audit_event_table.c.id == event_id.value)
     with engine.connect() as connection:
         values = connection.execute(statement).mappings().first()
     return (

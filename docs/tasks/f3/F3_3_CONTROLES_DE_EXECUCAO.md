@@ -1,6 +1,6 @@
 # F3.3 — Controles de execução de uma única operação de conector
 
-Status: **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**.
+Status: **ACEITA APÓS REVISÃO INDEPENDENTE**.
 
 ## 1. Objetivo, contexto e autorização
 
@@ -10,8 +10,10 @@ Esta tarefa materializa os controles operacionais do gate G3 sobre os contratos
 `FETCH_DETAILS` ou `FETCH_DOCUMENT`) de um único objeto `Connector` fornecido
 pelo chamador.
 
-`F3_ROADMAP.md` continua sendo apenas contexto. Esta entrega não aceita o gate
-G3, não conclui a Fase 3 por conta própria e não autoriza a Fase 4.
+`F3_ROADMAP.md` continua sendo apenas contexto. Na emissão original, esta
+entrega não aceitava o gate G3 nem concluía a Fase 3 por conta própria. A
+revisão independente posterior aceitou ambos; a autorização seguinte cobre
+inicialmente somente a F4.1; a F4.2 recebeu autorização própria após o aceite da F4.1.
 
 ## 2. Escopo
 
@@ -246,6 +248,8 @@ Resultados reais ficam em
 - Eventos retornados preparam auditoria futura, mas não são persistidos nem
   enviados a logging/telemetria.
 
-Fase 4 continua proibida. Somente autorização e revisão independentes futuras
-podem aceitar G3 e iniciar planner, múltiplos conectores, jobs, lifecycle,
-persistência ou resolução de entidades.
+Na emissão original, a Fase 4 continuava proibida. A primeira autorização
+posterior liberou somente a F4.1; após seu aceite, a F4.2 foi autorizada por
+instrução própria. Autorização e revisão futuras ainda são necessárias antes de
+F4.3, planner, múltiplos conectores, jobs,
+persistência de runs ou resolução de entidades.

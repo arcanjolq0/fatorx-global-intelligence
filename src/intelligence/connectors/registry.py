@@ -98,6 +98,17 @@ class ConnectorRegistry:
             )
         )
 
+    def list_descriptors(self) -> tuple[ConnectorDescriptor, ...]:
+        """Return admission-time descriptors without invoking connector objects."""
+
+        return tuple(
+            entry.descriptor
+            for _, entry in sorted(
+                self._entries.items(),
+                key=lambda item: item[0].value,
+            )
+        )
+
     def select(
         self,
         *,

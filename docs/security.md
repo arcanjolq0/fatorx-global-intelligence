@@ -98,6 +98,62 @@ mas não são antecipadas pelo registro tipado.
 
 Os códigos de ação e razão da F2.4.2 são enums fechados; eventos não aceitam payload arbitrário. Sucesso de mutação e mudança compartilham commit. Negação persiste evento sem mutação e só depois retorna erro constante. Recurso de outro workspace aparece como ausente e seu ID não é copiado para o evento negado. Leituras bem-sucedidas não são auditadas nesta fase para evitar retenção prematura de alto volume.
 
+Na F4.1, o snapshot de identificação é dado empresarial potencialmente
+sensível. Ele não entra em `repr` público de comando/agregado, erro, log ou
+`AuditEvent`. O evento de sucesso contém somente ator, workspace, investigação,
+ação fechada, outcome, razão fechada quando aplicável, correlação e instante.
+O digest do comando é construído por allowlist canônica e não substitui o
+controle de acesso ao snapshot. Replay e lookup usam tenant antes do ID, e a FK
+composta do ledger impede associação entre investigação e workspace distintos.
+
+O JSONB aceita somente o schema fechado de nomes, identificadores, domínio,
+endereço e idioma. Documento, token, cookie, segredo, URL arbitrária e payload
+externo não fazem parte do contrato. Conteúdo original é preservado somente nos
+campos previstos, enquanto normalização permanece derivado separado.
+
+Na F4.2, identidade e origem de candidatos são igualmente envelopes fechados e
+versionados. Limites de quantidade/tamanho e vocabulários são validados antes de
+matching/persistência. O matcher não usa rede, arquivo, ambiente, subprocesso,
+relógio ou aleatoriedade. Auditoria registra somente command ID, política/versão,
+quantidade e classificação de topo; não registra nomes, identificadores,
+endereços, administradores, score dimensional, snapshot ou SQL. Candidato é
+dado não confiável e nunca é promovido automaticamente a fato ou empresa.
+
+Na F4.3, o comando aceita apenas IDs tipados, motivo fechado e política canônica;
+não aceita texto livre, URL, payload, Company ID ou candidato inline. Auditoria
+registra somente IDs, motivo, rank/classificação e IDs/versões das políticas.
+Nome, identificadores, domínio, origem e snapshots permanecem fora de audit e
+`repr`. Todas as leituras são tenant-first e a decisão é reconstituída com
+Investigation, lote, candidato e Company. `EXCLUDED` é bloqueado mesmo sob
+override. Candidato e decisão continuam dados não confiáveis, não evidência.
+
+Na F4.4, o cliente fornece somente comando, Investigation, versão esperada e a
+política fechada suportada; não fornece conectores, plano, custo ou destino. O
+serviço autoriza antes de carregar recursos, usa locks tenant-scoped e lê Company
+e Investigation pelo workspace do ator. O planner consome cópias de descritores
+capturadas na admissão, sem rede, credenciais, ambiente ou disponibilidade
+externa. A auditoria allowlisted contém apenas IDs, contagens, política e custo
+agregado tipado; nomes, identificadores, domínios, payloads e credenciais ficam
+de fora.
+
+Na F4.4.1, o check de auditoria exige ausência total dos quatro campos de
+comando/custo ou um conjunto tipado completo. A continuidade histórica ainda
+valida Company tenant-scoped, lote ativo nulo e versão monotônica; ela não amplia
+autorização nem executa recursos externos.
+
+Na F4.5, o cliente informa somente comando, Investigation, plano, versão
+esperada e política fechada. Conector escolhido, operações, IDs internos,
+status, custo e destino são derivados do plano persistido. FKs compostas e
+unicidades protegem run/operações/dependências por tenant; digests são
+recalculados na leitura. A auditoria contém apenas IDs, contagem, política,
+custo agregado tipado, resultado e correlação. Nenhum snapshot, nome, domínio,
+payload ou credencial é auditado. A ativação não acessa rede ou segredo.
+
+Na F4.5.1, a revalidação de prazo acontece antes de IDs e materialização. A
+leitura fail-closed exige a transição histórica exata e usa os vínculos compostos
+de workspace, Investigation, Company e plano como defesa em profundidade. Erro
+de integridade não é convertido em replay ou ausência tenant-scoped.
+
 A FK obrigatória de `audit_event.actor_user_id` impede registrar `ACTOR_USER_NOT_FOUND`: o ator inexistente não pode ser referenciado sem violar o schema aprovado. Nesse único caso, a tentativa de auditoria falha, a negação original é preservada e nenhum detalhe técnico é exposto. Corrigir essa limitação exigiria decisão de schema própria; a F2.4.2 não cria migration silenciosa.
 
 - hash de artefato/evidência;

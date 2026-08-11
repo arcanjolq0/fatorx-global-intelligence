@@ -19,9 +19,10 @@ class CompanyStatus(StrEnum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     DISSOLVED = "DISSOLVED"
+    UNKNOWN = "UNKNOWN"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True, repr=False)
 class Company:
     """Immutable representation of a company within one workspace."""
 
@@ -41,8 +42,16 @@ class Company:
     def __post_init__(self) -> None:
         _validate_types(self)
 
-        legal_name = _required_text(self.legal_name, field_name="Company legal name")
-        trade_name = _optional_text(self.trade_name, field_name="Company trade name")
+        legal_name = _required_text(
+            self.legal_name,
+            field_name="Company legal name",
+            preserve_outer_whitespace=True,
+        )
+        trade_name = _optional_text(
+            self.trade_name,
+            field_name="Company trade name",
+            preserve_outer_whitespace=True,
+        )
         legal_form = _optional_text(self.legal_form, field_name="Company legal form")
         official_domain = _normalize_domain(self.official_domain)
         created_at = normalize_utc(self.created_at)
@@ -68,6 +77,13 @@ class Company:
         object.__setattr__(self, "created_at", created_at)
         object.__setattr__(self, "updated_at", updated_at)
 
+    def __repr__(self) -> str:
+        return (
+            "Company("
+            f"id={self.id!r}, workspace_id={self.workspace_id!r}, "
+            f"status={self.status.value!r}, identity=<redacted>)"
+        )
+
 
 def _validate_types(company: Company) -> None:
     if not isinstance(company.id, CompanyId):
@@ -87,16 +103,30 @@ def _validate_optional_date(value: date | None, *, field_name: str) -> None:
         raise InvariantViolationError(f"Company {field_name} must be a date.")
 
 
-def _required_text(value: str, *, field_name: str) -> str:
+def _required_text(
+    value: str,
+    *,
+    field_name: str,
+    preserve_outer_whitespace: bool = False,
+) -> str:
     if not isinstance(value, str) or not value.strip():
         raise InvariantViolationError(f"{field_name} must be a non-empty string.")
-    return value.strip()
+    return value if preserve_outer_whitespace else value.strip()
 
 
-def _optional_text(value: str | None, *, field_name: str) -> str | None:
+def _optional_text(
+    value: str | None,
+    *,
+    field_name: str,
+    preserve_outer_whitespace: bool = False,
+) -> str | None:
     if value is None:
         return None
-    return _required_text(value, field_name=field_name)
+    return _required_text(
+        value,
+        field_name=field_name,
+        preserve_outer_whitespace=preserve_outer_whitespace,
+    )
 
 
 def _normalize_domain(value: str | None) -> str | None:

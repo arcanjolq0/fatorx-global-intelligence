@@ -110,6 +110,16 @@ assíncrono de testes, biblioteca de fixtures, gerador de dados, cliente de rede
 relógio, retry ou plugin de descoberta; `uv.lock` e `pnpm-lock.yaml` permanecem
 inalterados.
 
+A F4.2 reutiliza `dataclasses`, `enum`, `hashlib`, `json`, `re`, `unicodedata`,
+SQLAlchemy Core, Alembic e Psycopg já aprovados. Matching, Jaccard, normalização,
+score e ranking foram implementados sem biblioteca fuzzy, transliteração,
+modelo, vetor ou float. Nenhuma dependência e nenhum lockfile mudou.
+
+A F4.3 reutiliza somente essas dependências e a biblioteca padrão para digests,
+serialização canônica, materialização e coordenação transacional. Não adiciona
+pacote de deduplicação, fuzzy matching, planner, fila ou cliente externo; os
+lockfiles permanecem inalterados.
+
 Não foram adicionados Redis, fila, S3, pgvector, OpenSearch, autenticação, SDK de
 modelo, LangGraph, Playwright, scraper, conector real, pacote de país, scoring,
 relatório, parser documental, ORM adicional ou framework de repositório.

@@ -7,6 +7,12 @@ from decimal import Decimal
 import pytest
 
 from intelligence.application.errors import PersistenceDataError
+from intelligence.application.investigation_lifecycle import (
+    InvestigationCancellationReason,
+    InvestigationCommandDigest,
+    InvestigationCommandType,
+    InvestigationTransitionRecord,
+)
 from intelligence.domain.audit import (
     AuditEvent,
     AuditOutcome,
@@ -17,9 +23,12 @@ from intelligence.domain.companies import Company, CompanyStatus
 from intelligence.domain.geography import CountryCode
 from intelligence.domain.identifiers import (
     AuditEventId,
+    CollectionRunId,
     CompanyId,
     CorrelationId,
+    InvestigationCommandId,
     InvestigationId,
+    InvestigationTransitionId,
     MembershipId,
     UserId,
     WorkspaceId,
@@ -32,6 +41,10 @@ from intelligence.domain.identities import (
     UserAccountStatus,
     WorkspaceMembership,
 )
+from intelligence.domain.investigation_inputs import (
+    IdentificationInput,
+    OriginalAndNormalizedText,
+)
 from intelligence.domain.investigations import Investigation, InvestigationState
 from intelligence.domain.money import CurrencyCode, Money
 from intelligence.domain.workspaces import Workspace, WorkspaceStatus
@@ -42,6 +55,8 @@ from intelligence.infrastructure.persistence.postgresql.mappers import (
     company_to_values,
     investigation_from_values,
     investigation_to_values,
+    investigation_transition_from_values,
+    investigation_transition_to_values,
     user_account_from_values,
     user_account_to_values,
     workspace_from_values,
@@ -99,6 +114,35 @@ def _investigation(workspace_id: WorkspaceId, company_id: CompanyId) -> Investig
         started_at=CREATED_AT + timedelta(minutes=1),
         completed_at=CREATED_AT + timedelta(minutes=2),
         created_at=CREATED_AT,
+        identification_input=IdentificationInput(
+            legal_name=OriginalAndNormalizedText(
+                original_value="Empresa Ltda.",
+                normalized_value="empresa ltda",
+            )
+        ),
+    )
+
+
+def _transition_record(
+    workspace_id: WorkspaceId,
+    investigation_id: InvestigationId,
+    actor_user_id: UserId,
+) -> InvestigationTransitionRecord:
+    return InvestigationTransitionRecord(
+        id=InvestigationTransitionId.new(),
+        workspace_id=workspace_id,
+        investigation_id=investigation_id,
+        command_id=InvestigationCommandId.new(),
+        command_type=InvestigationCommandType.CANCEL_INVESTIGATION,
+        state_before=InvestigationState.IDENTIFYING,
+        version_before=2,
+        state_after=InvestigationState.CANCELLED,
+        version_after=3,
+        actor_user_id=actor_user_id,
+        reason=InvestigationCancellationReason.USER_REQUESTED,
+        occurred_at=CREATED_AT + timedelta(minutes=2),
+        command_digest=InvestigationCommandDigest("a" * 64),
+        correlation_id=CorrelationId.new(),
     )
 
 
@@ -206,6 +250,28 @@ def test_investigation_mapper_round_trip_preserves_decimal_and_persisted_state()
     assert restored.state_version == 11
     assert restored.budget is not None
     assert restored.budget.amount == Decimal("12345678901234567890.12345678901234567890")
+    assert restored.identification_input == investigation.identification_input
+    assert investigation_to_values(restored)["input_schema_version"] == 1
+
+
+def test_investigation_mapper_rejects_input_digest_or_schema_mismatch() -> None:
+    values = investigation_to_values(_investigation(WorkspaceId.new(), CompanyId.new()))
+
+    with pytest.raises(PersistenceDataError, match="integrity metadata"):
+        investigation_from_values({**values, "input_digest": "0" * 64})
+    with pytest.raises(PersistenceDataError):
+        investigation_from_values({**values, "input_schema_version": None})
+
+
+def test_transition_record_mapper_round_trip_preserves_strong_ids_and_reason() -> None:
+    record = _transition_record(WorkspaceId.new(), InvestigationId.new(), UserId.new())
+
+    restored = investigation_transition_from_values(investigation_transition_to_values(record))
+
+    assert restored == record
+    assert isinstance(restored.id, InvestigationTransitionId)
+    assert isinstance(restored.command_id, InvestigationCommandId)
+    assert restored.reason is InvestigationCancellationReason.USER_REQUESTED
 
 
 @pytest.mark.parametrize("status", list(UserAccountStatus))
@@ -314,6 +380,31 @@ def test_audit_event_mapper_preserves_absent_resource_and_reason() -> None:
     assert restored.reason_code is None
 
 
+def test_audit_event_mapper_preserves_minimal_collection_activation_metadata() -> None:
+    investigation_id = InvestigationId.new()
+    event = AuditEvent(
+        id=AuditEventId.new(),
+        workspace_id=WorkspaceId.new(),
+        actor_user_id=UserId.new(),
+        action_code="INVESTIGATION_COLLECTION_STARTED",
+        resource_type=AuditResourceType.INVESTIGATION,
+        resource_id=investigation_id,
+        outcome=AuditOutcome.SUCCESS,
+        reason_code=None,
+        correlation_id=CorrelationId.new(),
+        occurred_at=CREATED_AT,
+        collection_command_id=InvestigationCommandId.new(),
+        collection_run_id=CollectionRunId.new(),
+        collection_operation_count=2,
+        collection_activation_policy_id="COLLECTION_ACTIVATION_V1",
+        collection_activation_policy_version=1,
+        collection_maximum_estimated_cost_kind_code="UNKNOWN",
+        collection_maximum_estimated_cost=None,
+    )
+
+    assert audit_event_from_values(audit_event_to_values(event)) == event
+
+
 @pytest.mark.parametrize(
     ("mapper", "values"),
     [
@@ -386,6 +477,15 @@ def test_mappers_reject_missing_mistyped_or_inconsistent_rows(
         (
             audit_event_from_values,
             {**audit_event_to_values(_audit_event()), "resource_type": "UNKNOWN"},
+        ),
+        (
+            investigation_transition_from_values,
+            {
+                **investigation_transition_to_values(
+                    _transition_record(WorkspaceId.new(), InvestigationId.new(), UserId.new())
+                ),
+                "version_after": 4,
+            },
         ),
         (
             audit_event_from_values,

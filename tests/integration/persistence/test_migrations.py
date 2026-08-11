@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -38,6 +40,17 @@ DOMAIN_TABLES = {
     "user_account",
     "workspace_membership",
     "audit_event",
+    "investigation_transition",
+    "entity_candidate_batch",
+    "entity_candidate",
+    "entity_candidate_dimension_score",
+    "entity_resolution_decision",
+    "investigation_plan",
+    "planned_capability",
+    "planned_connector_option",
+    "collection_run",
+    "collection_operation",
+    "collection_operation_dependency",
 }
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 
@@ -133,6 +146,9 @@ def _investigation_values(
         "country_code": "BR",
         "state": "CREATED",
         "state_version": 1,
+        "input_snapshot": None,
+        "input_schema_version": None,
+        "input_digest": None,
         "confirmed_company_id": None,
         "budget_amount": None,
         "budget_currency": None,
@@ -142,6 +158,38 @@ def _investigation_values(
         "created_at": CREATED_AT,
     }
     values.update(overrides)
+    if (
+        values["state"]
+        not in {
+            "CREATED",
+            "CANCELLED",
+            "UNKNOWN",
+        }
+        and values["confirmed_company_id"] is None
+        and values["input_snapshot"] is None
+    ):
+        snapshot: dict[str, object] = {
+            "address": None,
+            "corporate_domain": None,
+            "identifiers": [],
+            "legal_name": {
+                "normalized_value": "empresa de teste",
+                "original_value": "Empresa de teste",
+            },
+            "original_language": "pt-BR",
+            "schema_version": 1,
+            "trade_name": None,
+        }
+        canonical = json.dumps(
+            snapshot,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        values["input_snapshot"] = snapshot
+        values["input_schema_version"] = 1
+        values["input_digest"] = sha256(canonical.encode("utf-8")).hexdigest()
     return values
 
 
@@ -239,10 +287,22 @@ def test_primary_keys_have_stable_names(database: DatabaseHarness) -> None:
     engine = _upgrade_engine(database)
     inspector = sa.inspect(engine)
     try:
-        for table_name in DOMAIN_TABLES:
+        composite_primary_keys = {
+            "entity_candidate_dimension_score": ["candidate_id", "dimension"],
+            "collection_operation_dependency": [
+                "collection_run_id",
+                "operation_id",
+                "depends_on_operation_id",
+            ],
+        }
+        for table_name in DOMAIN_TABLES - composite_primary_keys.keys():
             primary_key = inspector.get_pk_constraint(table_name)
             assert primary_key["name"] == f"pk_{table_name}"
             assert primary_key["constrained_columns"] == ["id"]
+        for table_name, columns in composite_primary_keys.items():
+            primary_key = inspector.get_pk_constraint(table_name)
+            assert primary_key["name"] == f"pk_{table_name}"
+            assert primary_key["constrained_columns"] == columns
     finally:
         engine.dispose()
 
@@ -262,6 +322,7 @@ def test_foreign_keys_and_workspace_first_indexes_exist(database: DatabaseHarnes
         assert {foreign_key["name"] for foreign_key in investigation_foreign_keys} == {
             "fk_investigation_workspace",
             "fk_investigation_confirmed_company_workspace",
+            "fk_investigation_active_candidate_batch_scope",
         }
         composite_foreign_key = next(
             foreign_key
@@ -321,7 +382,7 @@ def test_company_rejects_invalid_dates_status_country_and_domain(
     _insert_prerequisites(engine, workspace_id=workspace_id)
     invalid_companies = (
         _company_values(uuid4(), workspace_id, country_code="br"),
-        _company_values(uuid4(), workspace_id, status="UNKNOWN"),
+        _company_values(uuid4(), workspace_id, status="PENDING"),
         _company_values(uuid4(), workspace_id, official_domain="UPPER.example"),
         _company_values(
             uuid4(),
@@ -404,7 +465,8 @@ def test_terminal_state_without_completed_at_is_rejected(
 ) -> None:
     engine = _upgrade_engine(database)
     workspace_id = uuid4()
-    _insert_prerequisites(engine, workspace_id=workspace_id)
+    company_id = uuid4() if terminal_state == "COMPLETED" else None
+    _insert_prerequisites(engine, workspace_id=workspace_id, company_id=company_id)
     try:
         _assert_rejected(
             engine,
@@ -413,6 +475,7 @@ def test_terminal_state_without_completed_at_is_rejected(
                     uuid4(),
                     workspace_id,
                     state=terminal_state,
+                    confirmed_company_id=company_id,
                     started_at=CREATED_AT + timedelta(seconds=1),
                 )
             ),
@@ -454,7 +517,8 @@ def test_terminal_state_with_valid_timestamps_is_accepted(
 ) -> None:
     engine = _upgrade_engine(database)
     workspace_id = uuid4()
-    _insert_prerequisites(engine, workspace_id=workspace_id)
+    company_id = uuid4() if terminal_state in {"COMPLETED", "PARTIALLY_COMPLETED"} else None
+    _insert_prerequisites(engine, workspace_id=workspace_id, company_id=company_id)
     try:
         with engine.begin() as connection:
             connection.execute(
@@ -463,6 +527,7 @@ def test_terminal_state_with_valid_timestamps_is_accepted(
                     uuid4(),
                     workspace_id,
                     state=terminal_state,
+                    confirmed_company_id=company_id,
                     started_at=CREATED_AT + timedelta(seconds=1),
                     completed_at=CREATED_AT + timedelta(seconds=2),
                 ),
@@ -591,7 +656,7 @@ def test_cross_workspace_company_reference_is_rejected(
         engine.dispose()
 
 
-def test_same_workspace_confirmed_company_is_accepted(
+def test_created_investigation_with_confirmed_company_is_rejected(
     database: DatabaseHarness,
 ) -> None:
     engine = _upgrade_engine(database)
@@ -603,15 +668,16 @@ def test_same_workspace_confirmed_company_is_accepted(
             workspace_id=workspace_id,
             company_id=company_id,
         )
-        with engine.begin() as connection:
-            connection.execute(
-                investigation_table.insert(),
-                _investigation_values(
+        _assert_rejected(
+            engine,
+            investigation_table.insert().values(
+                **_investigation_values(
                     uuid4(),
                     workspace_id,
                     confirmed_company_id=company_id,
-                ),
-            )
+                )
+            ),
+        )
     finally:
         engine.dispose()
 

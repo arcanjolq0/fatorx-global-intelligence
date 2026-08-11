@@ -33,13 +33,23 @@ class InvariantViolationError(DomainError):
     """An entity would be created in an inconsistent business state."""
 
 
+class InvalidIdentificationInputError(DomainError):
+    """An identification input violates its closed, versioned contract."""
+
+
+class InvalidInvestigationTransitionError(InvariantViolationError):
+    """An investigation command is invalid for the current snapshot."""
+
+
 __all__ = (
     "DomainError",
     "InvalidCountryCodeError",
     "InvalidCurrencyCodeError",
     "InvalidDateTimeError",
     "InvalidEmailAddressError",
+    "InvalidIdentificationInputError",
     "InvalidIdentifierError",
+    "InvalidInvestigationTransitionError",
     "InvalidMoneyError",
     "InvariantViolationError",
 )

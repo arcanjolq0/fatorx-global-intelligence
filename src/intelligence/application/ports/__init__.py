@@ -2,7 +2,9 @@
 
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
+    CollectionRunRepository,
     CompanyRepository,
+    InvestigationPlanRepository,
     InvestigationRepository,
     UserRepository,
     WorkspaceMembershipRepository,
@@ -12,7 +14,9 @@ from intelligence.application.ports.unit_of_work import UnitOfWork
 
 __all__ = [
     "AuditEventRepository",
+    "CollectionRunRepository",
     "CompanyRepository",
+    "InvestigationPlanRepository",
     "InvestigationRepository",
     "UnitOfWork",
     "UserRepository",

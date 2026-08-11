@@ -75,12 +75,51 @@ O store disponível é somente em memória e por instância. Não há seleção 
 paralelismo de conectores, planner, job, fila, persistência, HTTP ou composição
 de Fase 4.
 
+Na F4.1–F4.5, `intelligence.application` coordena comandos específicos de
+lifecycle sobre portas explícitas. O domínio recebe entrada tipada e tempo
+explícito e retorna snapshots/transições imutáveis. `entity_resolution` recebe
+entrada, candidatos e política e retorna somente scores/ranking puros. A
+infraestrutura PostgreSQL implementa CAS tenant-scoped, ledger e registros
+append-only de lote/candidatos/dimensões/decisão; Company, decisão, transição e
+auditoria compartilham o UoW.
+O lifecycle e o matcher não importam nem chamam `intelligence.connectors`, e a
+F3.3 permanece um runner local independente.
+
+`IdentificationInput` usa JSONB apenas como envelope versionado schema `1` ou
+extensão opt-in schema `2`, com
+serialização canônica e digest. A aplicação não aceita payload genérico e a
+auditoria não recebe conteúdo empresarial. Replay é durável por
+`(workspace_id, command_id)` e advisory transaction lock; colisão de digest e
+conflito de versão são erros distintos. A F4.2 persiste política/snapshot,
+identidade/origem, scores e ranking, e pausa em revisão humana. A F4.3 recebe a
+escolha humana explícita, materializa nova Company por política pura e avança
+para `PLANNING`. A F4.4 acrescenta `orchestration.planning`: uma política pura
+consome somente Investigation, Company e descritores estáticos capturados pelo
+registro explícito, produz um plano `READY` e o persiste de modo append-only.
+Na F4.4.1, a reconstituição separa a criação histórica do snapshot atual: as
+três leituras permanecem válidas após avanço pós-confirmação se Company, lote
+ativo e monotonicidade da versão continuarem coerentes. O caminho crítico usa
+somente capacidades `READY`.
+A F4.5 acrescenta `orchestration.collection_activation`, que consome apenas o
+plano persistido, seleciona rank 1 e materializa run/operações imutáveis. O
+serviço coordena CAS para `COLLECTING`, ledger e auditoria; não importa registry
+nem runner. Não há job, propagação de cancelamento, endpoint ou execução de
+conector.
+
+Na F4.5.1, a fronteira pura recalcula o caminho crítico das futuras operações
+`READY` usando as durações já persistidas. A aplicação valida o tempo restante
+antes de gerar IDs. O adaptador PostgreSQL correlaciona cada leitura do run com
+a transição histórica exata e falha fechado diante de ausência ou divergência;
+a transição carrega Company e plano para tornar essa prova relacional.
+
 ### Resolução de entidades
 
-- normaliza candidatos;
-- compara dimensões separadas;
-- aplica política versionada;
-- exige revisão onde necessário.
+- normaliza candidatos explicitamente fornecidos por NFKC/casefold;
+- compara sete dimensões separadas com aritmética inteira;
+- aplica e persiste a política versionada `ENTITY_MATCH_V1`;
+- detecta conflitos fortes, ordena de forma estável e exige revisão humana;
+- materializa Company somente após comando humano; não cria evidência/claim e
+  não confirma o topo automaticamente.
 
 ### Evidências e claims
 
@@ -112,7 +151,7 @@ de Fase 4.
 
 1. Usuário autorizado cria `Investigation`.
 2. Sistema valida entrada e cria candidatos de identidade.
-3. Política confirma automaticamente por identificador forte ou pausa para revisão.
+3. Política apenas classifica e ordena; a confirmação é sempre humana e explícita.
 4. Planner cria `InvestigationPlan` versionado por capacidades.
 5. Outbox publica jobs; workers chamam conectores elegíveis.
 6. Cada resultado registra status, uso, artefato e observações.

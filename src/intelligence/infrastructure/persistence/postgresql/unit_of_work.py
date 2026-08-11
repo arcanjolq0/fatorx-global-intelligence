@@ -17,8 +17,13 @@ from intelligence.application.errors import (
 )
 from intelligence.infrastructure.persistence.postgresql.repositories import (
     PostgreSQLAuditEventRepository,
+    PostgreSQLCollectionRunRepository,
     PostgreSQLCompanyRepository,
+    PostgreSQLEntityCandidateBatchRepository,
+    PostgreSQLEntityResolutionDecisionRepository,
+    PostgreSQLInvestigationPlanRepository,
     PostgreSQLInvestigationRepository,
+    PostgreSQLInvestigationTransitionRepository,
     PostgreSQLUserRepository,
     PostgreSQLWorkspaceMembershipRepository,
     PostgreSQLWorkspaceRepository,
@@ -29,7 +34,7 @@ from intelligence.infrastructure.persistence.postgresql.transaction_guard import
 
 
 class PostgreSQLUnitOfWork:
-    """Single-use explicit transaction shared by all six repositories."""
+    """Single-use explicit transaction shared by all persistence repositories."""
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -39,6 +44,13 @@ class PostgreSQLUnitOfWork:
         self._workspaces: PostgreSQLWorkspaceRepository | None = None
         self._companies: PostgreSQLCompanyRepository | None = None
         self._investigations: PostgreSQLInvestigationRepository | None = None
+        self._investigation_transitions: PostgreSQLInvestigationTransitionRepository | None = None
+        self._investigation_plans: PostgreSQLInvestigationPlanRepository | None = None
+        self._collection_runs: PostgreSQLCollectionRunRepository | None = None
+        self._entity_candidate_batches: PostgreSQLEntityCandidateBatchRepository | None = None
+        self._entity_resolution_decisions: PostgreSQLEntityResolutionDecisionRepository | None = (
+            None
+        )
         self._users: PostgreSQLUserRepository | None = None
         self._memberships: PostgreSQLWorkspaceMembershipRepository | None = None
         self._audit_events: PostgreSQLAuditEventRepository | None = None
@@ -70,6 +82,46 @@ class PostgreSQLUnitOfWork:
         repository = self._investigations
         if repository is None:
             raise PersistenceStateError("Investigation repository is unavailable.")
+        return repository
+
+    @property
+    def investigation_transitions(self) -> PostgreSQLInvestigationTransitionRepository:
+        self._require_active()
+        repository = self._investigation_transitions
+        if repository is None:
+            raise PersistenceStateError("Investigation transition repository is unavailable.")
+        return repository
+
+    @property
+    def entity_candidate_batches(self) -> PostgreSQLEntityCandidateBatchRepository:
+        self._require_active()
+        repository = self._entity_candidate_batches
+        if repository is None:
+            raise PersistenceStateError("Entity candidate batch repository is unavailable.")
+        return repository
+
+    @property
+    def entity_resolution_decisions(self) -> PostgreSQLEntityResolutionDecisionRepository:
+        self._require_active()
+        repository = self._entity_resolution_decisions
+        if repository is None:
+            raise PersistenceStateError("Entity resolution decision repository is unavailable.")
+        return repository
+
+    @property
+    def investigation_plans(self) -> PostgreSQLInvestigationPlanRepository:
+        self._require_active()
+        repository = self._investigation_plans
+        if repository is None:
+            raise PersistenceStateError("Investigation plan repository is unavailable.")
+        return repository
+
+    @property
+    def collection_runs(self) -> PostgreSQLCollectionRunRepository:
+        self._require_active()
+        repository = self._collection_runs
+        if repository is None:
+            raise PersistenceStateError("Collection run repository is unavailable.")
         return repository
 
     @property
@@ -123,6 +175,15 @@ class PostgreSQLUnitOfWork:
         self._workspaces = PostgreSQLWorkspaceRepository(transaction_guard)
         self._companies = PostgreSQLCompanyRepository(transaction_guard)
         self._investigations = PostgreSQLInvestigationRepository(transaction_guard)
+        self._investigation_transitions = PostgreSQLInvestigationTransitionRepository(
+            transaction_guard
+        )
+        self._entity_candidate_batches = PostgreSQLEntityCandidateBatchRepository(transaction_guard)
+        self._entity_resolution_decisions = PostgreSQLEntityResolutionDecisionRepository(
+            transaction_guard
+        )
+        self._investigation_plans = PostgreSQLInvestigationPlanRepository(transaction_guard)
+        self._collection_runs = PostgreSQLCollectionRunRepository(transaction_guard)
         self._users = PostgreSQLUserRepository(transaction_guard)
         self._memberships = PostgreSQLWorkspaceMembershipRepository(transaction_guard)
         self._audit_events = PostgreSQLAuditEventRepository(transaction_guard)

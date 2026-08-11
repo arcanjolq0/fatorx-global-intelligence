@@ -13,6 +13,14 @@ CONNECTORS_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "connecto
 SIMULATED_CONNECTORS_ROOT = CONNECTORS_ROOT / "simulated"
 EXECUTION_CONNECTORS_ROOT = CONNECTORS_ROOT / "execution"
 EXECUTION_CONNECTOR_TESTS_ROOT = Path(__file__).parents[1] / "connectors" / "execution"
+ENTITY_RESOLUTION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "entity_resolution"
+ORCHESTRATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "orchestration"
+F41_LIFECYCLE_PATHS = (
+    DOMAIN_ROOT / "investigation_inputs.py",
+    DOMAIN_ROOT / "investigations.py",
+    APPLICATION_ROOT / "investigation_lifecycle.py",
+    APPLICATION_ROOT / "services" / "investigations.py",
+)
 API_ROOT = Path(__file__).parents[2] / "apps" / "api"
 ALLOWED_INTERNAL_PREFIX = "intelligence.domain"
 ALLOWED_INFRASTRUCTURE_IMPORTS = {
@@ -190,6 +198,13 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
     assert {path.name for path in migration_root.glob("*.py")} == {
         "20260728_01_create_initial_domain_schema.py",
         "20260728_02_create_identities_memberships_audit.py",
+        "20260729_03_add_investigation_lifecycle_foundation.py",
+        "20260729_04_add_entity_candidate_review_foundation.py",
+        "20260801_05_add_entity_confirmation_decision.py",
+        "20260801_06_add_investigation_planning.py",
+        "20260801_07_harden_plan_continuity_audit_cost.py",
+        "20260802_08_add_collection_activation.py",
+        "20260802_09_harden_collection_activation_history.py",
     }
 
 
@@ -451,8 +466,11 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
                 root = module.partition(".")[0]
                 is_internal = (
                     module.startswith("intelligence.application")
+                    or module.startswith("intelligence.connectors")
                     or module.startswith("intelligence.domain")
+                    or module.startswith("intelligence.entity_resolution")
                     or module.startswith("intelligence.infrastructure")
+                    or module.startswith("intelligence.orchestration")
                 )
                 if (
                     root not in sys.stdlib_module_names
@@ -479,8 +497,13 @@ def test_application_imports_only_domain_and_application_contracts() -> None:
                 modules = []
             for module in modules:
                 root = module.partition(".")[0]
-                is_internal = module.startswith("intelligence.application") or module.startswith(
-                    "intelligence.domain"
+                is_internal = module.startswith(
+                    (
+                        "intelligence.application",
+                        "intelligence.domain",
+                        "intelligence.entity_resolution",
+                        "intelligence.orchestration",
+                    )
                 )
                 if root not in sys.stdlib_module_names and not is_internal:
                     violations.append(f"{path.relative_to(APPLICATION_ROOT)} -> {module}")
@@ -644,6 +667,414 @@ def test_audit_repository_surfaces_are_append_only() -> None:
         assert methods.isdisjoint({"delete", "replace", "save", "update"})
 
 
+def test_f41_transition_ledger_surfaces_are_append_only() -> None:
+    """The durable command ledger exposes locking, lookup, and append only."""
+
+    paths_and_classes = (
+        (
+            APPLICATION_ROOT / "ports" / "repositories.py",
+            "InvestigationTransitionRepository",
+        ),
+        (
+            INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py",
+            "PostgreSQLInvestigationTransitionRepository",
+        ),
+    )
+    for path, class_name in paths_and_classes:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        class_node = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name
+        )
+        methods = {
+            node.name
+            for node in class_node.body
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        }
+        assert {"acquire_command_lock", "add", "get_by_command"} <= methods
+        assert methods.isdisjoint({"delete", "replace", "save", "update"})
+
+
+def test_lifecycle_through_f42_has_no_runner_io_environment_or_later_phase_imports() -> None:
+    """Lifecycle remains synchronous core coordination without external I/O."""
+
+    forbidden_roots = {
+        "asyncio",
+        "http",
+        "httpx",
+        "os",
+        "pathlib",
+        "requests",
+        "socket",
+        "subprocess",
+        "urllib",
+    }
+    forbidden_internal_prefixes = {
+        "intelligence.claims",
+        "intelligence.connectors",
+        "intelligence.evidence",
+        "intelligence.orchestration",
+        "intelligence.reporting",
+        "intelligence.risk",
+    }
+    forbidden_calls = {
+        "Popen",
+        "connect",
+        "getenv",
+        "open",
+        "read_bytes",
+        "read_text",
+        "run",
+        "socket",
+        "system",
+        "write_bytes",
+        "write_text",
+    }
+    violations: list[str] = []
+    for path in F41_LIFECYCLE_PATHS:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_roots or any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in forbidden_internal_prefixes
+                ):
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Attribute) and node.attr == "environ":
+                violations.append(f"{path.name} -> environment access")
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            else:
+                continue
+            if call_name in forbidden_calls:
+                violations.append(f"{path.name} -> call {call_name}")
+
+    assert violations == []
+
+
+def test_lifecycle_exposes_only_specific_commands_without_generic_destination() -> None:
+    """Lifecycle growth requires a named command instead of transition_to(state)."""
+
+    investigation_tree = ast.parse((DOMAIN_ROOT / "investigations.py").read_text(encoding="utf-8"))
+    service_tree = ast.parse(
+        (APPLICATION_ROOT / "services" / "investigations.py").read_text(encoding="utf-8")
+    )
+    investigation_class = next(
+        node
+        for node in investigation_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "Investigation"
+    )
+    service_class = next(
+        node
+        for node in service_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "InvestigationService"
+    )
+    domain_public_methods = {
+        node.name
+        for node in investigation_class.body
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        and not node.name.startswith("_")
+    }
+    service_public_methods = {
+        node.name
+        for node in service_class.body
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        and not node.name.startswith("_")
+    }
+
+    assert {"start_identification", "cancel", "request_entity_confirmation", "confirm_entity"} <= (
+        domain_public_methods
+    )
+    assert {
+        "start_identification",
+        "cancel_investigation",
+        "request_entity_confirmation",
+    } <= service_public_methods
+    assert domain_public_methods.isdisjoint({"set_state", "transition", "transition_to"})
+    assert service_public_methods.isdisjoint({"set_state", "transition", "transition_to"})
+
+
+def test_f44_does_not_create_post_planning_packages_or_sensitive_audit_payloads() -> None:
+    """F4.4 adds orchestration planning, but no downstream execution domains."""
+
+    source_packages = {
+        path.name for path in (Path(__file__).parents[2] / "src" / "intelligence").iterdir()
+    }
+    assert source_packages.isdisjoint(
+        {
+            "candidates",
+            "claims",
+            "evidence",
+            "jobs",
+            "planner",
+            "reporting",
+            "risk",
+        }
+    )
+    audit_source = (APPLICATION_ROOT / "audit.py").read_text(encoding="utf-8").lower()
+    assert "input_snapshot" not in audit_source
+    assert "identification_input" not in audit_source
+
+
+def test_f42_entity_resolution_is_pure_closed_and_connector_independent() -> None:
+    """The matcher has no I/O, clock, randomness, framework, or downstream dependencies."""
+
+    forbidden_import_roots = {
+        "alembic",
+        "asyncio",
+        "fastapi",
+        "http",
+        "httpx",
+        "os",
+        "pathlib",
+        "psycopg",
+        "random",
+        "requests",
+        "secrets",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+        "time",
+        "urllib",
+        "uuid",
+    }
+    forbidden_internal_prefixes = {
+        "intelligence.application",
+        "intelligence.claims",
+        "intelligence.connectors",
+        "intelligence.documents",
+        "intelligence.evidence",
+        "intelligence.infrastructure",
+        "intelligence.orchestration",
+        "intelligence.reporting",
+        "intelligence.risk",
+    }
+    forbidden_calls = {
+        "connect",
+        "getenv",
+        "now",
+        "open",
+        "read_bytes",
+        "read_text",
+        "sleep",
+        "today",
+        "utcnow",
+        "write_bytes",
+        "write_text",
+    }
+    violations: list[str] = []
+    for path in sorted(ENTITY_RESOLUTION_ROOT.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_import_roots or any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in forbidden_internal_prefixes
+                ):
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Constant) and isinstance(node.value, float):
+                violations.append(f"{path.name}:{node.lineno} -> float")
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            else:
+                continue
+            if call_name in forbidden_calls or call_name.startswith(("rand", "urandom")):
+                violations.append(f"{path.name}:{node.lineno} -> call {call_name}")
+        assert "CandidateObservation" not in source
+        assert "ConnectorOutcome" not in source
+        assert "ConnectorProtocol" not in source
+
+    assert violations == []
+
+
+def test_f43_confirmation_is_explicit_and_candidate_batches_remain_immutable() -> None:
+    """F4.3 adds explicit confirmation without rejection-all or batch mutation."""
+
+    f42_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in (ENTITY_RESOLUTION_ROOT, APPLICATION_ROOT)
+        for path in sorted(root.rglob("*.py"))
+    )
+    assert "ConfirmEntityCandidate" in f42_source
+    assert "RejectAllCandidates" not in f42_source
+
+    paths_and_classes = (
+        (
+            APPLICATION_ROOT / "ports" / "repositories.py",
+            "EntityCandidateBatchRepository",
+        ),
+        (
+            INFRASTRUCTURE_ROOT / "persistence" / "postgresql" / "repositories.py",
+            "PostgreSQLEntityCandidateBatchRepository",
+        ),
+    )
+    for path, class_name in paths_and_classes:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        class_node = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name
+        )
+        methods = {
+            node.name
+            for node in class_node.body
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        }
+        assert {"add", "get"} <= methods
+        assert methods.isdisjoint({"delete", "replace", "save", "update"})
+
+
+def test_f43_confirmation_has_no_auto_selection_or_later_phase_capability() -> None:
+    """Confirmation consumes one explicit ID and cannot plan, link, reject, or run I/O."""
+
+    command_path = APPLICATION_ROOT / "entity_confirmation.py"
+    service_path = APPLICATION_ROOT / "services" / "entity_confirmation.py"
+    source = command_path.read_text(encoding="utf-8") + service_path.read_text(encoding="utf-8")
+    for forbidden_name in (
+        "CreatePlan",
+        "InvestigationPlan",
+        "LinkExistingCompany",
+        "MergeCompany",
+        "PlannedCapability",
+        "RejectAllCandidates",
+        "RejectCandidate",
+    ):
+        assert forbidden_name not in source
+
+    service_tree = ast.parse(service_path.read_text(encoding="utf-8"), filename=str(service_path))
+    forbidden_calls = {
+        "evaluate_candidate_batch",
+        "getenv",
+        "open",
+        "sleep",
+        "system",
+    }
+    calls = {
+        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+        for node in ast.walk(service_tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute))
+    }
+    assert calls.isdisjoint(forbidden_calls)
+    assert all(
+        not module.startswith(
+            (
+                "intelligence.claims",
+                "intelligence.connectors",
+                "intelligence.evidence",
+                "intelligence.orchestration",
+                "intelligence.reporting",
+                "intelligence.risk",
+            )
+        )
+        for node in ast.walk(service_tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+        for module in (node.module,)
+    )
+
+    command_tree = ast.parse(command_path.read_text(encoding="utf-8"), filename=str(command_path))
+    command_class = next(
+        node
+        for node in command_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "ConfirmEntityCandidate"
+    )
+    command_fields = {
+        target.id
+        for node in command_class.body
+        if isinstance(node, ast.AnnAssign) and isinstance((target := node.target), ast.Name)
+    }
+    assert command_fields == {
+        "command_id",
+        "investigation_id",
+        "expected_state_version",
+        "candidate_batch_id",
+        "candidate_id",
+        "review_reason",
+        "materialization_policy",
+        "schema_version",
+    }
+
+
+def test_f44_planning_is_pure_and_does_not_execute_or_advance_lifecycle() -> None:
+    """Planning uses static descriptors without I/O, runners, or COLLECTING transition."""
+
+    planning_path = ORCHESTRATION_ROOT / "planning.py"
+    service_path = APPLICATION_ROOT / "services" / "investigation_planning.py"
+    planning_source = planning_path.read_text(encoding="utf-8")
+    service_source = service_path.read_text(encoding="utf-8")
+    planning_tree = ast.parse(planning_source, filename=str(planning_path))
+    service_tree = ast.parse(service_source, filename=str(service_path))
+    forbidden_import_roots = {
+        "alembic",
+        "asyncio",
+        "fastapi",
+        "http",
+        "httpx",
+        "os",
+        "pathlib",
+        "psycopg",
+        "random",
+        "requests",
+        "secrets",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+        "time",
+        "urllib",
+        "uuid",
+    }
+    imports = {
+        module
+        for node in ast.walk(planning_tree)
+        for module in (
+            [alias.name for alias in node.names]
+            if isinstance(node, ast.Import)
+            else [node.module]
+            if isinstance(node, ast.ImportFrom) and node.module
+            else []
+        )
+    }
+    calls = {
+        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+        for node in ast.walk(planning_tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute))
+    }
+
+    assert all(module.partition(".")[0] not in forbidden_import_roots for module in imports)
+    assert not any(
+        isinstance(node, ast.Constant) and isinstance(node.value, float)
+        for node in ast.walk(planning_tree)
+    )
+    assert calls.isdisjoint({"connect", "execute", "getenv", "open", "sleep", "today", "utcnow"})
+    assert "COLLECTING" not in service_source
+    assert "compare_and_swap" not in service_source
+    service_calls = {
+        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+        for node in ast.walk(service_tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute))
+    }
+    assert service_calls.isdisjoint(
+        {"execute", "fetch_details", "fetch_document", "run", "search", "transition"}
+    )
+
+
 def test_f242_application_services_do_not_import_sql_or_infrastructure() -> None:
     """Tenant-scoped services coordinate ports without embedding persistence."""
 
@@ -687,6 +1118,72 @@ def test_authorization_policy_has_no_io_or_repository_access() -> None:
     }
 
     assert forbidden_calls.isdisjoint({"add", "commit", "execute", "get", "rollback"})
+
+
+def test_f45_activation_materializes_only_and_never_calls_connectors_or_runners() -> None:
+    """F4.5 may persist a manifest and COLLECTING transition, but cannot execute it."""
+
+    activation_paths = (
+        ORCHESTRATION_ROOT / "collection_activation.py",
+        APPLICATION_ROOT / "collection_activation.py",
+        APPLICATION_ROOT / "services" / "collection_activation.py",
+    )
+    forbidden_imports = {
+        "intelligence.connectors.execution",
+        "intelligence.connectors.registry",
+        "intelligence.connectors.simulated",
+    }
+    forbidden_calls = {
+        "execute",
+        "run",
+        "run_operation",
+        "submit",
+        "sleep",
+        "retry",
+    }
+    violations: list[str] = []
+    for path in activation_paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module is not None:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in forbidden_imports
+                ):
+                    violations.append(f"{path.name} -> import {module}")
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    name = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    name = node.func.attr
+                else:
+                    continue
+                if name in forbidden_calls:
+                    violations.append(f"{path.name}:{node.lineno} -> call {name}")
+    assert violations == []
+
+    repository_path = APPLICATION_ROOT / "ports" / "repositories.py"
+    repository_tree = ast.parse(
+        repository_path.read_text(encoding="utf-8"), filename=str(repository_path)
+    )
+    collection_repository = next(
+        node
+        for node in repository_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "CollectionRunRepository"
+    )
+    methods = {
+        node.name
+        for node in collection_repository.body
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+    }
+    assert "add" in methods
+    assert methods.isdisjoint({"delete", "replace", "save", "update"})
 
 
 def test_repositories_do_not_import_application_permissions_or_authorization() -> None:

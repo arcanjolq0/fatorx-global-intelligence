@@ -5,8 +5,13 @@ from typing import Literal, Protocol, Self
 
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
+    CollectionRunRepository,
     CompanyRepository,
+    EntityCandidateBatchRepository,
+    EntityResolutionDecisionRepository,
+    InvestigationPlanRepository,
     InvestigationRepository,
+    InvestigationTransitionRepository,
     UserRepository,
     WorkspaceMembershipRepository,
     WorkspaceRepository,
@@ -27,6 +32,26 @@ class UnitOfWork(Protocol):
     @property
     def investigations(self) -> InvestigationRepository:
         """Return the investigation repository bound to the active transaction."""
+
+    @property
+    def investigation_transitions(self) -> InvestigationTransitionRepository:
+        """Return the append-only transition repository for the active transaction."""
+
+    @property
+    def entity_candidate_batches(self) -> EntityCandidateBatchRepository:
+        """Return immutable entity-candidate batches for the active transaction."""
+
+    @property
+    def entity_resolution_decisions(self) -> EntityResolutionDecisionRepository:
+        """Return immutable human entity-resolution decisions for the transaction."""
+
+    @property
+    def investigation_plans(self) -> InvestigationPlanRepository:
+        """Return immutable investigation plans for the active transaction."""
+
+    @property
+    def collection_runs(self) -> CollectionRunRepository:
+        """Return immutable collection manifests for the active transaction."""
 
     @property
     def users(self) -> UserRepository:

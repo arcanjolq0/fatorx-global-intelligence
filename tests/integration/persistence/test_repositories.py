@@ -27,6 +27,10 @@ from intelligence.domain.identifiers import (
     UserId,
     WorkspaceId,
 )
+from intelligence.domain.investigation_inputs import (
+    IdentificationInput,
+    OriginalAndNormalizedText,
+)
 from intelligence.domain.investigations import (
     TERMINAL_INVESTIGATION_STATES,
     Investigation,
@@ -61,6 +65,8 @@ def engine() -> Iterator[Engine]:
     try:
         yield database_engine
     finally:
+        with database_engine.begin() as connection:
+            connection.execute(sa.text("TRUNCATE TABLE company CASCADE"))
         database_engine.dispose()
         command.downgrade(config, "base")
 
@@ -105,7 +111,6 @@ def _company(
 
 def _created_investigation(
     workspace_id: WorkspaceId,
-    company_id: CompanyId | None = None,
     *,
     investigation_id: InvestigationId | None = None,
 ) -> Investigation:
@@ -115,7 +120,6 @@ def _created_investigation(
         requested_by=UserId.new(),
         profile_code="  SUPPLIER_STANDARD  ",
         country_code=CountryCode("br"),
-        confirmed_company_id=company_id,
         budget=Money(
             Decimal("98765432109876543210.12345678901234567890"),
             CurrencyCode("brl"),
@@ -140,6 +144,12 @@ def _persisted_investigation(
         country_code=CountryCode("BR"),
         state=state,
         state_version=9,
+        identification_input=IdentificationInput(
+            legal_name=OriginalAndNormalizedText(
+                original_value="Empresa Global Ltda.",
+                normalized_value="empresa global ltda",
+            )
+        ),
         confirmed_company_id=company_id,
         budget=Money(Decimal("1000.00000000000000000001"), CurrencyCode("BRL")),
         deadline_at=CREATED_AT + timedelta(days=2),
@@ -167,7 +177,7 @@ def _terminate_unit_of_work_backend(
 def test_commit_persists_round_trip_for_all_three_entities(engine: Engine) -> None:
     workspace = _workspace()
     company = _company(workspace.id)
-    investigation = _created_investigation(workspace.id, company.id)
+    investigation = _created_investigation(workspace.id)
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         unit_of_work.workspaces.add(workspace)
@@ -221,7 +231,7 @@ def test_company_round_trip_covers_statuses_dates_and_optional_fields(
 
     assert restored == company
     assert restored is not None
-    assert restored.trade_name == "Empresa Global"
+    assert restored.trade_name == "  Empresa Global  "
     assert restored.official_domain == "empresa.example"
 
 
@@ -249,13 +259,16 @@ def test_company_round_trip_preserves_absent_optional_fields(engine: Engine) -> 
 
 def test_non_initial_investigation_snapshot_round_trip(engine: Engine) -> None:
     workspace = _workspace()
+    company = _company(workspace.id)
     investigation = _persisted_investigation(
         workspace.id,
         state=InvestigationState.WAITING_FOR_REVIEW,
+        company_id=company.id,
     )
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         unit_of_work.workspaces.add(workspace)
+        unit_of_work.companies.add(company)
         unit_of_work.investigations.add(investigation)
         unit_of_work.commit()
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
@@ -272,10 +285,21 @@ def test_terminal_investigation_snapshot_round_trip(
     state: InvestigationState,
 ) -> None:
     workspace = _workspace()
-    investigation = _persisted_investigation(workspace.id, state=state)
+    company = (
+        _company(workspace.id)
+        if state in {InvestigationState.COMPLETED, InvestigationState.PARTIALLY_COMPLETED}
+        else None
+    )
+    investigation = _persisted_investigation(
+        workspace.id,
+        state=state,
+        company_id=company.id if company is not None else None,
+    )
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         unit_of_work.workspaces.add(workspace)
+        if company is not None:
+            unit_of_work.companies.add(company)
         unit_of_work.investigations.add(investigation)
         unit_of_work.commit()
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
@@ -335,7 +359,7 @@ def test_company_and_investigation_insert_together_in_one_unit_of_work(
 ) -> None:
     workspace = _workspace()
     company = _company(workspace.id)
-    investigation = _created_investigation(workspace.id, company.id)
+    investigation = _created_investigation(workspace.id)
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         unit_of_work.workspaces.add(workspace)
@@ -364,7 +388,11 @@ def test_cross_workspace_company_conflict_remains_rejected(engine: Engine) -> No
     company_workspace = _workspace()
     investigation_workspace = _workspace()
     company = _company(company_workspace.id)
-    investigation = _created_investigation(investigation_workspace.id, company.id)
+    investigation = _persisted_investigation(
+        investigation_workspace.id,
+        state=InvestigationState.PLANNING,
+        company_id=company.id,
+    )
 
     with (
         pytest.raises(PersistenceConflictError),
@@ -380,7 +408,7 @@ def test_wrong_workspace_queries_return_none(engine: Engine) -> None:
     workspace = _workspace()
     other_workspace = _workspace()
     company = _company(workspace.id)
-    investigation = _created_investigation(workspace.id, company.id)
+    investigation = _created_investigation(workspace.id)
 
     with PostgreSQLUnitOfWork(engine) as unit_of_work:
         unit_of_work.workspaces.add(workspace)
@@ -604,7 +632,11 @@ def test_rollback_leaves_no_partial_data_after_constraint_failure(engine: Engine
     first_workspace = _workspace()
     second_workspace = _workspace()
     company = _company(first_workspace.id)
-    invalid_investigation = _created_investigation(second_workspace.id, company.id)
+    invalid_investigation = _persisted_investigation(
+        second_workspace.id,
+        state=InvestigationState.PLANNING,
+        company_id=company.id,
+    )
 
     with (
         pytest.raises(PersistenceConflictError),

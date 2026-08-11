@@ -28,6 +28,7 @@ pytestmark = pytest.mark.allow_hosts(["127.0.0.1", "::1", "localhost"])
 
 REPOSITORY_ROOT = Path(__file__).parents[3]
 PREVIOUS_REVISION = "20260728_01"
+F241_REVISION = "20260728_02"
 CORE_TABLES = {"workspace", "company", "investigation"}
 F241_TABLES = {"user_account", "workspace_membership", "audit_event"}
 MANAGED_TABLES = CORE_TABLES | F241_TABLES
@@ -41,7 +42,7 @@ class DatabaseHarness:
     url: str
     config: Config
 
-    def upgrade(self, revision: str = "head") -> None:
+    def upgrade(self, revision: str = F241_REVISION) -> None:
         command.upgrade(self.config, revision)
 
     def downgrade(self, revision: str = "base") -> None:
@@ -461,6 +462,6 @@ def test_reupgrade_after_one_revision_downgrade_recreates_f241(
 
 
 def test_alembic_check_reports_metadata_at_head(database: DatabaseHarness) -> None:
-    database.upgrade()
+    database.upgrade("head")
 
     command.check(database.config)

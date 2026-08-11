@@ -4,8 +4,8 @@
 
 - F3.1 concluída em 2026-07-28;
 - F3.2 concluída em 2026-07-29;
-- F3.3 **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE** em 2026-07-29;
-- gate G3 permanece não aceito até revisão independente; Fase 4 não autorizada.
+- F3.3 **ACEITA APÓS REVISÃO INDEPENDENTE** em 2026-07-29;
+- gate G3 **ACEITO** e Fase 3 **CONCLUÍDA**; F4.1 foi posteriormente aceita e F4.2 recebeu instrução própria.
 
 ## 1. Objetivo
 
@@ -229,7 +229,7 @@ criar uma suíte reutilizável que qualquer futuro conector deverá passar.
 
 # F3.3 — Controles de execução de uma operação
 
-Status: **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**.
+Status: **ACEITA APÓS REVISÃO INDEPENDENTE**.
 
 ## Objetivo
 
@@ -307,7 +307,7 @@ A Fase 3 só termina quando:
 
 ## 8. Próxima fase
 
-Somente depois do gate G3, a Fase 4 poderá:
+Somente depois do gate G3, a Fase 4 poderia:
 
 - criar jobs;
 - planejar por país/capacidade;
@@ -317,5 +317,7 @@ Somente depois do gate G3, a Fase 4 poderá:
 - aplicar política de resolução;
 - pausar para revisão humana.
 
-Nada disso pertence à Fase 3. A implementação da F3.3 não constitui aceite do
-gate G3 nem autorização para iniciar qualquer item desta seção.
+Nada disso pertence à Fase 3. A revisão independente posterior aceitou a F3.3,
+o gate G3 e a Fase 3. A primeira instrução de avanço autorizou exclusivamente a
+F4.1; após seu aceite independente, uma instrução separada autorizou a F4.2.
+F4.3 e os demais itens desta seção continuam bloqueados.

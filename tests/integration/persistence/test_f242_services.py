@@ -386,12 +386,12 @@ def test_creations_use_actor_scope_requester_and_atomic_success_audit(engine: En
         actor,
         profile_code="SUPPLIER_STANDARD",
         country_code=CountryCode("BR"),
-        confirmed_company_id=company.id,
     )
 
     assert company.workspace_id == actor.workspace_id
     assert investigation.workspace_id == actor.workspace_id
     assert investigation.requested_by == actor.user_id
+    assert investigation.confirmed_company_id is None
     assert len(factory.created) == 2
     assert all(unit_of_work.is_closed for unit_of_work in factory.created)
     rows = _audit_rows(engine)

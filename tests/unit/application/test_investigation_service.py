@@ -17,10 +17,8 @@ from intelligence.application.errors import (
 )
 from intelligence.application.services.investigations import InvestigationService
 from intelligence.domain.audit import AuditOutcome
-from intelligence.domain.companies import Company, CompanyStatus
 from intelligence.domain.geography import CountryCode
 from intelligence.domain.identifiers import (
-    CompanyId,
     CorrelationId,
     InvestigationId,
     MembershipId,
@@ -141,55 +139,6 @@ def test_viewer_cannot_create_investigation_and_denial_is_audited() -> None:
 
     assert database.investigations == {}
     assert database.audit_events[-1].reason_code == AuditReasonCode.PERMISSION_DENIED.value
-
-
-def test_confirmed_company_must_exist_in_actor_workspace() -> None:
-    actor, database, factory, service = _setup(MembershipRole.OWNER)
-    other_company = Company(
-        id=CompanyId.new(),
-        workspace_id=WorkspaceId.new(),
-        legal_name="Other Tenant",
-        country_code=CountryCode("BR"),
-        status=CompanyStatus.ACTIVE,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-    database.companies[(other_company.workspace_id, other_company.id)] = other_company
-
-    with pytest.raises(ResourceNotFoundError):
-        service.create_investigation(
-            actor,
-            profile_code="SUPPLIER_STANDARD",
-            country_code=CountryCode("BR"),
-            confirmed_company_id=other_company.id,
-        )
-
-    assert factory.created[0].companies.get_calls == [(actor.workspace_id, other_company.id)]
-    assert database.investigations == {}
-    assert database.audit_events[-1].outcome is AuditOutcome.FAILURE
-
-
-def test_create_with_company_from_same_workspace_preserves_reference() -> None:
-    actor, database, _, service = _setup(MembershipRole.OWNER)
-    company = Company(
-        id=CompanyId.new(),
-        workspace_id=actor.workspace_id,
-        legal_name="Same Tenant",
-        country_code=CountryCode("BR"),
-        status=CompanyStatus.ACTIVE,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-    database.companies[(actor.workspace_id, company.id)] = company
-
-    investigation = service.create_investigation(
-        actor,
-        profile_code="SUPPLIER_STANDARD",
-        country_code=CountryCode("BR"),
-        confirmed_company_id=company.id,
-    )
-
-    assert investigation.confirmed_company_id == company.id
 
 
 @pytest.mark.parametrize("role", list(MembershipRole))

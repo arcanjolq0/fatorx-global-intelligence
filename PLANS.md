@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 3 — Framework de conectores simulados, implementada até a F3.3 e aguardando revisão independente**.
-- Status: **F2.1 concluída em 2026-07-25; F2.2 a F2.4.2 e F3.1 concluídas em 2026-07-28; F3.2 concluída e F3.3 implementada em 2026-07-29**. O gate G3 não foi aceito e a Fase 4 não foi iniciada.
-- Código executável: API de saúde, shell web estático, domínio imutável, seis tabelas PostgreSQL versionadas, seis portas/adaptadores Core, Unit of Work síncrona endurecida, serviços mínimos tenant-scoped, contratos de conectores `1.0.0`, registro explícito, simulador empresarial sintético, suíte comum e runner local de uma única operação com controles injetáveis. Não há autenticação, acesso pela API, conector real ou I/O externo.
+- Fase atual: **Fase 4 — F4.5/F4.5.1 aceitas após revisão independente**.
+- Status: **Fase 3 concluída; F4.1 a F4.5/F4.5.1 aceitas após revisão independente**. A F4.6 e posteriores não estão autorizadas.
+- Código executável: API de saúde, shell web estático, domínio imutável, dezessete tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico e manifesto de coleta imutável. Não há autenticação, acesso pela API, execução do manifesto, jobs, vínculo a Company existente, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -288,7 +288,7 @@ Limites: `ActorContext` não autentica nem representa sessão/token; o bootstrap
 
 ### Fase 3 — Framework de conectores simulados
 
-**Status: F3.1 e F3.2 concluídas; F3.3 IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE. O gate G3 permanece não aceito.**
+**Status: F3.1 e F3.2 concluídas; F3.3 ACEITA APÓS REVISÃO INDEPENDENTE; gate G3 ACEITO; Fase 3 CONCLUÍDA.**
 
 Escopo:
 
@@ -360,7 +360,7 @@ evidência, claim, scoring e relatório continuam ausentes.
 
 #### F3.3 — Controles de execução de uma única operação
 
-Status: **IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE**.
+Status: **ACEITA APÓS REVISÃO INDEPENDENTE**.
 
 Entregas:
 
@@ -381,9 +381,110 @@ Limites: o runner não seleciona nem agrega conectores; store e accounting não
 são persistidos; jitter padrão é zero; nenhuma próxima página é seguida. Não há
 HTTP, rede, banco, migration, job, worker, fila, transição de investigação,
 resolução, evidência, claim, scoring, relatório, endpoint ou frontend. A própria
-entrega não aceita G3 e não autoriza a Fase 4.
+entrega foi posteriormente aceita por revisão independente, fechando o gate G3 e a Fase 3. Esse aceite autorizou somente o início da F4.1 por instrução específica, não o restante da Fase 4.
 
 ### Fase 4 — Orquestração e resolução de entidades
+
+**Status: F4.1 A F4.5/F4.5.1 ACEITAS APÓS REVISÃO INDEPENDENTE. F4.6 — NÃO AUTORIZADA.**
+
+#### F4.1 — Lifecycle transacional inicial
+
+Materializa exclusivamente `StartIdentification` (`CREATED -> IDENTIFYING`) e
+`CancelInvestigation` (não terminal `-> CANCELLED`), com entrada tipada,
+`state_version` por compare-and-swap, ledger/idempotência duráveis e auditoria no
+mesmo commit. Detalhes e evidências estão em `docs/tasks/f4/F4_1_LIFECYCLE_TRANSACIONAL_INICIAL.md`
+e `docs/validation/f4.1-investigation-lifecycle-foundation.md`.
+
+#### F4.2 — Candidatos, matching e pausa para confirmação
+
+Materializa exclusivamente candidatos fornecidos ao caso de uso, política V1
+versionada, score inteiro em basis points, ranking estável e explicável,
+persistência append-only e `IDENTIFYING -> WAITING_FOR_ENTITY_CONFIRMATION`.
+CAS, replay/collision, ledger, auditoria e lote/candidatos/scores compartilham
+uma única transação. Candidatos não são evidência, claim ou empresa canônica.
+
+Na F4.2 não havia confirmação nem Company; esses comportamentos foram adicionados
+somente pela F4.3, mantendo planner e execução de conector ausentes.
+
+#### F4.2.1 — Integridade da reconstituição persistida
+
+Corrige a leitura fail-closed de candidatos e avaliações: política e
+normalização suportada, dimensões/pesos, total, cobertura, classificação,
+conflitos, candidate/input/policy digests, submission digest, digest agregado e
+ranking são reconstruídos pela representação canônica oficial. A serialização
+do lote ordena candidatos por chave para tornar o submission digest
+reproduzível; a tupla recebida e o resultado do matching não mudam. Não há nova
+migration, dependência ou alteração de pesos/thresholds.
+
+#### F4.3 — Confirmação humana e Company canônica
+
+Materializa somente a escolha humana positiva de candidato persistido. Bloqueia
+`EXCLUDED`, exige `MANUAL_OVERRIDE` para LOW ou rank maior que 1, cria sempre uma
+nova Company por política V1, persiste decisão append-only e avança
+`WAITING_FOR_ENTITY_CONFIRMATION -> PLANNING` de forma atômica. Não cria plano,
+não vincula Company existente e não transforma candidato/decisão em evidência.
+
+#### F4.3.1 — Replay histórico durável da confirmação
+
+Corrige a leitura e o replay depois de a investigação sair de `PLANNING`. A
+transição histórica exata `WAITING_FOR_ENTITY_CONFIRMATION -> PLANNING` e seus
+vínculos são validados separadamente do snapshot atual. O estado atual pode ser
+qualquer estado pós-confirmação autorizado, inclusive `CANCELLED`, desde que
+preserve a mesma Company, não reintroduza lote ativo e nunca regrida a versão.
+Replay íntegro não lê relógio, não gera IDs, não executa CAS nem escreve novos
+registros. Não há migration, dependência, lockfile ou transição nova.
+
+#### F4.4 — Plano determinístico de investigação
+
+Materializa `INVESTIGATION_PLANNING_V1` e um único `InvestigationPlan` `READY`
+por Investigation em `PLANNING` com Company confirmada. As dez capacidades do
+vocabulário atual são persistidas; `COMPANY_IDENTITY` e `COMPANY_REGISTRY` são
+obrigatórias e `OWNERSHIP` depende de `COMPANY_REGISTRY`. Opções elegíveis usam
+somente descritores admitidos no registro explícito e ordenação estável por
+cobertura do país, contrato suportado e `connector_id`. Como o descritor atual
+não declara preço, custos permanecem `UNKNOWN`, sem estimativa inventada.
+
+Plano, capacidades, opções, comando e auditoria compartilham uma transação. O
+registro do plano contém os campos duráveis de comando/digest; replay íntegro
+não lê relógio, não gera IDs e não duplica auditoria. A Investigation não sofre
+CAS, transição ou incremento: permanece em `PLANNING`. A F4.4 não executa
+conectores nem cria jobs, evidências, claims, risco ou relatório.
+
+#### F4.4.1 — Continuidade histórica do plano
+
+Corrige a reconstituição para preservar as três leituras e o replay do plano
+quando a Investigation avança, desde que mantenha a mesma Company, lote ativo
+nulo e versão não inferior. Na versão exata de criação, apenas `PLANNING` é
+aceito; com versão maior, são aceitos os estados pós-confirmação definidos no
+lifecycle, inclusive terminais. Estados anteriores, regressão, troca de Company
+e lote reintroduzido falham fechados.
+
+O caminho crítico considera somente capacidades `READY`; opcionais
+indisponíveis não consomem prazo. A migration `20260801_07` reforça o conjunto
+tipado comando/kind/valor/moeda da auditoria sem alterar `20260801_06`.
+
+#### F4.5 — Ativação e manifesto de coleta
+
+Materializa `COLLECTION_ACTIVATION_V1`, seleciona somente a opção rank 1 já
+persistida de cada capacidade `READY` e cria um run `PENDING` com operações
+`PENDING` e tentativa zero. Capacidades `OPTIONAL_UNAVAILABLE` não geram
+operação. O manifesto conserva os snapshots e digests do plano, converte
+dependências para IDs no mesmo run e não consulta registry nem chama conector.
+
+Run, operações, dependências, CAS `PLANNING -> COLLECTING`, ledger e auditoria
+compartilham um commit. Replay íntegro não lê clock, não gera IDs, não executa
+CAS e não escreve. A migration `20260802_08` cria as três tabelas append-only e
+recusa downgrade destrutivo. F4.6 e qualquer execução permanecem não autorizadas.
+
+#### F4.5.1 — Correção de prazo e integridade histórica
+
+Revalida no instante de ativação se o caminho crítico formado exclusivamente
+pelas operações das capacidades `READY` cabe no deadline persistido. O limite
+exato é aceito; insuficiência falha antes de manifesto, transição, CAS e
+auditoria de sucesso. Cada run é validado contra a transição histórica exata,
+incluindo workspace, Investigation, comando/digest, versões, ator, instante,
+run, Company, plano, política e quantidade. A migration `20260802_09` acrescenta
+somente os vínculos históricos de Company e plano exigidos para essa prova.
 
 Escopo:
 
