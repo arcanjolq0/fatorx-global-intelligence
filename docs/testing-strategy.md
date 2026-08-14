@@ -160,6 +160,22 @@ fechado. Replay em nova UoW e colisão verdadeira continuam separados. A
 migration sucessora cobre backfill, FK composta, upgrade, downgrade e
 `alembic check`; o ZIP é validado por nomes POSIX e `unzip -t`.
 
+Na F4.6, unitários cobrem comando/política/digests, autorização, prazo, replay
+sem clock/conector/escrita, colisão e ausência de payload persistido. PostgreSQL
+real cobre ownership pré-I/O, conclusão 1:1, tenant scope, round-trip dos mappers,
+adulteração fail-closed, constraints, downgrade/refusal e convergência do
+metadata. Somente o simulador admitido em `TEST` participa; rede e fontes reais
+continuam proibidas.
+
+Na F4.6.1, um conector adversarial muda o descritor entre os preflights e deve
+ser rejeitado antes de `search`. A corrida F4.3 de comandos distintos deve
+produzir um sucesso e um `STATE_VERSION_CONFLICT` auditado em cinco repetições,
+sem contagem dependente do escalonamento.
+
+Na F4.6.2, a mesma continuidade é testada após a primeira tentativa com
+`INVALID_RESPONSE` configurado como retriável. A divergência deve produzir no
+máximo uma chamada de operação e nunca iniciar novo I/O.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

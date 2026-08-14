@@ -3,7 +3,8 @@
 ## Estado
 
 **ACEITA APÓS REVISÃO INDEPENDENTE, INCLUINDO A F4.5.1.** A Fase 4
-permanece em andamento. A F4.6 não está autorizada.
+permanece em andamento. A F4.6 foi posteriormente autorizada e implementada,
+mas ainda aguarda sua própria revisão independente.
 
 ## Escopo implementado
 

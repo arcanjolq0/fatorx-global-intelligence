@@ -36,6 +36,7 @@ CREATE_AND_READ = {
     Permission.INVESTIGATION_ENTITY_CONFIRM,
     Permission.INVESTIGATION_PLAN_CREATE,
     Permission.INVESTIGATION_COLLECTION_START,
+    Permission.COLLECTION_OPERATION_EXECUTE,
 }
 EXPECTED: dict[MembershipRole, set[Permission]] = {
     MembershipRole.OWNER: set(Permission),

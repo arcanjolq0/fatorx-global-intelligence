@@ -8,7 +8,8 @@
 - F4.3/F4.3.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
 - F4.4/F4.4.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
 - F4.5/F4.5.1: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
-- F4.6 e demais subfases: **NÃO AUTORIZADAS**.
+- F4.6/F4.6.1/F4.6.2: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
+- subfases posteriores: **NÃO AUTORIZADAS**.
 
 A Fase 4 permanece em andamento e seu gate não está aceito. Este roadmap
 registra decomposição e fronteiras; não autoriza a execução de uma subfase.
@@ -120,8 +121,37 @@ A ativação revalida o deadline com o caminho crítico das operações derivada
 somente de capacidades `READY`, aceitando igualdade e rejeitando insuficiência
 antes de materializar o run. Toda leitura correlaciona o run com a transição
 histórica exata, inclusive ator, instante, Company e plano. A migration
-`20260802_09` adiciona apenas os dois vínculos históricos necessários; F4.6
-permanece não autorizada.
+`20260802_09` adiciona apenas os dois vínculos históricos necessários. A F4.6
+foi autorizada e implementada posteriormente em entrega própria.
+
+## F4.6 — Execução direta controlada
+
+A F4.6 consome uma única operação `SEARCH` do manifesto por comando. O conector
+é fornecido explicitamente, allowlisted, precisa corresponder ao snapshot e só
+opera em `TEST`. Um ownership tenant-scoped é persistido antes do I/O; a conclusão
+posterior contém somente outcome, accounting e digests, nunca itens/payload.
+
+O manifesto não muda de status. Não há jobs, filas, workers, descoberta,
+paralelismo, `FETCH_DETAILS`, fonte real ou transição de lifecycle. A migration
+`20260811_10` cria as duas tabelas append-only. A implementação aguarda revisão
+independente; detalhes estão em `F4_6_EXECUCAO_DIRETA_CONTROLADA.md`.
+
+## F4.6.1 — Continuidade do descritor e auditoria concorrente
+
+O descritor do preflight pré-commit passa a ser a única fonte do ownership e o
+runner exige igualdade no preflight pós-commit antes de I/O. Comandos F4.3
+distintos são serializados pelo lock da Investigation, tornando a falha de
+versão e sua auditoria determinísticas. A correção não expande a funcionalidade
+e foi aceita em conjunto com a F4.6.2 após nova revisão independente.
+
+## F4.6.2 — Divergência terminal do descritor
+
+Uma mudança de descritor observada após a operação é distinta de uma resposta
+externa inválida e encerra a execução lógica imediatamente. O resultado redigido
+pode registrar a falha da tentativa já iniciada, mas a política de retry não
+pode reservar nem executar outra tentativa. O teste adversarial cobre mutações
+antes do ownership, nos preflights pós-commit e após a primeira tentativa com
+`INVALID_RESPONSE` explicitamente retriável.
 
 ## Exclusões e próximas subfases
 
@@ -130,11 +160,11 @@ Não foram implementados:
 - rejeição de candidato ou de todos os candidatos;
 - associação, deduplicação ou merge de `Company`;
 - qualquer transição posterior a `COLLECTING`;
-- descoberta ou execução de conector;
-- execução do manifesto, jobs, filas, workers, outbox ou fan-out/fan-in;
-- evidência, claim, risco, relatório, endpoint ou frontend novo.
+- descoberta dinâmica, conector real ou operação além de um `SEARCH` direto;
+- recovery/lease, jobs, filas, workers, outbox ou fan-out/fan-in;
+- evidência, claim factual, risco, relatório, endpoint ou frontend novo.
 
-Esses itens, inclusive a F4.6, exigem instrução e revisão próprias. Conectores
+Esses itens posteriores à F4.6 exigem instrução e revisão próprias. Conectores
 reais continuam condicionados ao gate G6 e às aprovações técnica, jurídica e
 comercial por fonte.
 

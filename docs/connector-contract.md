@@ -277,3 +277,21 @@ replay, rejeita colisão de `operation_id` e libera owner cancelado. Não oferec
 durabilidade ou coordenação distribuída. Multi-page, múltiplos conectores,
 planner, jobs, filas, lifecycle, rate limiter global, circuit breaker e
 persistência continuam fora da F3.3.
+
+## 17. Consumo controlado na F4.6
+
+A F4.6 não altera o contrato `1.0.0` nem o runner. A aplicação deriva uma request
+`SEARCH` da Company e do manifesto persistidos, injeta o conector sintético
+explicitamente, exige allowlist e `TEST` e conserva source policy, locales e
+política de execução no ownership pré-I/O. O retorno completo permanece transitório:
+somente status, códigos, accounting, fingerprints e digests entram no recibo
+operacional. Nenhum item do conector se torna candidato canônico, evidência ou
+claim factual por essa passagem.
+
+Na F4.6.1, o contrato `1.0.0` continua inalterado. A aplicação conserva o
+descritor do preflight pré-commit e o fornece como expectativa ao runner. O
+runner valida novamente o conector depois do commit e rejeita qualquer
+descritor diferente antes da reserva de idempotência e da operação externa.
+Na F4.6.2, instabilidade desse descritor depois de uma tentativa é terminal:
+mesmo quando `INVALID_RESPONSE` é retriável, nenhuma nova operação pode ser
+iniciada após a divergência.

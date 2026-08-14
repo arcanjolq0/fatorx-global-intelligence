@@ -3,7 +3,8 @@
 ## Estado
 
 **ACEITA APÓS REVISÃO INDEPENDENTE EM 2026-08-11.** Esta correção não
-autoriza a F4.6 nem qualquer execução do manifesto.
+autorizava a F4.6 nem qualquer execução do manifesto. Essa autorização ocorreu
+posteriormente, em instrução própria.
 
 ## Objetivo
 

@@ -167,7 +167,12 @@ def test_raw_object_and_mutating_descriptor_are_rejected_without_retry() -> None
     )
 
     raw_result = run_async(operation_runner().execute(search_request(raw)))
-    mutating_result = run_async(operation_runner().execute(search_request(mutating)))
+    retry_invalid_response = execution_policy(
+        retriable_codes=(ConnectorErrorCode.INVALID_RESPONSE,)
+    )
+    mutating_result = run_async(
+        operation_runner().execute(search_request(mutating, policy=retry_invalid_response))
+    )
 
     for result in (raw_result, mutating_result):
         assert result.outcome.error is not None

@@ -43,6 +43,9 @@
 - `validation/f4.4-investigation-plan.md`: política determinística, persistência, replay, concorrência, migration e limites da F4.4.
 - `validation/f4.5-collection-activation-manifest.md`: ativação, manifesto, replay, atomicidade e limites da F4.5.
 - `validation/f4.5.1-collection-activation-integrity.md`: revalidação de prazo, vínculo histórico exato e pacote portátil da F4.5.1.
+- `validation/f4.6-direct-controlled-execution.md`: execução direta `SEARCH`, ownership pré-I/O, conclusão redigida e limites da F4.6.
+- `validation/f4.6.1-descriptor-audit-continuity.md`: continuidade do descritor e auditoria concorrente corretiva.
+- `validation/f4.6.2-terminal-descriptor-divergence.md`: interrupção terminal de retries após divergência do descritor.
 - `validation/f4.4.1-plan-continuity.md`: continuidade histórica, caminho crítico executável e constraint de custo corrigida.
 
 ## Tarefas da Fase 3
@@ -54,7 +57,7 @@
 
 ## Tarefas da Fase 4
 
-- `tasks/f4/F4_ROADMAP.md`: decomposição da Fase 4; F4.5/F4.5.1 aceitas após revisão independente.
+- `tasks/f4/F4_ROADMAP.md`: decomposição da Fase 4; F4.6/F4.6.1/F4.6.2 aceitas após revisão independente.
 - `tasks/f4/F4_1_LIFECYCLE_TRANSACIONAL_INICIAL.md`: escopo, contratos, persistência e exclusões da F4.1.
 - `tasks/f4/F4_2_CANDIDATOS_MATCHING_CONFIRMACAO.md`: escopo, política, transação e exclusões da F4.2.
 - `tasks/f4/F4_2_1_CORRECAO_INTEGRIDADE_RECONSTITUICAO.md`: causa, algoritmo e limites da correção de integridade F4.2.1.
@@ -64,6 +67,9 @@
 - `tasks/f4/F4_4_1_CORRECAO_CONTINUIDADE_PLANO.md`: correção curta da continuidade, prazo e auditoria da F4.4.
 - `tasks/f4/F4_5_ATIVACAO_MANIFESTO_COLETA.md`: ativação transacional e manifesto persistente sem execução.
 - `tasks/f4/F4_5_1_CORRECAO_PRAZO_E_INTEGRIDADE.md`: correção curta de prazo, integridade histórica e empacotamento.
+- `tasks/f4/F4_6_EXECUCAO_DIRETA_CONTROLADA.md`: ownership pré-I/O e conclusão operacional redigida de um `SEARCH` em `TEST`.
+- `tasks/f4/F4_6_1_CORRECAO_CONTINUIDADE_DESCRITOR_AUDITORIA.md`: correção do descritor mutável e da corrida de auditoria.
+- `tasks/f4/F4_6_2_DIVERGENCIA_TERMINAL_DESCRITOR.md`: correção terminal da continuidade após uma tentativa.
 
 ## Decisões
 
@@ -89,6 +95,7 @@
 - `adr/0019-human-entity-confirmation-and-company-materialization.md`: confirmação exclusivamente humana, nova Company, decisão append-only e atomicidade.
 - `adr/0020-deterministic-investigation-plan.md`: política pura, descritores estáticos e persistência imutável do plano F4.4.
 - `adr/0021-collection-activation-manifest.md`: seleção rank 1, lifecycle e persistência imutável do manifesto F4.5.
+- `adr/0022-direct-controlled-collection-execution.md`: execução direta controlada e recibo redigido da F4.6.
 
 ## Regra de consistência
 

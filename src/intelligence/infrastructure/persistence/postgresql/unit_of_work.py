@@ -17,6 +17,7 @@ from intelligence.application.errors import (
 )
 from intelligence.infrastructure.persistence.postgresql.repositories import (
     PostgreSQLAuditEventRepository,
+    PostgreSQLCollectionExecutionRepository,
     PostgreSQLCollectionRunRepository,
     PostgreSQLCompanyRepository,
     PostgreSQLEntityCandidateBatchRepository,
@@ -47,6 +48,7 @@ class PostgreSQLUnitOfWork:
         self._investigation_transitions: PostgreSQLInvestigationTransitionRepository | None = None
         self._investigation_plans: PostgreSQLInvestigationPlanRepository | None = None
         self._collection_runs: PostgreSQLCollectionRunRepository | None = None
+        self._collection_executions: PostgreSQLCollectionExecutionRepository | None = None
         self._entity_candidate_batches: PostgreSQLEntityCandidateBatchRepository | None = None
         self._entity_resolution_decisions: PostgreSQLEntityResolutionDecisionRepository | None = (
             None
@@ -125,6 +127,14 @@ class PostgreSQLUnitOfWork:
         return repository
 
     @property
+    def collection_executions(self) -> PostgreSQLCollectionExecutionRepository:
+        self._require_active()
+        repository = self._collection_executions
+        if repository is None:
+            raise PersistenceStateError("Collection execution repository is unavailable.")
+        return repository
+
+    @property
     def users(self) -> PostgreSQLUserRepository:
         self._require_active()
         repository = self._users
@@ -184,6 +194,7 @@ class PostgreSQLUnitOfWork:
         )
         self._investigation_plans = PostgreSQLInvestigationPlanRepository(transaction_guard)
         self._collection_runs = PostgreSQLCollectionRunRepository(transaction_guard)
+        self._collection_executions = PostgreSQLCollectionExecutionRepository(transaction_guard)
         self._users = PostgreSQLUserRepository(transaction_guard)
         self._memberships = PostgreSQLWorkspaceMembershipRepository(transaction_guard)
         self._audit_events = PostgreSQLAuditEventRepository(transaction_guard)

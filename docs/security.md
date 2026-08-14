@@ -154,6 +154,13 @@ leitura fail-closed exige a transição histórica exata e usa os vínculos comp
 de workspace, Investigation, Company e plano como defesa em profundidade. Erro
 de integridade não é convertido em replay ou ausência tenant-scoped.
 
+Na F4.6, o comando não escolhe conector: a composição fornece uma implementação
+explicitamente allowlisted, `TEST` e idêntica ao snapshot do manifesto. O ownership
+durável precede o I/O. Source policy, locales e política de execução ficam
+preservados no ownership; a conclusão exclui nomes, domínios, itens, observações,
+artefatos, payloads e credenciais. Fonte real e rede permanecem bloqueadas, e
+ownership sem conclusão falha fechado como execução em andamento.
+
 A FK obrigatória de `audit_event.actor_user_id` impede registrar `ACTOR_USER_NOT_FOUND`: o ator inexistente não pode ser referenciado sem violar o schema aprovado. Nesse único caso, a tentativa de auditoria falha, a negação original é preservada e nenhum detalhe técnico é exposto. Corrigir essa limitação exigiria decisão de schema própria; a F2.4.2 não cria migration silenciosa.
 
 - hash de artefato/evidência;

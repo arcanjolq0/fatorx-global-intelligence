@@ -7,6 +7,10 @@ from datetime import datetime
 from types import TracebackType
 from typing import Literal, Self
 
+from intelligence.application.collection_execution import (
+    CollectionExecutionOwnership,
+    CollectionExecutionResultRecord,
+)
 from intelligence.application.entity_candidate_review import EntityCandidateBatchRecord
 from intelligence.application.entity_confirmation import EntityResolutionDecisionRecord
 from intelligence.application.errors import PersistenceConflictError, PersistenceError
@@ -14,6 +18,7 @@ from intelligence.application.investigation_lifecycle import InvestigationTransi
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
+    CollectionOperationId,
     CollectionRunId,
     CompanyId,
     EntityCandidateBatchId,
@@ -59,6 +64,12 @@ class FakeDatabase:
     collection_runs: dict[tuple[WorkspaceId, CollectionRunId], CollectionRun] = field(
         default_factory=dict
     )
+    collection_execution_ownership: dict[
+        tuple[WorkspaceId, InvestigationCommandId], CollectionExecutionOwnership
+    ] = field(default_factory=dict)
+    collection_execution_results: dict[
+        tuple[WorkspaceId, InvestigationCommandId], CollectionExecutionResultRecord
+    ] = field(default_factory=dict)
     users: dict[UserId, UserAccount] = field(default_factory=dict)
     memberships: dict[tuple[WorkspaceId, UserId], WorkspaceMembership] = field(default_factory=dict)
     audit_events: list[AuditEvent] = field(default_factory=list)
@@ -73,6 +84,8 @@ class FakeDatabase:
             entity_resolution_decisions=dict(self.entity_resolution_decisions),
             investigation_plans=dict(self.investigation_plans),
             collection_runs=dict(self.collection_runs),
+            collection_execution_ownership=dict(self.collection_execution_ownership),
+            collection_execution_results=dict(self.collection_execution_results),
             users=dict(self.users),
             memberships=dict(self.memberships),
             audit_events=list(self.audit_events),
@@ -87,6 +100,8 @@ class FakeDatabase:
         self.entity_resolution_decisions = dict(other.entity_resolution_decisions)
         self.investigation_plans = dict(other.investigation_plans)
         self.collection_runs = dict(other.collection_runs)
+        self.collection_execution_ownership = dict(other.collection_execution_ownership)
+        self.collection_execution_results = dict(other.collection_execution_results)
         self.users = dict(other.users)
         self.memberships = dict(other.memberships)
         self.audit_events = list(other.audit_events)
@@ -425,6 +440,84 @@ class FakeCollectionRunRepository:
         return self._database.collection_runs.get((workspace_id, run_id))
 
 
+class FakeCollectionExecutionRepository:
+    def __init__(self, database: FakeDatabase) -> None:
+        self._database = database
+
+    def try_add_ownership(self, ownership: CollectionExecutionOwnership) -> bool:
+        if (
+            ownership.workspace_id,
+            ownership.command_id,
+        ) in self._database.collection_execution_ownership:
+            return False
+        if any(
+            existing.workspace_id == ownership.workspace_id
+            and existing.collection_operation_id == ownership.collection_operation_id
+            for existing in self._database.collection_execution_ownership.values()
+        ):
+            return False
+        self._database.collection_execution_ownership[
+            (ownership.workspace_id, ownership.command_id)
+        ] = ownership
+        return True
+
+    def add_result(self, result: CollectionExecutionResultRecord) -> None:
+        key = (result.workspace_id, result.command_id)
+        if key in self._database.collection_execution_results:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.collection_execution_results[key] = result
+
+    def get_ownership_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionOwnership | None:
+        return self._database.collection_execution_ownership.get((workspace_id, command_id))
+
+    def get_ownership_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionOwnership | None:
+        return next(
+            (
+                item
+                for item in self._database.collection_execution_ownership.values()
+                if item.workspace_id == workspace_id
+                and item.collection_operation_id == operation_id
+            ),
+            None,
+        )
+
+    def get_result_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionResultRecord | None:
+        return self._database.collection_execution_results.get((workspace_id, command_id))
+
+    def get_result_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionResultRecord | None:
+        return next(
+            (
+                item
+                for item in self._database.collection_execution_results.values()
+                if item.workspace_id == workspace_id
+                and item.collection_operation_id == operation_id
+            ),
+            None,
+        )
+
+    def list_results_by_run(
+        self, workspace_id: WorkspaceId, run_id: CollectionRunId
+    ) -> tuple[CollectionExecutionResultRecord, ...]:
+        return tuple(
+            sorted(
+                (
+                    item
+                    for item in self._database.collection_execution_results.values()
+                    if item.workspace_id == workspace_id and item.collection_run_id == run_id
+                ),
+                key=lambda item: str(item.collection_operation_id),
+            )
+        )
+
+
 class FakeUserRepository:
     def __init__(self, database: FakeDatabase) -> None:
         self._database = database
@@ -574,6 +667,7 @@ class FakeUnitOfWork:
             fail_operation_add=fail_operation_add,
             fail_dependency_add=fail_dependency_add,
         )
+        self.collection_executions = FakeCollectionExecutionRepository(self._working_database)
         self.users = FakeUserRepository(self._working_database)
         self.memberships = FakeWorkspaceMembershipRepository(self._working_database)
         self.audit_events = FakeAuditEventRepository(

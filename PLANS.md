@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 4 — F4.5/F4.5.1 aceitas após revisão independente**.
-- Status: **Fase 3 concluída; F4.1 a F4.5/F4.5.1 aceitas após revisão independente**. A F4.6 e posteriores não estão autorizadas.
-- Código executável: API de saúde, shell web estático, domínio imutável, dezessete tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico e manifesto de coleta imutável. Não há autenticação, acesso pela API, execução do manifesto, jobs, vínculo a Company existente, conector real ou I/O externo.
+- Fase atual: **Fase 4 — F4.6/F4.6.1/F4.6.2 aceitas após revisão independente**.
+- Status: **Fase 3 concluída; F4.1 a F4.6/F4.6.1/F4.6.2 aceitas**. Subfases posteriores não estão autorizadas.
+- Código executável: API de saúde, shell web estático, domínio imutável, dezenove tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável e execução direta controlada de um `SEARCH` em modo `TEST`. Não há autenticação, acesso pela API, jobs, vínculo a Company existente, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -77,7 +77,7 @@ Critério de saída: instalação reproduzível documentada; comandos de qualida
 
 ### Fase 2 — Domínio e persistência inicial
 
-**Status: concluída; F2.1 a F2.4.2 entregues. Nenhuma fase posterior foi iniciada.**
+**Status histórico do fechamento da fase: concluída; F2.1 a F2.4.2 entregues.** Fases posteriores foram iniciadas e entregues em tarefas próprias, conforme o estado atual no início deste plano.
 
 Escopo:
 
@@ -385,7 +385,7 @@ entrega foi posteriormente aceita por revisão independente, fechando o gate G3 
 
 ### Fase 4 — Orquestração e resolução de entidades
 
-**Status: F4.1 A F4.5/F4.5.1 ACEITAS APÓS REVISÃO INDEPENDENTE. F4.6 — NÃO AUTORIZADA.**
+**Status: F4.1 A F4.6/F4.6.1/F4.6.2 ACEITAS APÓS REVISÃO INDEPENDENTE.**
 
 #### F4.1 — Lifecycle transacional inicial
 
@@ -474,7 +474,7 @@ dependências para IDs no mesmo run e não consulta registry nem chama conector.
 Run, operações, dependências, CAS `PLANNING -> COLLECTING`, ledger e auditoria
 compartilham um commit. Replay íntegro não lê clock, não gera IDs, não executa
 CAS e não escreve. A migration `20260802_08` cria as três tabelas append-only e
-recusa downgrade destrutivo. F4.6 e qualquer execução permanecem não autorizadas.
+recusa downgrade destrutivo. A execução foi adicionada somente na F4.6 posterior.
 
 #### F4.5.1 — Correção de prazo e integridade histórica
 
@@ -485,6 +485,45 @@ auditoria de sucesso. Cada run é validado contra a transição histórica exata
 incluindo workspace, Investigation, comando/digest, versões, ator, instante,
 run, Company, plano, política e quantidade. A migration `20260802_09` acrescenta
 somente os vínculos históricos de Company e plano exigidos para essa prova.
+
+#### F4.6 — Execução direta controlada de uma operação
+
+Executa exatamente uma operação `SEARCH` do manifesto por comando, com conector
+explicitamente fornecido, admitido por allowlist, compatível com o snapshot e em
+modo `TEST`. Ownership imutável é confirmado antes do runner F3.3; depois, somente
+outcome, accounting e digests redigidos são persistidos. Itens e payloads não
+são armazenados. Replay não lê clock nem chama conector. Run/operação permanecem
+`PENDING` e tentativa zero; não há transição adicional da Investigation.
+
+A migration `20260811_10` cria ownership e conclusão tenant-scoped e recusa apagar
+histórico. A implementação aguarda revisão independente. Recovery/lease,
+`FETCH_DETAILS`, paralelismo, jobs, filas, workers, fontes reais, evidência,
+claims factuais, risco e relatório permanecem não autorizados.
+
+Validação local: `pnpm quality` aprovado com 1.340 testes Python, cobertura
+branch de 89,54%, 13 warnings Alembic conhecidos, 1 teste web, scanner de
+segredos, lint, formatação, tipos estritos e builds Python/web aprovados.
+
+#### F4.6.1 — Continuidade do descritor e auditoria concorrente
+
+A revisão independente da F4.6 encontrou leituras desacopladas de
+`connector.describe()` e reproduziu uma corrida F4.3 com auditoria variável. A
+correção usa um único preflight pré-commit para manifesto/ownership, exige no
+runner um preflight pós-commit idêntico antes de I/O e serializa comandos F4.3
+distintos pelo lock da Investigation. Aguarda nova revisão independente.
+
+Validação F4.6.1: 1.341 testes Python aprovados, 89,54% de cobertura branch, 13
+warnings Alembic conhecidos, 1 teste web, lint, formatação, tipos, scanner de
+segredos e builds aprovados; a corrida PostgreSQL passou 5/5.
+
+#### F4.6.2 — Divergência terminal do descritor
+
+A nova revisão independente confirmou a F4.3 e os gates gerais, mas demonstrou
+que uma divergência do descritor após a primeira tentativa era convertida em
+`INVALID_RESPONSE` retriável. A correção distingue instabilidade de identidade
+de resposta inválida e encerra a execução após a tentativa corrente, mesmo que
+a política inclua `INVALID_RESPONSE` entre os códigos retriáveis. A correção foi
+aceita após nova revisão independente.
 
 Escopo:
 

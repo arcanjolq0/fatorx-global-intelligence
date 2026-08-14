@@ -186,7 +186,7 @@ def test_connectors_have_no_network_database_or_import_time_io_surface() -> None
 
 
 def test_f33_allows_simulation_and_single_operation_execution_without_later_phases() -> None:
-    """F3.3 permits its local runner while real adapters and schema stay absent."""
+    """F4.6 adds only its receipt schema while real connector adapters stay absent."""
 
     forbidden_parts = {"adapters", "http", "real"}
     assert all(
@@ -205,6 +205,7 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
         "20260801_07_harden_plan_continuity_audit_cost.py",
         "20260802_08_add_collection_activation.py",
         "20260802_09_harden_collection_activation_history.py",
+        "20260811_10_add_direct_collection_execution.py",
     }
 
 
@@ -483,7 +484,7 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
 
 
 def test_application_imports_only_domain_and_application_contracts() -> None:
-    """Application ports cannot depend on infrastructure or database frameworks."""
+    """Only the explicit F4.6 boundary may consume connector contracts and runner."""
 
     violations: list[str] = []
     for path in sorted(APPLICATION_ROOT.rglob("*.py")):
@@ -497,6 +498,11 @@ def test_application_imports_only_domain_and_application_contracts() -> None:
                 modules = []
             for module in modules:
                 root = module.partition(".")[0]
+                relative_path = path.relative_to(APPLICATION_ROOT).as_posix()
+                is_f46_connector_boundary = relative_path in {
+                    "collection_execution.py",
+                    "services/collection_execution.py",
+                } and module.startswith("intelligence.connectors")
                 is_internal = module.startswith(
                     (
                         "intelligence.application",
@@ -505,7 +511,11 @@ def test_application_imports_only_domain_and_application_contracts() -> None:
                         "intelligence.orchestration",
                     )
                 )
-                if root not in sys.stdlib_module_names and not is_internal:
+                if (
+                    root not in sys.stdlib_module_names
+                    and not is_internal
+                    and not is_f46_connector_boundary
+                ):
                     violations.append(f"{path.relative_to(APPLICATION_ROOT)} -> {module}")
 
     assert violations == []

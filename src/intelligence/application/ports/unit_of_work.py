@@ -5,6 +5,7 @@ from typing import Literal, Protocol, Self
 
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
+    CollectionExecutionRepository,
     CollectionRunRepository,
     CompanyRepository,
     EntityCandidateBatchRepository,
@@ -52,6 +53,10 @@ class UnitOfWork(Protocol):
     @property
     def collection_runs(self) -> CollectionRunRepository:
         """Return immutable collection manifests for the active transaction."""
+
+    @property
+    def collection_executions(self) -> CollectionExecutionRepository:
+        """Return append-only execution ownership and completions for the transaction."""
 
     @property
     def users(self) -> UserRepository:

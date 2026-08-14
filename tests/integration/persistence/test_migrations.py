@@ -51,6 +51,8 @@ DOMAIN_TABLES = {
     "collection_run",
     "collection_operation",
     "collection_operation_dependency",
+    "collection_operation_execution",
+    "collection_operation_execution_result",
 }
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 
@@ -294,6 +296,8 @@ def test_primary_keys_have_stable_names(database: DatabaseHarness) -> None:
                 "operation_id",
                 "depends_on_operation_id",
             ],
+            "collection_operation_execution": ["command_id"],
+            "collection_operation_execution_result": ["command_id"],
         }
         for table_name in DOMAIN_TABLES - composite_primary_keys.keys():
             primary_key = inspector.get_pk_constraint(table_name)

@@ -10,6 +10,10 @@ from enum import StrEnum
 from typing import cast
 from uuid import UUID
 
+from intelligence.application.collection_execution import (
+    CollectionExecutionOwnership,
+    CollectionExecutionResultRecord,
+)
 from intelligence.application.entity_candidate_review import (
     CandidateReviewDecision,
     EntityCandidateBatchRecord,
@@ -28,14 +32,24 @@ from intelligence.application.investigation_lifecycle import (
     InvestigationCommandType,
     InvestigationTransitionRecord,
 )
+from intelligence.connectors.context import LocaleTag
 from intelligence.connectors.enums import (
     ConnectorAccessType,
     ConnectorCapability,
     ConnectorCoverageKind,
+    ConnectorErrorCode,
     ConnectorOperation,
+    ConnectorOutcomeStatus,
+    ConnectorWarningCode,
+    UsageCostKind,
+)
+from intelligence.connectors.errors import ConnectorContractError
+from intelligence.connectors.execution.contracts import (
+    ConnectorExecutionControlCode,
+    ConnectorExecutionIdempotencyStatus,
 )
 from intelligence.connectors.identifiers import ConnectorId, SourceId
-from intelligence.connectors.versions import SemanticVersion
+from intelligence.connectors.versions import SemanticVersion, SourcePolicyVersion
 from intelligence.domain.audit import AuditEvent, AuditOutcome, AuditResourceId, AuditResourceType
 from intelligence.domain.companies import Company, CompanyStatus
 from intelligence.domain.errors import DomainError
@@ -1207,6 +1221,161 @@ def entity_resolution_decision_from_values(
         raise PersistenceDataError("Persisted entity resolution decision is invalid.") from error
 
 
+def collection_execution_ownership_to_values(
+    ownership: CollectionExecutionOwnership,
+) -> dict[str, object]:
+    return {
+        "command_id": ownership.command_id.value,
+        "workspace_id": ownership.workspace_id.value,
+        "investigation_id": ownership.investigation_id.value,
+        "collection_run_id": ownership.collection_run_id.value,
+        "collection_operation_id": ownership.collection_operation_id.value,
+        "command_digest": ownership.command_digest,
+        "actor_user_id": ownership.actor_user_id.value,
+        "connector_id": ownership.connector_id.value,
+        "connector_version": str(ownership.connector_version),
+        "contract_version": str(ownership.contract_version),
+        "source_id": ownership.source_id.value,
+        "source_policy_version": ownership.source_policy_version.value,
+        "accepted_locales": [item.value for item in ownership.accepted_locales],
+        "execution_policy_snapshot": ownership.execution_policy_snapshot,
+        "execution_policy_digest": ownership.execution_policy_digest,
+        "started_at": ownership.started_at,
+        "ownership_digest": ownership.ownership_digest,
+        "schema_version": ownership.schema_version,
+    }
+
+
+def collection_execution_ownership_from_values(
+    values: RelationalValues,
+) -> CollectionExecutionOwnership:
+    raw_locales = _read(values, "accepted_locales")
+    if not isinstance(raw_locales, (list, tuple)) or any(
+        not isinstance(item, str) for item in raw_locales
+    ):
+        raise PersistenceDataError("Persisted collection execution locales are invalid.")
+    try:
+        return CollectionExecutionOwnership(
+            command_id=InvestigationCommandId(_required(values, "command_id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            investigation_id=InvestigationId(_required(values, "investigation_id", UUID)),
+            collection_run_id=CollectionRunId(_required(values, "collection_run_id", UUID)),
+            collection_operation_id=CollectionOperationId(
+                _required(values, "collection_operation_id", UUID)
+            ),
+            command_digest=_required(values, "command_digest", str),
+            actor_user_id=UserId(_required(values, "actor_user_id", UUID)),
+            connector_id=ConnectorId(_required(values, "connector_id", str)),
+            connector_version=SemanticVersion.parse(_required(values, "connector_version", str)),
+            contract_version=SemanticVersion.parse(_required(values, "contract_version", str)),
+            source_id=SourceId(_required(values, "source_id", str)),
+            source_policy_version=SourcePolicyVersion(
+                _required(values, "source_policy_version", str)
+            ),
+            accepted_locales=tuple(LocaleTag(cast(str, item)) for item in raw_locales),
+            execution_policy_snapshot=_required(values, "execution_policy_snapshot", str),
+            execution_policy_digest=_required(values, "execution_policy_digest", str),
+            started_at=_required_datetime(values, "started_at"),
+            ownership_digest=_required(values, "ownership_digest", str),
+            schema_version=_required_integer(values, "schema_version"),
+        )
+    except (DomainError, ConnectorContractError, ValueError) as error:
+        raise PersistenceDataError(
+            "Persisted collection execution ownership is invalid."
+        ) from error
+
+
+def collection_execution_result_to_values(
+    result: CollectionExecutionResultRecord,
+) -> dict[str, object]:
+    return {
+        "command_id": result.command_id.value,
+        "workspace_id": result.workspace_id.value,
+        "investigation_id": result.investigation_id.value,
+        "collection_run_id": result.collection_run_id.value,
+        "collection_operation_id": result.collection_operation_id.value,
+        "command_digest": result.command_digest,
+        "outcome_status": result.outcome_status.value,
+        "error_code": result.error_code.value if result.error_code is not None else None,
+        "warning_codes": [item.value for item in result.warning_codes],
+        "attempts_started": result.attempts_started,
+        "usage_calls": result.usage_calls,
+        "usage_bytes_received": result.usage_bytes_received,
+        "usage_duration_microseconds": result.usage_duration_microseconds,
+        "usage_cost_amount": (result.usage_cost.amount if result.usage_cost is not None else None),
+        "usage_cost_currency": (
+            result.usage_cost.currency.value if result.usage_cost is not None else None
+        ),
+        "usage_cost_kind": (
+            result.usage_cost_kind.value if result.usage_cost_kind is not None else None
+        ),
+        "request_fingerprint": result.request_fingerprint,
+        "execution_digest": result.execution_digest,
+        "idempotency_status": result.idempotency_status.value,
+        "control_code": result.control_code.value if result.control_code is not None else None,
+        "completed_at": result.completed_at,
+        "result_digest": result.result_digest,
+        "schema_version": result.schema_version,
+    }
+
+
+def collection_execution_result_from_values(
+    values: RelationalValues,
+) -> CollectionExecutionResultRecord:
+    raw_warnings = _read(values, "warning_codes")
+    if not isinstance(raw_warnings, (list, tuple)) or any(
+        not isinstance(item, str) for item in raw_warnings
+    ):
+        raise PersistenceDataError("Persisted collection execution warnings are invalid.")
+    try:
+        return CollectionExecutionResultRecord(
+            command_id=InvestigationCommandId(_required(values, "command_id", UUID)),
+            workspace_id=WorkspaceId(_required(values, "workspace_id", UUID)),
+            investigation_id=InvestigationId(_required(values, "investigation_id", UUID)),
+            collection_run_id=CollectionRunId(_required(values, "collection_run_id", UUID)),
+            collection_operation_id=CollectionOperationId(
+                _required(values, "collection_operation_id", UUID)
+            ),
+            command_digest=_required(values, "command_digest", str),
+            outcome_status=_enum(values, "outcome_status", ConnectorOutcomeStatus),
+            error_code=(
+                ConnectorErrorCode(value)
+                if (value := _optional(values, "error_code", str)) is not None
+                else None
+            ),
+            warning_codes=tuple(ConnectorWarningCode(cast(str, item)) for item in raw_warnings),
+            attempts_started=_required_integer(values, "attempts_started"),
+            usage_calls=_required_integer(values, "usage_calls"),
+            usage_bytes_received=_required_integer(values, "usage_bytes_received"),
+            usage_duration_microseconds=_required_integer(values, "usage_duration_microseconds"),
+            usage_cost=_money_from_columns(
+                values,
+                amount_field="usage_cost_amount",
+                currency_field="usage_cost_currency",
+            ),
+            usage_cost_kind=(
+                UsageCostKind(value)
+                if (value := _optional(values, "usage_cost_kind", str)) is not None
+                else None
+            ),
+            request_fingerprint=_required(values, "request_fingerprint", str),
+            execution_digest=_required(values, "execution_digest", str),
+            idempotency_status=_enum(
+                values, "idempotency_status", ConnectorExecutionIdempotencyStatus
+            ),
+            control_code=(
+                ConnectorExecutionControlCode(value)
+                if (value := _optional(values, "control_code", str)) is not None
+                else None
+            ),
+            completed_at=_required_datetime(values, "completed_at"),
+            result_digest=_required(values, "result_digest", str),
+            schema_version=_required_integer(values, "schema_version"),
+        )
+    except (DomainError, ValueError) as error:
+        raise PersistenceDataError("Persisted collection execution result is invalid.") from error
+
+
 def investigation_plan_to_values(plan: InvestigationPlan) -> dict[str, object]:
     """Map the immutable plan record that also carries its command ledger fields."""
 
@@ -1753,6 +1922,10 @@ __all__ = [
     "audit_event_from_values",
     "audit_event_to_values",
     "collection_dependency_to_values",
+    "collection_execution_ownership_from_values",
+    "collection_execution_ownership_to_values",
+    "collection_execution_result_from_values",
+    "collection_execution_result_to_values",
     "collection_operation_to_values",
     "collection_run_from_values",
     "collection_run_to_values",

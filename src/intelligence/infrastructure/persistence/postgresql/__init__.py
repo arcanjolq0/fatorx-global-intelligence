@@ -8,6 +8,8 @@ from intelligence.infrastructure.persistence.postgresql.metadata import metadata
 from intelligence.infrastructure.persistence.postgresql.tables import (
     audit_event_table,
     collection_operation_dependency_table,
+    collection_operation_execution_result_table,
+    collection_operation_execution_table,
     collection_operation_table,
     collection_run_table,
     company_table,
@@ -28,6 +30,8 @@ __all__ = [
     "DatabaseConfigurationError",
     "audit_event_table",
     "collection_operation_dependency_table",
+    "collection_operation_execution_result_table",
+    "collection_operation_execution_table",
     "collection_operation_table",
     "collection_run_table",
     "company_table",

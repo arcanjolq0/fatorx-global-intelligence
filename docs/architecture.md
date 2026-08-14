@@ -1,8 +1,10 @@
-# Arquitetura inicial
+# Arquitetura geral
 
 ## 1. Estilo arquitetural
 
-O MVP será um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
+O MVP tem como arquitetura-alvo um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
+
+No corte materializado até a F4.6, o monólito modular possui aplicação síncrona, PostgreSQL, conectores simulados e execução direta controlada de uma única operação. Workers, fila, outbox/inbox, scheduler, fan-out/fan-in e paralelismo continuam componentes-alvo não implementados e não autorizados.
 
 O backend segue portas e adaptadores. O núcleo define tipos e portas; API, persistência, fila, storage, modelos e conectores são adaptadores substituíveis.
 
@@ -112,6 +114,23 @@ antes de gerar IDs. O adaptador PostgreSQL correlaciona cada leitura do run com
 a transição histórica exata e falha fechado diante de ausência ou divergência;
 a transição carrega Company e plano para tornar essa prova relacional.
 
+Na F4.6, `application.collection_execution` liga diretamente uma única operação
+`SEARCH` ao runner F3.3. O conector é injetado explicitamente, deve estar em uma
+allowlist e coincidir com o descritor do manifesto; somente `TEST` é aceito. A
+aplicação confirma ownership append-only antes do I/O e persiste depois um recibo
+redigido sem itens/payload. O manifesto não é atualizado e nenhuma transição,
+fila, worker, scheduler, outbox, descoberta ou paralelismo é introduzido.
+
+Na F4.6.1, o descritor deixa de ser relido de forma desacoplada: o preflight
+pré-commit alimenta manifesto e ownership; o runner exige que seu novo preflight
+pós-commit seja idêntico antes de qualquer I/O. A confirmação de entidade também
+usa lock da Investigation para auditar deterministicamente comandos distintos
+que disputam a mesma versão.
+
+Na F4.6.2, uma divergência de descritor observada após uma tentativa é terminal
+e não participa da política de retry. A tentativa já iniciada pode gerar apenas
+uma conclusão operacional redigida.
+
 ### Resolução de entidades
 
 - normaliza candidatos explicitamente fornecidos por NFKC/casefold;
@@ -147,7 +166,18 @@ a transição carrega Company e plano para tornar essa prova relacional.
 - inclui instante de corte, fontes, limitações e aprovação;
 - não inventa nem corrige fatos.
 
-## 3. Fluxo principal
+## 3. Fluxos por horizonte
+
+### 3.1 Fluxo materializado até a F4.6
+
+1. Aplicação cria e avança `Investigation` por comandos tenant-scoped.
+2. Matching determinístico classifica candidatos e sempre exige confirmação humana explícita.
+3. Confirmação materializa uma `Company` como âncora canônica interna, ainda não como conjunto de fatos reportáveis.
+4. Planner cria `InvestigationPlan`; ativação cria manifesto imutável e avança para `COLLECTING`.
+5. F4.6 registra ownership durável e executa diretamente um único `SEARCH` sintético em `TEST`.
+6. Somente a conclusão operacional redigida é persistida; payload, evidência, claim factual, risco e relatório não são criados.
+
+### 3.2 Fluxo-alvo condicionado a fases e gates futuros
 
 1. Usuário autorizado cria `Investigation`.
 2. Sistema valida entrada e cria candidatos de identidade.
@@ -164,20 +194,25 @@ a transição carrega Company e plano para tornar essa prova relacional.
 
 ## 4. Consistência e mensageria
 
+### 4.1 Materializado
+
 - PostgreSQL é a fonte de verdade.
 - A Unit of Work síncrona abre uma conexão e uma `RootTransaction`, compartilha um guard com os repositórios e exige commit explícito; saída sem commit executa rollback.
 - Antes de qualquer operação, o guard comprova que não foi invalidado, conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
 - A Unit of Work invalida permanentemente o guard antes de tentar commit ou rollback. Falha do driver não reabre a fronteira; somente o `__exit__` pode executar rollback/close técnicos depois da invalidação.
-- Os seis repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
+- Todos os repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
 - `UnitOfWorkFactory` cria uma instância single-use por operação; os serviços executam commit explícito, e o adaptador PostgreSQL não abre conexão durante import ou construção da factory.
 - O repositório de membership expõe somente os locks e a atualização necessários ao caso de uso. Políticas de ator, alvo e papel permanecem na aplicação.
-- Mudança de estado e evento a publicar usam transação única com outbox.
-- Workers usam chave de idempotência e inbox/registro de processamento.
-- Entrega pode ser ao menos uma vez; efeitos devem ser idempotentes.
 - Transições usam versão do agregado para impedir disputa.
 - Retry só ocorre para falha classificada como transitória e dentro do deadline/budget.
 
-O produto de fila/cache não está decidido. Sua escolha deve ser registrada e justificada na Fase 1.
+### 4.2 Arquitetura-alvo não autorizada no corte atual
+
+- mudança de estado e evento a publicar usam transação única com outbox;
+- workers usam chave de idempotência e inbox/registro de processamento;
+- entrega pode ser ao menos uma vez, com efeitos idempotentes.
+
+O produto de fila/cache não está decidido. Sua escolha exige SLA, volume, operação e uma subfase futura explicitamente autorizada, com ADR e análise de dependência.
 
 ## 5. Dados e storage
 
@@ -260,13 +295,15 @@ Esta é uma proposta; diretórios de código serão criados somente na fase de i
 | Web | React + TypeScript + Vite | UI tipada e separada | Fase 1 |
 | Banco | PostgreSQL | transação, JSONB e busca textual | Fase 2 |
 | Objetos | API compatível com S3 | artefatos grandes e retenção | Fase 5 |
-| Fila/cache | não decidido | depende de SLA e operação | Fase 1/4 |
+| Fila/cache | não decidido | depende de SLA e operação | subfase futura autorizada |
 | Browser | não decidido | somente fonte aprovada que realmente exija | G6 |
 | Vetores/busca externa | adiado | depende de métrica de volume/qualidade | Pós-MVP ou ADR futuro |
 
 Itens ainda propostos nesta tabela não autorizam dependência sem a análise prevista em `AGENTS.md`. As dependências já adotadas possuem versões e análise em `docs/dependencies.md`.
 
-## 11. Requisitos de implantação
+## 11. Requisitos-alvo de implantação
+
+Os itens abaixo pertencem ao MVP-alvo; não descrevem componentes já materializados na F4.6.
 
 - processos separados para API e workers, ainda que compartilhem código;
 - migrations executadas como etapa controlada;

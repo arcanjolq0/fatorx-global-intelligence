@@ -100,3 +100,8 @@ Indisponibilidade deve resultar em estado tipado e aparecer como lacuna. O siste
 ## 10. Catálogo inicial
 
 Nenhuma fonte real é nomeada ou considerada acessível nesta fase. O catálogo será preenchido após as respostas de `open-questions.md` e o gate G6.
+
+O `source.synthetic.business_registry` usado na F4.6 é somente um identificador
+de fixture determinística, sem rede ou terceiro subjacente. Sua versão de
+política é persistida no ownership para reproduzir o contexto de teste; isso não
+representa `APPROVED_TEST` de fonte real nem satisfaz o gate G6.

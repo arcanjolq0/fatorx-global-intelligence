@@ -5,10 +5,16 @@ from typing import cast
 from uuid import UUID
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.sql.elements import ColumnElement
 
 from intelligence.application.collection_activation import validate_collection_activation_history
+from intelligence.application.collection_execution import (
+    CollectionExecutionOwnership,
+    CollectionExecutionResultRecord,
+    validate_collection_execution_history,
+)
 from intelligence.application.entity_candidate_review import EntityCandidateBatchRecord
 from intelligence.application.entity_confirmation import (
     EntityResolutionDecisionRecord,
@@ -27,6 +33,7 @@ from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.errors import DomainError
 from intelligence.domain.identifiers import (
+    CollectionOperationId,
     CollectionRunId,
     CompanyId,
     EntityCandidateBatchId,
@@ -49,6 +56,10 @@ from intelligence.domain.workspaces import Workspace
 from intelligence.infrastructure.persistence.postgresql.mappers import (
     audit_event_to_values,
     collection_dependency_to_values,
+    collection_execution_ownership_from_values,
+    collection_execution_ownership_to_values,
+    collection_execution_result_from_values,
+    collection_execution_result_to_values,
     collection_operation_to_values,
     collection_run_from_values,
     collection_run_to_values,
@@ -79,6 +90,8 @@ from intelligence.infrastructure.persistence.postgresql.mappers import (
 from intelligence.infrastructure.persistence.postgresql.tables import (
     audit_event_table,
     collection_operation_dependency_table,
+    collection_operation_execution_result_table,
+    collection_operation_execution_table,
     collection_operation_table,
     collection_run_table,
     company_table,
@@ -879,6 +892,163 @@ class PostgreSQLCollectionRunRepository:
         return run
 
 
+class PostgreSQLCollectionExecutionRepository:
+    """Append-only durable ownership and redacted completions for F4.6."""
+
+    def __init__(self, transaction_guard: PostgreSQLTransactionGuard) -> None:
+        self._transaction_guard = transaction_guard
+
+    def try_add_ownership(self, ownership: CollectionExecutionOwnership) -> bool:
+        connection = self._transaction_guard.require_active()
+        statement = (
+            postgresql_insert(collection_operation_execution_table)
+            .values(**collection_execution_ownership_to_values(ownership))
+            .on_conflict_do_nothing()
+            .returning(collection_operation_execution_table.c.command_id)
+        )
+        try:
+            return connection.execute(statement).scalar_one_or_none() is not None
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+
+    def add_result(self, result: CollectionExecutionResultRecord) -> None:
+        connection = self._transaction_guard.require_active()
+        try:
+            connection.execute(
+                sa.insert(collection_operation_execution_result_table).values(
+                    **collection_execution_result_to_values(result)
+                )
+            )
+        except IntegrityError as error:
+            raise PersistenceConflictError("Persistence constraint conflict.") from error
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+
+    def get_ownership_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionOwnership | None:
+        return self._ownership(
+            workspace_id, collection_operation_execution_table.c.command_id == command_id.value
+        )
+
+    def get_ownership_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionOwnership | None:
+        return self._ownership(
+            workspace_id,
+            collection_operation_execution_table.c.collection_operation_id == operation_id.value,
+        )
+
+    def get_result_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionResultRecord | None:
+        return self._result(
+            workspace_id,
+            collection_operation_execution_result_table.c.command_id == command_id.value,
+        )
+
+    def get_result_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionResultRecord | None:
+        return self._result(
+            workspace_id,
+            collection_operation_execution_result_table.c.collection_operation_id
+            == operation_id.value,
+        )
+
+    def list_results_by_run(
+        self, workspace_id: WorkspaceId, run_id: CollectionRunId
+    ) -> tuple[CollectionExecutionResultRecord, ...]:
+        connection = self._transaction_guard.require_active()
+        try:
+            rows = (
+                connection.execute(
+                    sa.select(collection_operation_execution_result_table)
+                    .where(
+                        collection_operation_execution_result_table.c.workspace_id
+                        == workspace_id.value,
+                        collection_operation_execution_result_table.c.collection_run_id
+                        == run_id.value,
+                    )
+                    .order_by(collection_operation_execution_result_table.c.collection_operation_id)
+                )
+                .mappings()
+                .all()
+            )
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+        results = tuple(
+            collection_execution_result_from_values(cast(Mapping[str, object], row)) for row in rows
+        )
+        for result in results:
+            ownership = self.get_ownership_by_command(workspace_id, result.command_id)
+            self._validate_result(ownership, result)
+        return results
+
+    def _ownership(
+        self, workspace_id: WorkspaceId, predicate: ColumnElement[bool]
+    ) -> CollectionExecutionOwnership | None:
+        connection = self._transaction_guard.require_active()
+        try:
+            row = (
+                connection.execute(
+                    sa.select(collection_operation_execution_table).where(
+                        collection_operation_execution_table.c.workspace_id == workspace_id.value,
+                        predicate,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+        return (
+            collection_execution_ownership_from_values(cast(Mapping[str, object], row))
+            if row is not None
+            else None
+        )
+
+    def _result(
+        self, workspace_id: WorkspaceId, predicate: ColumnElement[bool]
+    ) -> CollectionExecutionResultRecord | None:
+        connection = self._transaction_guard.require_active()
+        try:
+            row = (
+                connection.execute(
+                    sa.select(collection_operation_execution_result_table).where(
+                        collection_operation_execution_result_table.c.workspace_id
+                        == workspace_id.value,
+                        predicate,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+        except DBAPIError as error:
+            raise PersistenceError("Persistence operation failed.") from error
+        if row is None:
+            return None
+        result = collection_execution_result_from_values(cast(Mapping[str, object], row))
+        self._validate_result(
+            self.get_ownership_by_command(workspace_id, result.command_id), result
+        )
+        return result
+
+    @staticmethod
+    def _validate_result(
+        ownership: CollectionExecutionOwnership | None,
+        result: CollectionExecutionResultRecord,
+    ) -> None:
+        if ownership is None:
+            raise PersistenceDataError("Persisted collection execution result lacks its ownership.")
+        try:
+            validate_collection_execution_history(ownership, result)
+        except DomainError as error:
+            raise PersistenceDataError(
+                "Persisted collection execution history is invalid."
+            ) from error
+
+
 class PostgreSQLUserRepository:
     """Core adapter for internal user identity snapshots."""
 
@@ -1062,6 +1232,7 @@ class PostgreSQLAuditEventRepository:
 
 __all__ = [
     "PostgreSQLAuditEventRepository",
+    "PostgreSQLCollectionExecutionRepository",
     "PostgreSQLCollectionRunRepository",
     "PostgreSQLCompanyRepository",
     "PostgreSQLEntityCandidateBatchRepository",

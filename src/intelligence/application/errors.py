@@ -182,6 +182,34 @@ class CollectionRunAlreadyExistsError(ApplicationError):
         super().__init__("A collection run already exists.")
 
 
+class InvalidCollectionExecutionError(ApplicationError):
+    """The manifest, connector, runtime, or command cannot be executed safely."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection operation execution request is invalid.")
+
+
+class CollectionExecutionAlreadyOwnedError(ApplicationError):
+    """Another command durably owns this manifest operation."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection operation execution is already owned.")
+
+
+class CollectionExecutionInProgressError(ApplicationError):
+    """The same command has durable ownership but no completion yet."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection operation execution is still in progress.")
+
+
+class CollectionExecutionDependencyError(ApplicationError):
+    """A manifest dependency lacks a usable durable completion."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection operation dependencies are not complete.")
+
+
 __all__ = [
     "ApplicationError",
     "AuthorizationDeniedError",
@@ -190,11 +218,15 @@ __all__ = [
     "CandidateNotInBatchError",
     "CandidateReviewError",
     "CollectionActivationDeadlineError",
+    "CollectionExecutionAlreadyOwnedError",
+    "CollectionExecutionDependencyError",
+    "CollectionExecutionInProgressError",
     "CollectionRunAlreadyExistsError",
     "ConcurrentInvestigationUpdateError",
     "EntityConfirmationReasonError",
     "InactiveCandidateBatchError",
     "InvalidCollectionActivationError",
+    "InvalidCollectionExecutionError",
     "InvalidInvestigationPlanningError",
     "InvalidMaterializationPolicyError",
     "InvalidOperationError",

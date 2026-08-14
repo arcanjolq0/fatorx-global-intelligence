@@ -47,6 +47,7 @@ from intelligence.connectors.execution.ports import (
     StoredConnectorExecutionResult,
 )
 from intelligence.connectors.execution.validation import (
+    ConnectorDescriptorStabilityError,
     InvalidRuntimeConnectorOutcomeError,
     validate_and_limit_outcome,
     validate_descriptor_stability,
@@ -198,33 +199,48 @@ class ConnectorOperationRunner:
     async def execute(
         self,
         request: SearchConnectorOperation,
+        *,
+        expected_descriptor: ConnectorDescriptor | None = None,
     ) -> ConnectorExecutionResult[CandidateObservation]: ...
 
     @overload
     async def execute(
         self,
         request: FetchDetailsConnectorOperation,
+        *,
+        expected_descriptor: ConnectorDescriptor | None = None,
     ) -> ConnectorExecutionResult[Observation]: ...
 
     @overload
     async def execute(
         self,
         request: FetchDocumentConnectorOperation,
+        *,
+        expected_descriptor: ConnectorDescriptor | None = None,
     ) -> ConnectorExecutionResult[ArtifactPayload]: ...
 
     @overload
     async def execute(
         self,
         request: ConnectorOperationRequest,
+        *,
+        expected_descriptor: ConnectorDescriptor | None = None,
     ) -> ConnectorExecutionResult[ConnectorExecutionItem]: ...
 
     async def execute(
         self,
         request: ConnectorOperationRequest,
+        *,
+        expected_descriptor: ConnectorDescriptor | None = None,
     ) -> ConnectorExecutionResult[ConnectorExecutionItem]:
         """Validate, reserve, and execute exactly the request's one declared operation."""
 
         preflight = validate_execution_preflight(request)
+        if expected_descriptor is not None and preflight.descriptor != expected_descriptor:
+            raise ConnectorExecutionPreflightError(
+                ConnectorErrorCode.INVALID_REQUEST,
+                "Connector descriptor differs from the expected persisted descriptor",
+            )
         try:
             fingerprint = connector_request_fingerprint(
                 request,
@@ -515,6 +531,7 @@ class ConnectorOperationRunner:
                     events=events,
                     control_code=ConnectorExecutionControlCode.CANCELLATION_OBSERVED,
                 )
+            descriptor_unstable = False
             if invocation.kind is _InvocationKind.RAISED:
                 outcome = _failed_outcome(
                     ConnectorErrorCode.INTERNAL_ERROR,
@@ -534,6 +551,14 @@ class ConnectorOperationRunner:
                         expected_cost_currency=expected_currency,
                     )
                     attempt_control_code = None
+                except ConnectorDescriptorStabilityError:
+                    descriptor_unstable = True
+                    outcome = _failed_outcome(
+                        ConnectorErrorCode.INVALID_RESPONSE,
+                        "Connector identity changed during execution",
+                        attempt_usage,
+                    )
+                    attempt_control_code = ConnectorExecutionControlCode.INVALID_CONNECTOR_RESPONSE
                 except InvalidRuntimeConnectorOutcomeError:
                     outcome = _failed_outcome(
                         ConnectorErrorCode.INVALID_RESPONSE,
@@ -582,7 +607,7 @@ class ConnectorOperationRunner:
                     total_cost=accounting.cost,
                 )
             )
-            if overrun or not _should_retry(outcome, request, attempt):
+            if descriptor_unstable or overrun or not _should_retry(outcome, request, attempt):
                 return _build_result(
                     outcome=outcome,
                     attempts_started=attempts_started,

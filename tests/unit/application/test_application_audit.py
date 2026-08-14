@@ -42,6 +42,7 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "INVESTIGATION_ENTITY_CANDIDATE_CONFIRMED",
         "INVESTIGATION_PLAN_CREATED",
         "INVESTIGATION_COLLECTION_STARTED",
+        "COLLECTION_OPERATION_EXECUTED",
         "COMPANY_READ_DENIED",
         "INVESTIGATION_READ_DENIED",
     }
@@ -70,6 +71,10 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "COLLECTION_CONTEXT_INVALID",
         "COLLECTION_DEADLINE_EXCEEDED",
         "COLLECTION_RUN_ALREADY_EXISTS",
+        "COLLECTION_EXECUTION_INVALID",
+        "COLLECTION_EXECUTION_ALREADY_OWNED",
+        "COLLECTION_EXECUTION_IN_PROGRESS",
+        "COLLECTION_EXECUTION_DEPENDENCY_PENDING",
         "CANCELLATION_USER_REQUESTED",
     } <= {code.value for code in AuditReasonCode}
 

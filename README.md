@@ -4,7 +4,7 @@ Plataforma de investigação empresarial internacional orientada por evidências
 
 ## Estado atual
 
-O repositório concluiu a Fase 3; F4.1 a F4.5/F4.5.1 foram aceitas após revisão independente. A F4.5/F4.5.1 revalida o prazo, ativa um plano `READY`, persiste run/operações imutáveis e avança somente `PLANNING -> COLLECTING`, sem executar conectores. Permanecem a API FastAPI somente com `GET /health`, o shell React/Vite estático e conectores simulados sem I/O externo. Não há autenticação, acesso da API ao banco, execução do manifesto, jobs, filas, workers, vínculo com Company existente, conector real ou integração externa. **F4.6 — NÃO AUTORIZADA** e a Fase 4 permanece em andamento.
+O repositório concluiu a Fase 3; F4.1 a **F4.6/F4.6.1/F4.6.2 foram aceitas após revisão independente**. A execução permanece limitada a um `SEARCH` sintético em `TEST`; o descritor validado antes do commit deve coincidir com o preflight do runner e qualquer divergência posterior é terminal, sem novo I/O por retry. A F4.6.1 também tornou determinística a auditoria de comandos F4.3 concorrentes. Run e operação permanecem `PENDING`, tentativa zero. Não há autenticação, acesso da API ao banco, jobs, filas, workers, conector real, HTTP externo, evidência, claim factual, risco ou relatório. A Fase 4 permanece em andamento e subfases posteriores à F4.6 não estão autorizadas.
 
 ## Como navegar
 

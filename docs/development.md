@@ -2,17 +2,19 @@
 
 ## 1. Escopo atual
 
-A fundação concluída até a F2.4.2 oferece somente:
+A implementação disponível até a F4.6 oferece:
 
 - pacote Python independente em `src/intelligence`, com tipos fundamentais e entidades imutáveis do domínio;
-- metadata e duas migrations PostgreSQL para as seis tabelas aprovadas;
+- metadata e migrations PostgreSQL versionadas até `20260811_10`, totalizando dezenove tabelas;
 - identidades internas sem credenciais, memberships por workspace e eventos mínimos de auditoria append-only;
-- portas de aplicação para seis repositórios e Unit of Work, sem dependência de infraestrutura;
-- factory explícita de engine, mapeadores puros e adaptadores SQLAlchemy Core para os seis snapshots persistidos;
+- portas de aplicação para repositórios tenant-scoped e Unit of Work, sem dependência de infraestrutura;
+- factory explícita de engine, mapeadores puros e adaptadores SQLAlchemy Core;
 - `ActorContext`, autorização por matriz fechada e serviços mínimos de Membership, Company e Investigation;
 - factory de Unit of Work single-use, locks explícitos do último owner e auditoria coordenada por caso de uso;
 - Unit of Work síncrona com uma conexão/`RootTransaction` compartilhada, commit explícito e rollback padrão;
 - guard transacional que vincula cada repositório à transação original e bloqueia leitura/escrita e autobegin após commit, rollback ou substituição da transação;
+- lifecycle transacional, matching determinístico, confirmação humana, plano, manifesto e execução direta controlada de um `SEARCH` sintético em `TEST`;
+- nenhuma autenticação, rota de negócio, fonte real, HTTP externo, fila, worker, evidência, claim factual, risco ou relatório.
 - invalidação irreversível do guard antes de qualquer tentativa de finalização; erros de commit/rollback não permitem reutilização pública, embora o `__exit__` ainda tente a limpeza técnica;
 - API FastAPI com `GET /health`;
 - shell React/Vite estático;
@@ -105,9 +107,9 @@ pnpm db:downgrade
 pnpm db:upgrade
 ```
 
-`alembic.ini` não contém URL. `migrations/env.py` exige a variável e usa o metadata em `src/intelligence/infrastructure/persistence/postgresql`. A revisão `20260728_01` cria `workspace`, `company` e `investigation`; a revisão `20260728_02` cria somente `user_account`, `workspace_membership` e `audit_event`. A F2.4.2 não altera schema nem cria migration. `alembic_version` é administrada pelo Alembic.
+`alembic.ini` não contém URL. `migrations/env.py` exige a variável e usa o metadata em `src/intelligence/infrastructure/persistence/postgresql`. As revisões são incrementais e preservadas desde `20260728_01`; a F4.6 acrescenta somente `20260811_10`. `alembic_version` é administrada pelo Alembic, e migrations aplicadas não são reescritas.
 
-A aplicação constrói o engine por `create_postgresql_engine`, que valida a mesma `DATABASE_URL`, não conecta durante import e devolve ao chamador a responsabilidade de executar `dispose()`. `PostgreSQLUnitOfWorkFactory` cria uma UoW nova e ainda fechada por operação. Os seis repositórios só existem dentro de uma `PostgreSQLUnitOfWork` ativa e compartilham a transação original.
+A aplicação constrói o engine por `create_postgresql_engine`, que valida a mesma `DATABASE_URL`, não conecta durante import e devolve ao chamador a responsabilidade de executar `dispose()`. `PostgreSQLUnitOfWorkFactory` cria uma UoW nova e ainda fechada por operação. Todos os repositórios só existem dentro de uma `PostgreSQLUnitOfWork` ativa e compartilham a transação original.
 
 Os serviços recebem a factory, `ContextualAuthorizer` e `Clock` por construtor. Nenhum aceita `workspace_id` separado. Mutações chamam repositório e append de auditoria antes de um único `unit_of_work.commit()`. Leituras permitidas finalizam explicitamente a UoW sem evento; leituras negadas persistem evento redigido.
 

@@ -3,7 +3,8 @@
 ## Estado
 
 **ACEITA APÓS REVISÃO INDEPENDENTE.** A F4.5 foi autorizada e implementada
-posteriormente; a F4.6 permanece não autorizada.
+posteriormente; a F4.6 também foi autorizada e implementada depois, em entrega
+própria, e aguarda revisão independente.
 
 ## Objetivo
 

@@ -2,12 +2,17 @@
 
 from typing import Protocol
 
+from intelligence.application.collection_execution import (
+    CollectionExecutionOwnership,
+    CollectionExecutionResultRecord,
+)
 from intelligence.application.entity_candidate_review import EntityCandidateBatchRecord
 from intelligence.application.entity_confirmation import EntityResolutionDecisionRecord
 from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
+    CollectionOperationId,
     CollectionRunId,
     CompanyId,
     EntityCandidateBatchId,
@@ -200,6 +205,41 @@ class CollectionRunRepository(Protocol):
         """Return a validated manifest by its strong identifier."""
 
 
+class CollectionExecutionRepository(Protocol):
+    """Append-only ownership and redacted completions for direct manifest execution."""
+
+    def try_add_ownership(self, ownership: CollectionExecutionOwnership) -> bool:
+        """Atomically append ownership, returning false on command or operation conflict."""
+
+    def add_result(self, result: CollectionExecutionResultRecord) -> None:
+        """Append the sole completion for one owned command."""
+
+    def get_ownership_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionOwnership | None:
+        """Return tenant-scoped execution ownership by command."""
+
+    def get_ownership_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionOwnership | None:
+        """Return the sole tenant-scoped ownership for one manifest operation."""
+
+    def get_result_by_command(
+        self, workspace_id: WorkspaceId, command_id: InvestigationCommandId
+    ) -> CollectionExecutionResultRecord | None:
+        """Return a validated completion by command."""
+
+    def get_result_by_operation(
+        self, workspace_id: WorkspaceId, operation_id: CollectionOperationId
+    ) -> CollectionExecutionResultRecord | None:
+        """Return a validated completion by manifest operation."""
+
+    def list_results_by_run(
+        self, workspace_id: WorkspaceId, run_id: CollectionRunId
+    ) -> tuple[CollectionExecutionResultRecord, ...]:
+        """Return all validated completions for a run in operation order."""
+
+
 class UserRepository(Protocol):
     """Persistence operations for internal user identities."""
 
@@ -252,6 +292,7 @@ class AuditEventRepository(Protocol):
 
 __all__ = [
     "AuditEventRepository",
+    "CollectionExecutionRepository",
     "CollectionRunRepository",
     "CompanyRepository",
     "EntityCandidateBatchRepository",

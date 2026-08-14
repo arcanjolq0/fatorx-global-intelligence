@@ -58,6 +58,10 @@ class InvalidRuntimeConnectorOutcomeError(Exception):
     """A connector returned an object that cannot be safely published."""
 
 
+class ConnectorDescriptorStabilityError(InvalidRuntimeConnectorOutcomeError):
+    """A connector changed identity after the execution preflight."""
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ConnectorPreflight:
     """Validated immutable data needed after the no-I/O preflight."""
@@ -156,11 +160,11 @@ def validate_descriptor_stability(
         actual = connector.describe()
         validate_connector_descriptor(actual)
     except Exception as error:
-        raise InvalidRuntimeConnectorOutcomeError(
+        raise ConnectorDescriptorStabilityError(
             "Connector descriptor became invalid after execution."
         ) from error
     if actual != expected:
-        raise InvalidRuntimeConnectorOutcomeError("Connector descriptor changed during execution.")
+        raise ConnectorDescriptorStabilityError("Connector descriptor changed during execution.")
 
 
 def validate_and_limit_outcome(

@@ -748,7 +748,19 @@ def test_distinct_commands_same_version_leave_one_company_and_decision(
             )
             == 2
         )
-        assert connection.scalar(sa.select(sa.func.count()).select_from(audit_event_table)) == 2
+        confirmation_audits = (
+            connection.execute(
+                sa.select(audit_event_table.c.outcome, audit_event_table.c.reason_code).where(
+                    audit_event_table.c.action_code == "INVESTIGATION_ENTITY_CANDIDATE_CONFIRMED"
+                )
+            )
+            .mappings()
+            .all()
+        )
+        assert sorted((item["outcome"], item["reason_code"]) for item in confirmation_audits) == [
+            ("FAILURE", "STATE_VERSION_CONFLICT"),
+            ("SUCCESS", None),
+        ]
 
 
 def test_same_command_concurrently_has_one_effect_and_one_replay(engine: Engine) -> None:

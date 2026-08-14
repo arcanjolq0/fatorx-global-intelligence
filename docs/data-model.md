@@ -67,7 +67,7 @@ Campos implementados na F2.2: `id`, `workspace_id`, `legal_name`, `trade_name`, 
 
 `jurisdiction_code` permanece no modelo alvo, mas não é criado na F2.2. Ele depende de um `JurisdictionCode` de domínio com semântica para registros nacionais, subnacionais e múltiplos registros por país. `country_code` não o substitui implicitamente.
 
-`Company` é uma entidade canônica interna, não uma cópia de uma fonte. Cada atributo factual relevante deve ser apoiado por claim/evidência.
+`Company` é uma entidade canônica interna e uma âncora de identidade, não uma cópia de uma fonte nem prova de seus próprios atributos. Sua materialização após confirmação humana não torna os dados reportáveis; cada atributo factual relevante deve ser apoiado posteriormente por claim/evidência admissível.
 
 ### `CompanyIdentifier`
 
@@ -208,6 +208,25 @@ A migration `20260802_09` reforça a FK da transição para o conjunto run,
 workspace, Investigation, Company e plano. Na leitura por comando,
 Investigation, plano ou ID, run sem transição e transição F4.5 sem run são dados
 inválidos, nunca ausência comum.
+
+### Ownership e conclusões operacionais da F4.6
+
+`collection_operation_execution` registra ownership único por operação e
+workspace antes do I/O. Conserva comando/digest, escopo completo, ator,
+descritor, versão da source policy, locales, snapshot/digest da política de
+execução, instante e digest do ownership. FK composta impede apontar para operação
+de outro run/tenant.
+
+`collection_operation_execution_result` é filho 1:1 do ownership e armazena somente
+status/códigos, accounting agregado, fingerprint/digest do runner, estado de
+idempotência/controle, instante e digest. Não possui itens, payload, observações
+ou artefatos. As portas são append-only, a leitura revalida os digests e o
+downgrade recusa apagar histórico. Esses registros não são `ConnectorRun`, job,
+evidência, claim factual, risco ou relatório.
+
+`Ownership` é vocabulário operacional e não pertence ao agregado factual
+`Claim`; nenhum consumidor de evidência, risco ou relatório pode tratá-lo como
+afirmação sobre a empresa.
 
 ### `ConnectorRun`
 

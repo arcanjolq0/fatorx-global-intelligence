@@ -105,7 +105,7 @@ class EntityConfirmationService:
                     action=action,
                 )
 
-            investigation = unit_of_work.investigations.get(
+            investigation = unit_of_work.investigations.get_for_update(
                 actor.workspace_id,
                 command.investigation_id,
             )

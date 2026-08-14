@@ -175,7 +175,14 @@ crítico das operações de capacidades `READY`; igualdade é aceita. O ledger d
 coincidir exatamente com o run em comando/digest, versões, ator, instante, ID,
 Company, plano, política e quantidade. Persistência parcial falha fechado.
 
-### 4.6 Planejados, não implementados nem autorizados após a F4.5
+### 4.6 Execução direta sem transição, implementada e aguardando revisão
+
+`ExecuteCollectionSearchOperation` não altera o lifecycle. Ele consome uma
+operação do manifesto enquanto a Investigation continua em `COLLECTING`, cria
+ownership pré-I/O e conclusão redigida e preserva run/operação em `PENDING`. Não há
+evento no ledger de transições. Este corte executa somente um `SEARCH` em `TEST`.
+
+### 4.7 Planejados, não implementados nem autorizados após a F4.6
 
 - `RejectAllCandidates`: retorna a identificação com nova entrada quando permitido ou termina `FAILED` com motivo.
 - `CloseCollection`: `COLLECTING -> NORMALIZING` após todos os jobs em estado final ou deadline.

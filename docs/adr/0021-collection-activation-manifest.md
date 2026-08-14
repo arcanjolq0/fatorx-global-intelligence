@@ -51,7 +51,8 @@ correlação.
 - reconstituição histórica continua válida após avanço compatível, mas nunca
   restaura nem executa estado;
 - downgrade recusa apagar histórico de coleta existente;
-- F4.6 continua necessária para qualquer execução e não está autorizada.
+- na data desta decisão, F4.6 continuava necessária e não autorizada; ela foi
+  implementada posteriormente sob o ADR 0022 proposto.
 
 ## Alternativas rejeitadas
 
