@@ -34,3 +34,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0020 | Accepted | política e persistência do plano determinístico, corrigida pela F4.4.1 |
 | 0021 | Accepted | ativação transacional e manifesto imutável de coleta F4.5/F4.5.1 |
 | 0022 | Accepted | execução direta controlada F4.6, corrigida por F4.6.1/F4.6.2 |
+| 0023 | Accepted | separação entre Gate F4-F e Gate E2E para handoff à Fase 5 |

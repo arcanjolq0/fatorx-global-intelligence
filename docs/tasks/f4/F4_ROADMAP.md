@@ -11,8 +11,10 @@
 - F4.6/F4.6.1/F4.6.2: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
 - subfases posteriores: **NÃO AUTORIZADAS**.
 
-A Fase 4 permanece em andamento e seu gate não está aceito. Este roadmap
-registra decomposição e fronteiras; não autoriza a execução de uma subfase.
+A revisão de fechamento concluiu que o gate histórico não está satisfeito. O
+ADR 0023 foi aceito em 2026-08-14: a Fase 4 está **CONCLUÍDA EXCLUSIVAMENTE NO
+GATE F4-F**; o Gate E2E permanece aberto e obrigatório antes do piloto. Somente
+a F5.1 foi autorizada. Este roadmap não autoriza qualquer outro avanço.
 
 ## F4.1 — Lifecycle transacional inicial
 
@@ -170,7 +172,12 @@ comercial por fonte.
 
 ## Gate da Fase 4
 
-A F4.2 isoladamente não conclui a Fase 4. O gate futuro deverá provar o lifecycle
-completo autorizado, retomada sob decisão humana, isolamento, concorrência,
-idempotência, resolução de homônimos e comportamento determinístico com fontes
-simuladas, sem relaxar proveniência ou admissibilidade.
+A revisão formal está em `F4_GATE_REVIEW_AND_F5_HANDOFF.md`. Isolamento,
+concorrência, idempotência, resolução de homônimos, confirmação humana e uma
+execução simulada controlada estão comprovados. Fan-out, recovery, fechamento
+da coleta, revisão geral e conclusão parcial não estão implementados.
+
+O critério histórico exige lifecycle completo, mas suas transições finais
+dependem de evidências, claims, risco e relatório das Fases 5–7. O ADR 0023
+`Accepted` separa a fundação F4-F do Gate E2E transversal. O Gate F4-F está
+aceito; o Gate E2E não está e não pode ser silenciosamente promovido.

@@ -2,8 +2,8 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 4 — F4.6/F4.6.1/F4.6.2 aceitas após revisão independente**.
-- Status: **Fase 3 concluída; F4.1 a F4.6/F4.6.1/F4.6.2 aceitas**. Subfases posteriores não estão autorizadas.
+- Fase atual: **Fase 5 — somente F5.1 autorizada; ainda não implementada**.
+- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. Subfases posteriores à F5.1 não estão autorizadas.
 - Código executável: API de saúde, shell web estático, domínio imutável, dezenove tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável e execução direta controlada de um `SEARCH` em modo `TEST`. Não há autenticação, acesso pela API, jobs, vínculo a Company existente, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
@@ -387,6 +387,20 @@ entrega foi posteriormente aceita por revisão independente, fechando o gate G3 
 
 **Status: F4.1 A F4.6/F4.6.1/F4.6.2 ACEITAS APÓS REVISÃO INDEPENDENTE.**
 
+#### Revisão do gate e handoff para a Fase 5
+
+A revisão de 2026-08-14 concluiu que o critério histórico da F4 não está
+satisfeito: fan-out/consolidação, recovery, fechamento da coleta, revisão geral
+e conclusão parcial não foram implementados. Também identificou uma dependência
+circular, pois conclusão parcial exige evidências, claims, risco e relatório das
+Fases 5–7.
+
+O ADR 0023 `Accepted` separa o Gate F4-F, limitado à fundação aceita até
+`COLLECTING`, do Gate E2E transversal, obrigatório antes do piloto. A Fase 4
+foi concluída exclusivamente no Gate F4-F e somente a F5.1 foi autorizada. A
+matriz e o plano estão em
+`docs/tasks/f4/F4_GATE_REVIEW_AND_F5_HANDOFF.md`.
+
 #### F4.1 — Lifecycle transacional inicial
 
 Materializa exclusivamente `StartIdentification` (`CREATED -> IDENTIFYING`) e
@@ -496,7 +510,8 @@ são armazenados. Replay não lê clock nem chama conector. Run/operação perma
 `PENDING` e tentativa zero; não há transição adicional da Investigation.
 
 A migration `20260811_10` cria ownership e conclusão tenant-scoped e recusa apagar
-histórico. A implementação aguarda revisão independente. Recovery/lease,
+histórico. A implementação foi aceita após F4.6.1/F4.6.2 e nova revisão
+independente. Recovery/lease,
 `FETCH_DETAILS`, paralelismo, jobs, filas, workers, fontes reais, evidência,
 claims factuais, risco e relatório permanecem não autorizados.
 
@@ -510,7 +525,8 @@ A revisão independente da F4.6 encontrou leituras desacopladas de
 `connector.describe()` e reproduziu uma corrida F4.3 com auditoria variável. A
 correção usa um único preflight pré-commit para manifesto/ownership, exige no
 runner um preflight pós-commit idêntico antes de I/O e serializa comandos F4.3
-distintos pelo lock da Investigation. Aguarda nova revisão independente.
+distintos pelo lock da Investigation. A correção foi aceita em conjunto com a
+F4.6.2 após nova revisão independente.
 
 Validação F4.6.1: 1.341 testes Python aprovados, 89,54% de cobertura branch, 13
 warnings Alembic conhecidos, 1 teste web, lint, formatação, tipos, scanner de
@@ -533,7 +549,10 @@ Escopo:
 - gerar candidatos e aplicar política versionada de correspondência;
 - pausar e retomar em revisão humana.
 
-Critério de saída: cenários de homônimos, confirmação, cancelamento, retomada e conclusão parcial passam de forma determinística.
+Critério histórico de saída: cenários de homônimos, confirmação, cancelamento,
+retomada e conclusão parcial passam de forma determinística. A revisão do gate
+demonstrou que a parcela de conclusão parcial depende das Fases 5–7; qualquer
+mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 

@@ -46,6 +46,7 @@
 - `validation/f4.6-direct-controlled-execution.md`: execução direta `SEARCH`, ownership pré-I/O, conclusão redigida e limites da F4.6.
 - `validation/f4.6.1-descriptor-audit-continuity.md`: continuidade do descritor e auditoria concorrente corretiva.
 - `validation/f4.6.2-terminal-descriptor-divergence.md`: interrupção terminal de retries após divergência do descritor.
+- `validation/f4-gate-foundation-acceptance.md`: aceite explícito da Fase 4 somente no Gate F4-F e limites do Gate E2E.
 - `validation/f4.4.1-plan-continuity.md`: continuidade histórica, caminho crítico executável e constraint de custo corrigida.
 
 ## Tarefas da Fase 3
@@ -58,6 +59,7 @@
 ## Tarefas da Fase 4
 
 - `tasks/f4/F4_ROADMAP.md`: decomposição da Fase 4; F4.6/F4.6.1/F4.6.2 aceitas após revisão independente.
+- `tasks/f4/F4_GATE_REVIEW_AND_F5_HANDOFF.md`: parecer do gate, matriz de lacunas e plano de handoff sem autorizar a F5.
 - `tasks/f4/F4_1_LIFECYCLE_TRANSACIONAL_INICIAL.md`: escopo, contratos, persistência e exclusões da F4.1.
 - `tasks/f4/F4_2_CANDIDATOS_MATCHING_CONFIRMACAO.md`: escopo, política, transação e exclusões da F4.2.
 - `tasks/f4/F4_2_1_CORRECAO_INTEGRIDADE_RECONSTITUICAO.md`: causa, algoritmo e limites da correção de integridade F4.2.1.
@@ -96,6 +98,7 @@
 - `adr/0020-deterministic-investigation-plan.md`: política pura, descritores estáticos e persistência imutável do plano F4.4.
 - `adr/0021-collection-activation-manifest.md`: seleção rank 1, lifecycle e persistência imutável do manifesto F4.5.
 - `adr/0022-direct-controlled-collection-execution.md`: execução direta controlada e recibo redigido da F4.6.
+- `adr/0023-phase-4-gate-and-phase-5-handoff.md`: proposta de separar o Gate F4-F do Gate E2E antes da Fase 5.
 
 ## Regra de consistência
 

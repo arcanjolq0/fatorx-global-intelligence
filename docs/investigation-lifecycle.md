@@ -175,7 +175,7 @@ crítico das operações de capacidades `READY`; igualdade é aceita. O ledger d
 coincidir exatamente com o run em comando/digest, versões, ator, instante, ID,
 Company, plano, política e quantidade. Persistência parcial falha fechado.
 
-### 4.6 Execução direta sem transição, implementada e aguardando revisão
+### 4.6 Execução direta sem transição, aceita após revisão
 
 `ExecuteCollectionSearchOperation` não altera o lifecycle. Ele consome uma
 operação do manifesto enquanto a Investigation continua em `COLLECTING`, cria
