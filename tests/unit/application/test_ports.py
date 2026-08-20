@@ -6,6 +6,7 @@ from intelligence.application.ports.clock import Clock
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
     CompanyRepository,
+    EvidenceRepository,
     InvestigationRepository,
     InvestigationTransitionRepository,
     UserRepository,
@@ -22,6 +23,7 @@ from intelligence.application.ports.unit_of_work import UnitOfWork, UnitOfWorkFa
         CompanyRepository,
         InvestigationRepository,
         InvestigationTransitionRepository,
+        EvidenceRepository,
         UserRepository,
         WorkspaceMembershipRepository,
         AuditEventRepository,
@@ -68,6 +70,24 @@ def test_investigation_transition_repository_is_append_only_with_command_lookup(
     }
 
     assert public_operations == {"acquire_command_lock", "add", "get_by_command"}
+
+
+def test_evidence_repository_exposes_append_only_history_operations() -> None:
+    public_operations = {
+        name
+        for name, member in EvidenceRepository.__dict__.items()
+        if not name.startswith("_") and callable(member)
+    }
+
+    assert public_operations == {
+        "acquire_command_lock",
+        "acquire_history_lock",
+        "add_correction",
+        "add_initial",
+        "add_lifecycle_event",
+        "get_history",
+        "get_history_by_command",
+    }
 
 
 def test_audit_event_protocol_accepts_add_only_structural_adapter() -> None:

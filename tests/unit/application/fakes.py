@@ -23,6 +23,8 @@ from intelligence.domain.identifiers import (
     CompanyId,
     EntityCandidateBatchId,
     EntityResolutionDecisionId,
+    EvidenceCommandId,
+    EvidenceId,
     InvestigationCommandId,
     InvestigationId,
     InvestigationPlanId,
@@ -38,6 +40,7 @@ from intelligence.domain.identities import (
 )
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
+from intelligence.evidence.models import Artifact, Evidence, EvidenceHistory, EvidenceLifecycleEvent
 from intelligence.orchestration.collection_activation import CollectionRun
 from intelligence.orchestration.planning import InvestigationPlan
 
@@ -73,6 +76,9 @@ class FakeDatabase:
     users: dict[UserId, UserAccount] = field(default_factory=dict)
     memberships: dict[tuple[WorkspaceId, UserId], WorkspaceMembership] = field(default_factory=dict)
     audit_events: list[AuditEvent] = field(default_factory=list)
+    evidence_histories: dict[tuple[WorkspaceId, EvidenceId], EvidenceHistory] = field(
+        default_factory=dict
+    )
 
     def clone(self) -> FakeDatabase:
         return FakeDatabase(
@@ -89,6 +95,7 @@ class FakeDatabase:
             users=dict(self.users),
             memberships=dict(self.memberships),
             audit_events=list(self.audit_events),
+            evidence_histories=dict(self.evidence_histories),
         )
 
     def replace_with(self, other: FakeDatabase) -> None:
@@ -105,6 +112,7 @@ class FakeDatabase:
         self.users = dict(other.users)
         self.memberships = dict(other.memberships)
         self.audit_events = list(other.audit_events)
+        self.evidence_histories = dict(other.evidence_histories)
 
 
 class FakeWorkspaceRepository:
@@ -607,6 +615,80 @@ class FakeAuditEventRepository:
         self._database.audit_events.append(event)
 
 
+class FakeEvidenceRepository:
+    def __init__(self, database: FakeDatabase) -> None:
+        self._database = database
+        self.lock_calls: list[tuple[WorkspaceId, EvidenceCommandId]] = []
+        self.history_lock_calls: list[tuple[WorkspaceId, EvidenceId]] = []
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: EvidenceCommandId
+    ) -> None:
+        self.lock_calls.append((workspace_id, command_id))
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, evidence_id: EvidenceId) -> None:
+        self.history_lock_calls.append((workspace_id, evidence_id))
+
+    def add_initial(self, artifact: Artifact, evidence: Evidence) -> None:
+        key = (artifact.workspace_id, evidence.series_id)
+        if key in self._database.evidence_histories:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.evidence_histories[key] = EvidenceHistory(
+            artifact=artifact, versions=(evidence,), events=()
+        )
+
+    def add_correction(self, evidence: Evidence, event: EvidenceLifecycleEvent) -> None:
+        key = (evidence.workspace_id, evidence.series_id)
+        history = self._database.evidence_histories.get(key)
+        if history is None:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.evidence_histories[key] = EvidenceHistory(
+            artifact=history.artifact,
+            versions=(*history.versions, evidence),
+            events=(*history.events, event),
+        )
+
+    def add_lifecycle_event(self, event: EvidenceLifecycleEvent) -> None:
+        found = self.get_history(event.workspace_id, event.evidence_id)
+        if found is None:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        key = (event.workspace_id, found.latest.series_id)
+        self._database.evidence_histories[key] = EvidenceHistory(
+            artifact=found.artifact,
+            versions=found.versions,
+            events=(*found.events, event),
+        )
+
+    def get_history(
+        self, workspace_id: WorkspaceId, evidence_id: EvidenceId
+    ) -> EvidenceHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.evidence_histories.items()
+                if scope == workspace_id
+                and any(item.id == evidence_id for item in history.versions)
+            ),
+            None,
+        )
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: EvidenceCommandId
+    ) -> EvidenceHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.evidence_histories.items()
+                if scope == workspace_id
+                and (
+                    any(item.command_id == command_id for item in history.versions)
+                    or any(item.command_id == command_id for item in history.events)
+                )
+            ),
+            None,
+        )
+
+
 class FakeUnitOfWork:
     def __init__(
         self,
@@ -668,6 +750,7 @@ class FakeUnitOfWork:
             fail_dependency_add=fail_dependency_add,
         )
         self.collection_executions = FakeCollectionExecutionRepository(self._working_database)
+        self.evidence = FakeEvidenceRepository(self._working_database)
         self.users = FakeUserRepository(self._working_database)
         self.memberships = FakeWorkspaceMembershipRepository(self._working_database)
         self.audit_events = FakeAuditEventRepository(

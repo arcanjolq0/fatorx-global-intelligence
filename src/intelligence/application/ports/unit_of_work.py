@@ -10,6 +10,7 @@ from intelligence.application.ports.repositories import (
     CompanyRepository,
     EntityCandidateBatchRepository,
     EntityResolutionDecisionRepository,
+    EvidenceRepository,
     InvestigationPlanRepository,
     InvestigationRepository,
     InvestigationTransitionRepository,
@@ -57,6 +58,10 @@ class UnitOfWork(Protocol):
     @property
     def collection_executions(self) -> CollectionExecutionRepository:
         """Return append-only execution ownership and completions for the transaction."""
+
+    @property
+    def evidence(self) -> EvidenceRepository:
+        """Return append-only canonical evidence records for the transaction."""
 
     @property
     def users(self) -> UserRepository:

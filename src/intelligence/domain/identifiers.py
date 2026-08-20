@@ -106,6 +106,22 @@ class CollectionOperationId(_UUIDIdentifier):
     """Identifier for one operation prepared by a collection manifest."""
 
 
+class ArtifactId(_UUIDIdentifier):
+    """Identifier for one immutable acquired artifact."""
+
+
+class EvidenceId(_UUIDIdentifier):
+    """Identifier for one immutable evidence version."""
+
+
+class EvidenceCommandId(_UUIDIdentifier):
+    """Tenant-scoped idempotency identifier for one evidence command."""
+
+
+class EvidenceLifecycleEventId(_UUIDIdentifier):
+    """Identifier for one append-only evidence lifecycle event."""
+
+
 class MembershipId(_UUIDIdentifier):
     """Identifier for one user membership within a workspace."""
 
@@ -119,6 +135,7 @@ class CorrelationId(_UUIDIdentifier):
 
 
 __all__ = (
+    "ArtifactId",
     "AuditEventId",
     "CollectionOperationId",
     "CollectionRunId",
@@ -127,6 +144,9 @@ __all__ = (
     "EntityCandidateBatchId",
     "EntityCandidateId",
     "EntityResolutionDecisionId",
+    "EvidenceCommandId",
+    "EvidenceId",
+    "EvidenceLifecycleEventId",
     "InvestigationCommandId",
     "InvestigationId",
     "InvestigationPlanId",

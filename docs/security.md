@@ -173,6 +173,13 @@ A FK obrigatória de `audit_event.actor_user_id` impede registrar `ACTOR_USER_NO
 - logs append-only/protegidos conforme operação;
 - nunca registrar conteúdo completo por conveniência.
 
+Na F5.1, comandos e registros ocultam bytes/trechos em `repr`; auditoria contém
+somente ator, workspace, Investigation, ação, resultado e correlação. Digests de
+comando usam hashes, não payload. FKs compostas ligam evidência a artefato,
+Investigation, Company e decisão no mesmo tenant. Conteúdo original integral não
+é escrito no PostgreSQL; somente trecho explicitamente permitido pode ser
+persistido. Não há endpoint, upload, URL fetch ou object storage nesta subfase.
+
 ## 10. API e web
 
 - validação estrita de payload e limites;

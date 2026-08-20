@@ -254,7 +254,13 @@ Campos: `id`, `source_id`, `connector_key`, `version`, `capabilities`, `country_
 
 Container original adquirido ou enviado.
 
-Campos: `id`, `workspace_id`, `investigation_id`, `connector_run_id` opcional, `origin_type`, `storage_mode`, `object_key` opcional, `content_type`, `byte_length`, `sha256`, `retrieval_url`, `retrieved_at`, `published_at`, `source_policy_version_id`, `encryption_key_ref`, `quarantine_status`, `retention_until`.
+Materializado na F5.1 como `evidence_artifact`: `id`, workspace, Investigation,
+`source_id` e `source_policy_version` em snapshot, origem e fingerprint, método e
+versão de aquisição, ator, consulta, publicação ou ausência explícita, tipo de
+mídia, SHA-256/tamanho dos bytes originais, storage/retenção/exibição/sensibilidade,
+instante, versão de schema e digest. Bytes integrais são transitórios e não são
+coluna. `connector_run_id`, catálogo por FK, encryption key, quarentena e adapter
+de objetos continuam adiados.
 
 `storage_mode`: `OBJECT`, `EXCERPT_ONLY`, `REFERENCE_ONLY` ou `EPHEMERAL_PROCESSING`, sempre definido pela política.
 
@@ -262,7 +268,14 @@ Campos: `id`, `workspace_id`, `investigation_id`, `connector_run_id` opcional, `
 
 Unidade localizável e imutável do contrato em `evidence-contract.md`.
 
-Campos: `id`, `workspace_id`, `investigation_id`, `artifact_id`, `source_id`, `subject_ref`, `evidence_kind`, `original_language`, `locator_type`, `locator_value`, `content_original` quando permitido, `content_sha256`, `observed_at`, `published_at`, `valid_from`, `valid_until`, `extraction_method`, `extractor_version`, `entity_match_policy_version`, `admissibility_status`, `created_at`.
+Materializada na F5.1 como série versionada: `id`, `series_id`, versão e
+`supersedes_evidence_id`; workspace, Investigation, Company, decisão humana e
+artefato; comando/digest; tipo, idioma, locator tipado canônico, hash e trecho
+quando permitido; método/versão de extração; política/versão de matching; ator,
+instante, schema e digest. Toda linha F5.1 permanece `PENDING`. FKs compostas
+impedem trocar tenant, Investigation, Company, decisão, artefato, raiz da série,
+versão supersedida ou evidência relacionada. Locks transacionais distintos para
+idempotência e versão-alvo serializam correção/revogação concorrentes.
 
 ### `EvidenceDerivation`
 
@@ -270,7 +283,10 @@ Relaciona evidência derivada à(s) origem(ns): tradução, OCR, trecho, normali
 
 ### `EvidenceLifecycleEvent`
 
-Registra `ADMITTED`, `EXPIRED`, `REVOKED`, `REDACTED`, `PURGED_CONTENT` e motivo/autor. O conteúdo original não é sobrescrito.
+Na F5.1 registra somente `SUPERSEDED` por `CORRECTION` e `REVOKED` com motivo
+fechado, ator, comando/digest, instante, versão de schema e digest. A correção
+aponta a nova evidência e a revogação é terminal. `ADMITTED`, `EXPIRED`,
+`REDACTED` e `PURGED_CONTENT` continuam futuros; o conteúdo não é sobrescrito.
 
 ## 7. Claims e fatos estruturados
 
@@ -338,8 +354,9 @@ A materialização mínima de `AuditEvent` pertence à F2.4.1. Na F2.4.2, helper
 - `Investigation(workspace_id, state)` para consultas de raiz;
 - `InvestigationTransition(workspace_id, investigation_id, version_after)` e `(workspace_id, occurred_at)` para histórico e auditoria operacional;
 - `ConnectorRun(operation_id, connector_id, operation_kind)` único;
-- `Artifact(workspace_id, sha256, source_policy_version_id)` para deduplicação permitida;
-- `Evidence(investigation_id, subject_ref, admissibility_status)`;
+- `evidence_artifact(workspace_id, investigation_id)` para custódia tenant-first;
+- `evidence(workspace_id, series_id)` e unicidade de versão/comando;
+- `evidence_lifecycle_event(workspace_id, investigation_id)` e comando único;
 - `Claim(investigation_id, subject_ref, predicate_code, status)`;
 - `AuditEvent(workspace_id, occurred_at)` particionável por volume;
 - checks para país, moeda, scores no intervalo definido e período válido;

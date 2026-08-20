@@ -105,3 +105,10 @@ O `source.synthetic.business_registry` usado na F4.6 é somente um identificador
 de fixture determinística, sem rede ou terceiro subjacente. Sua versão de
 política é persistida no ownership para reproduzir o contexto de teste; isso não
 representa `APPROVED_TEST` de fonte real nem satisfaz o gate G6.
+
+Na F5.1, `source_id` e `source_policy_version` são snapshots obrigatórios do
+envelope de custódia. Como o catálogo relacional de fontes ainda não existe,
+esses campos não possuem FK e não autorizam consulta, retenção ou redistribuição.
+Somente fixtures/corpus controlado podem alimentar o serviço interno. Os modos
+tipados de armazenamento, retenção e exibição registram a política declarada;
+não substituem as aprovações desta política nem implementam I/O de storage.

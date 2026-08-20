@@ -5,6 +5,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from intelligence.infrastructure.persistence.postgresql import (  # noqa: F401
+    evidence_tables as _evidence_tables,
+)
 from intelligence.infrastructure.persistence.postgresql import tables as _tables  # noqa: F401
 from intelligence.infrastructure.persistence.postgresql.configuration import (
     alembic_database_url,

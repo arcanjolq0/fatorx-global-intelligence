@@ -210,6 +210,34 @@ class CollectionExecutionDependencyError(ApplicationError):
         super().__init__("Collection operation dependencies are not complete.")
 
 
+class InvalidEvidenceContextError(ApplicationError):
+    """Evidence does not match the persisted investigation and entity decision."""
+
+    def __init__(self) -> None:
+        super().__init__("Evidence context is invalid.")
+
+
+class EvidenceCommandCollisionError(ApplicationError):
+    """A tenant-scoped evidence command ID was reused with different content."""
+
+    def __init__(self) -> None:
+        super().__init__("Evidence command identifier conflicts with prior content.")
+
+
+class EvidenceVersionConflictError(ApplicationError):
+    """A correction or revocation targeted a stale evidence version."""
+
+    def __init__(self) -> None:
+        super().__init__("Evidence version is stale.")
+
+
+class EvidenceAlreadyRevokedError(ApplicationError):
+    """A revoked evidence history cannot receive more lifecycle changes."""
+
+    def __init__(self) -> None:
+        super().__init__("Evidence history is already revoked.")
+
+
 __all__ = [
     "ApplicationError",
     "AuthorizationDeniedError",
@@ -224,9 +252,13 @@ __all__ = [
     "CollectionRunAlreadyExistsError",
     "ConcurrentInvestigationUpdateError",
     "EntityConfirmationReasonError",
+    "EvidenceAlreadyRevokedError",
+    "EvidenceCommandCollisionError",
+    "EvidenceVersionConflictError",
     "InactiveCandidateBatchError",
     "InvalidCollectionActivationError",
     "InvalidCollectionExecutionError",
+    "InvalidEvidenceContextError",
     "InvalidInvestigationPlanningError",
     "InvalidMaterializationPolicyError",
     "InvalidOperationError",

@@ -152,3 +152,23 @@ O relatório deve incluir referência humana à fonte, publicação/consulta, lo
 - expurgo preserva trilha permitida e remove conteúdo solicitado;
 - deduplicação não confunde independência de origem;
 - relatório consegue enumerar evidências exatas usadas.
+
+## 14. Materialização inicial — F5.1
+
+A F5.1 materializa apenas `Artifact`, versões de `Evidence` e
+`EvidenceLifecycleEvent`, conforme ADR 0024. O registro exige uma decisão humana
+de entidade do mesmo workspace e Investigation em `COLLECTING`; isso não cria
+nova transição de lifecycle.
+
+- bytes integrais recebidos são usados transitoriamente para SHA-256 e tamanho;
+- PostgreSQL guarda metadados, locator canônico e trecho somente quando permitido;
+- `OBJECT` é apenas uma referência workspace-scoped, sem adapter de storage;
+- fonte e versão de política são snapshots obrigatórios, não aprovação de fonte;
+- toda evidência nasce e permanece `PENDING` na F5.1;
+- correção cria nova versão e `SUPERSEDED`; revogação cria evento terminal;
+- correção e revogação da mesma versão-alvo são serializadas transacionalmente;
+- reconstituição recalcula digests e rejeita adulteração, lacuna ou troca de escopo.
+
+Não foram materializados claims, links, derivações, admissão, expiração, redação,
+expurgo, risco ou relatório. O recibo operacional F4.6 não é promovido a
+artefato ou evidência.

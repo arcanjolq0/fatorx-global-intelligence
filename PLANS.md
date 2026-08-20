@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 5 — somente F5.1 autorizada; ainda não implementada**.
+- Fase atual: **Fase 5 — F5.1 implementada e aguardando revisão independente**.
 - Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. Subfases posteriores à F5.1 não estão autorizadas.
-- Código executável: API de saúde, shell web estático, domínio imutável, dezenove tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável e execução direta controlada de um `SEARCH` em modo `TEST`. Não há autenticação, acesso pela API, jobs, vínculo a Company existente, conector real ou I/O externo.
+- Código executável: API de saúde, shell web estático, domínio imutável, vinte e duas tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST` e núcleo F5.1 de artefato/evidência/lifecycle append-only. Não há autenticação, acesso pela API, jobs, claims, admissão factual, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -389,7 +389,7 @@ entrega foi posteriormente aceita por revisão independente, fechando o gate G3 
 
 #### Revisão do gate e handoff para a Fase 5
 
-A revisão de 2026-08-14 concluiu que o critério histórico da F4 não está
+A revisão de 2026-08-14 concluiu que a parcela E2E do critério histórico da F4 não está
 satisfeito: fan-out/consolidação, recovery, fechamento da coleta, revisão geral
 e conclusão parcial não foram implementados. Também identificou uma dependência
 circular, pois conclusão parcial exige evidências, claims, risco e relatório das
@@ -541,7 +541,8 @@ de resposta inválida e encerra a execução após a tentativa corrente, mesmo q
 a política inclua `INVALID_RESPONSE` entre os códigos retriáveis. A correção foi
 aceita após nova revisão independente.
 
-Escopo:
+Escopo histórico restante da Fase 5, **não autorizado nem implementado pela
+F5.1**:
 
 - implementar máquina de estados e transições atômicas;
 - planejar jobs por capacidade e país;
@@ -556,6 +557,24 @@ mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 
+**Status parcial: somente F5.1 implementada, aguardando revisão independente.**
+O ADR 0024 permanece `Proposed` até parecer `ACEITAR`. Claims, admissibilidade,
+derivações e revisão factual continuam não autorizados.
+
+#### F5.1 — Núcleo canônico de evidências
+
+Entregas implementadas:
+
+- artefato imutável com proveniência, hash original e políticas tipadas;
+- evidência tenant-scoped, ligada à decisão de entidade e sempre `PENDING`;
+- sete locators canônicos mínimos;
+- correção por nova versão e revogação por evento append-only;
+- porta, serviço, PostgreSQL, migration e reconstituição fail-closed;
+- testes de tenancy, idempotência, integridade, adulteração e downgrade seguro.
+
+Limites: sem object storage operacional, catálogo materializado de fontes,
+claims, derivações, admissão, risco, relatório, IA, conectores ou interfaces.
+
 Escopo:
 
 - armazenar artefatos originais conforme política;
@@ -564,7 +583,9 @@ Escopo:
 - bloquear afirmações críticas sem evidência admissível;
 - registrar decisões humanas.
 
-Critério de saída: a cadeia de evidência é reproduzível; tentativas de publicar claim crítico sem suporte são rejeitadas.
+Critério futuro de saída da Fase 5/G4: a cadeia de evidência é reproduzível;
+tentativas de publicar claim crítico sem suporte são rejeitadas. O núcleo F5.1,
+isoladamente, não satisfaz esse gate porque não cria claims nem admissibilidade.
 
 ### Fase 6 — Documentos
 

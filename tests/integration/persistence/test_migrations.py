@@ -53,6 +53,9 @@ DOMAIN_TABLES = {
     "collection_operation_dependency",
     "collection_operation_execution",
     "collection_operation_execution_result",
+    "evidence_artifact",
+    "evidence",
+    "evidence_lifecycle_event",
 }
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 

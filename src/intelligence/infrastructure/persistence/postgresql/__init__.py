@@ -4,6 +4,11 @@ from intelligence.infrastructure.persistence.postgresql.configuration import (
     DatabaseConfigurationError,
     require_database_url,
 )
+from intelligence.infrastructure.persistence.postgresql.evidence_tables import (
+    evidence_artifact_table,
+    evidence_lifecycle_event_table,
+    evidence_table,
+)
 from intelligence.infrastructure.persistence.postgresql.metadata import metadata
 from intelligence.infrastructure.persistence.postgresql.tables import (
     audit_event_table,
@@ -39,6 +44,9 @@ __all__ = [
     "entity_candidate_dimension_score_table",
     "entity_candidate_table",
     "entity_resolution_decision_table",
+    "evidence_artifact_table",
+    "evidence_lifecycle_event_table",
+    "evidence_table",
     "investigation_plan_table",
     "investigation_table",
     "metadata",

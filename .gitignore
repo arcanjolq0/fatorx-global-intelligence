@@ -5,6 +5,7 @@
 
 # Python
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -14,12 +15,14 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+coverage/
 build/
 dist/
 
 # Node and Vite
 node_modules/
 .pnpm-store/
+.next/
 apps/web/dist/
 apps/web/coverage/
 apps/web/node_modules/.tmp/
@@ -31,6 +34,21 @@ apps/web/node_modules/.tmp/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Local temporary files and confidential material
+tmp/
+temp/
+.cache/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.sqlite
+*.db
+*.dump
+*.bak
 
 # Logs
 *.log
@@ -56,3 +74,5 @@ pnpm-debug.log*
 /FatorX_Global_Intelligence_F4_4_1.zip
 /FatorX_Global_Intelligence_F4_5.zip
 /FatorX_Global_Intelligence_F4_5_1.zip
+/FatorX_Global_Intelligence_*.zip
+/deliverables/*.zip

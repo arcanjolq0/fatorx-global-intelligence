@@ -21,9 +21,13 @@ from intelligence.domain.errors import (
 )
 from intelligence.domain.geography import CountryCode
 from intelligence.domain.identifiers import (
+    ArtifactId,
     AuditEventId,
     CompanyId,
     CorrelationId,
+    EvidenceCommandId,
+    EvidenceId,
+    EvidenceLifecycleEventId,
     InvestigationId,
     MembershipId,
     UserId,
@@ -54,6 +58,7 @@ __all__ = [
     "INITIAL_STATE_VERSION",
     "REASON_CODE_MAX_LENGTH",
     "TERMINAL_INVESTIGATION_STATES",
+    "ArtifactId",
     "AuditEvent",
     "AuditEventId",
     "AuditOutcome",
@@ -67,6 +72,9 @@ __all__ = [
     "CurrencyCode",
     "DomainError",
     "EmailAddress",
+    "EvidenceCommandId",
+    "EvidenceId",
+    "EvidenceLifecycleEventId",
     "InvalidCountryCodeError",
     "InvalidCurrencyCodeError",
     "InvalidDateTimeError",

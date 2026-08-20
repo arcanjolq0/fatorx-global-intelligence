@@ -11,7 +11,7 @@
 - F4.6/F4.6.1/F4.6.2: **ACEITAS APÓS REVISÃO INDEPENDENTE**;
 - subfases posteriores: **NÃO AUTORIZADAS**.
 
-A revisão de fechamento concluiu que o gate histórico não está satisfeito. O
+A revisão de fechamento concluiu que o Gate E2E histórico não está satisfeito. O
 ADR 0023 foi aceito em 2026-08-14: a Fase 4 está **CONCLUÍDA EXCLUSIVAMENTE NO
 GATE F4-F**; o Gate E2E permanece aberto e obrigatório antes do piloto. Somente
 a F5.1 foi autorizada. Este roadmap não autoriza qualquer outro avanço.

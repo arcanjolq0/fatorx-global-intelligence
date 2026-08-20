@@ -43,6 +43,10 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "INVESTIGATION_PLAN_CREATED",
         "INVESTIGATION_COLLECTION_STARTED",
         "COLLECTION_OPERATION_EXECUTED",
+        "EVIDENCE_REGISTERED",
+        "EVIDENCE_CORRECTED",
+        "EVIDENCE_REVOKED",
+        "EVIDENCE_READ_DENIED",
         "COMPANY_READ_DENIED",
         "INVESTIGATION_READ_DENIED",
     }
@@ -75,6 +79,9 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "COLLECTION_EXECUTION_ALREADY_OWNED",
         "COLLECTION_EXECUTION_IN_PROGRESS",
         "COLLECTION_EXECUTION_DEPENDENCY_PENDING",
+        "EVIDENCE_CONTEXT_INVALID",
+        "EVIDENCE_VERSION_CONFLICT",
+        "EVIDENCE_ALREADY_REVOKED",
         "CANCELLATION_USER_REQUESTED",
     } <= {code.value for code in AuditReasonCode}
 

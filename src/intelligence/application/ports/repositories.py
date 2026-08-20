@@ -17,6 +17,8 @@ from intelligence.domain.identifiers import (
     CompanyId,
     EntityCandidateBatchId,
     EntityResolutionDecisionId,
+    EvidenceCommandId,
+    EvidenceId,
     InvestigationCommandId,
     InvestigationId,
     InvestigationPlanId,
@@ -26,6 +28,7 @@ from intelligence.domain.identifiers import (
 from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
+from intelligence.evidence.models import Artifact, Evidence, EvidenceHistory, EvidenceLifecycleEvent
 from intelligence.orchestration.collection_activation import CollectionRun
 from intelligence.orchestration.planning import InvestigationPlan
 
@@ -240,6 +243,37 @@ class CollectionExecutionRepository(Protocol):
         """Return all validated completions for a run in operation order."""
 
 
+class EvidenceRepository(Protocol):
+    """Append-only artifact, evidence-version, and lifecycle persistence."""
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: EvidenceCommandId
+    ) -> None:
+        """Serialize one tenant-scoped evidence idempotency key."""
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, evidence_id: EvidenceId) -> None:
+        """Serialize lifecycle changes targeting one evidence version."""
+
+    def add_initial(self, artifact: Artifact, evidence: Evidence) -> None:
+        """Append an artifact and first evidence version atomically."""
+
+    def add_correction(self, evidence: Evidence, event: EvidenceLifecycleEvent) -> None:
+        """Append a corrected version and its supersession event atomically."""
+
+    def add_lifecycle_event(self, event: EvidenceLifecycleEvent) -> None:
+        """Append a terminal revocation event."""
+
+    def get_history(
+        self, workspace_id: WorkspaceId, evidence_id: EvidenceId
+    ) -> EvidenceHistory | None:
+        """Return the complete validated series containing the evidence ID."""
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: EvidenceCommandId
+    ) -> EvidenceHistory | None:
+        """Return the complete validated history affected by one command."""
+
+
 class UserRepository(Protocol):
     """Persistence operations for internal user identities."""
 
@@ -297,6 +331,7 @@ __all__ = [
     "CompanyRepository",
     "EntityCandidateBatchRepository",
     "EntityResolutionDecisionRepository",
+    "EvidenceRepository",
     "InvestigationPlanRepository",
     "InvestigationRepository",
     "InvestigationTransitionRepository",

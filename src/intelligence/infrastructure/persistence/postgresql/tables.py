@@ -1080,6 +1080,7 @@ entity_resolution_decision_table = sa.Table(
     sa.Column("decision_digest", sa.String(length=64), nullable=False),
     sa.PrimaryKeyConstraint("id"),
     sa.UniqueConstraint("id", "workspace_id", "investigation_id", "command_id"),
+    sa.UniqueConstraint("id", "workspace_id", "investigation_id", "company_id"),
     sa.UniqueConstraint(
         "workspace_id",
         "investigation_id",

@@ -43,6 +43,11 @@ Essas invariantes descrevem snapshots persistidos. Na F4.1–F4.5, somente os
 comandos específicos de início, pausa, confirmação e cancelamento podem
 alterá-los; não existe setter ou API de estado destino arbitrário.
 
+A F5.1 não acrescenta transição. Registro e correção de evidência exigem a
+Investigation já em `COLLECTING`; revogação append-only é controle corretivo e
+não reabre nem avança o lifecycle. Estados `NORMALIZING` e posteriores continuam
+sem comando de entrada implementado.
+
 ### 2.2 Criação e reconstituição
 
 Uma nova investigação continua sendo construída somente em `CREATED`, com `state_version = 1` e sem timestamps de início/término. A F2.3 introduz `Investigation.reconstitute(...)` para ler snapshots que já foram persistidos em outros estados. O método revalida o vocabulário, a versão positiva, os tipos e todas as regras temporais desta seção, sem executar uma transição e sem produzir evento.

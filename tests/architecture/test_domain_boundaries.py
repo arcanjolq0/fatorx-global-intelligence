@@ -14,6 +14,7 @@ SIMULATED_CONNECTORS_ROOT = CONNECTORS_ROOT / "simulated"
 EXECUTION_CONNECTORS_ROOT = CONNECTORS_ROOT / "execution"
 EXECUTION_CONNECTOR_TESTS_ROOT = Path(__file__).parents[1] / "connectors" / "execution"
 ENTITY_RESOLUTION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "entity_resolution"
+EVIDENCE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "evidence"
 ORCHESTRATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "orchestration"
 F41_LIFECYCLE_PATHS = (
     DOMAIN_ROOT / "investigation_inputs.py",
@@ -206,6 +207,7 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
         "20260802_08_add_collection_activation.py",
         "20260802_09_harden_collection_activation_history.py",
         "20260811_10_add_direct_collection_execution.py",
+        "20260814_11_add_canonical_evidence_core.py",
     }
 
 
@@ -470,6 +472,7 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
                     or module.startswith("intelligence.connectors")
                     or module.startswith("intelligence.domain")
                     or module.startswith("intelligence.entity_resolution")
+                    or module.startswith("intelligence.evidence")
                     or module.startswith("intelligence.infrastructure")
                     or module.startswith("intelligence.orchestration")
                 )
@@ -508,6 +511,7 @@ def test_application_imports_only_domain_and_application_contracts() -> None:
                         "intelligence.application",
                         "intelligence.domain",
                         "intelligence.entity_resolution",
+                        "intelligence.evidence",
                         "intelligence.orchestration",
                     )
                 )
@@ -823,7 +827,6 @@ def test_f44_does_not_create_post_planning_packages_or_sensitive_audit_payloads(
         {
             "candidates",
             "claims",
-            "evidence",
             "jobs",
             "planner",
             "reporting",
@@ -833,6 +836,47 @@ def test_f44_does_not_create_post_planning_packages_or_sensitive_audit_payloads(
     audit_source = (APPLICATION_ROOT / "audit.py").read_text(encoding="utf-8").lower()
     assert "input_snapshot" not in audit_source
     assert "identification_input" not in audit_source
+
+
+def test_f51_evidence_core_is_pure_and_has_no_later_phase_capabilities() -> None:
+    """Canonical evidence has no I/O, claims, risk, reports, models, or workers."""
+
+    forbidden_roots = {
+        "alembic",
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "os",
+        "psycopg",
+        "requests",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+    }
+    forbidden_internal = {
+        "intelligence.claims",
+        "intelligence.connectors",
+        "intelligence.infrastructure",
+        "intelligence.reporting",
+        "intelligence.risk",
+    }
+    violations: list[str] = []
+    for path in sorted(EVIDENCE_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_roots or any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in forbidden_internal
+                ):
+                    violations.append(f"{path.name} -> {module}")
+    assert violations == []
 
 
 def test_f42_entity_resolution_is_pure_closed_and_connector_independent() -> None:
