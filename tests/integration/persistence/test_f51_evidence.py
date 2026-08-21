@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
@@ -21,6 +22,7 @@ from intelligence.application.authorization import ContextualAuthorizer
 from intelligence.application.errors import (
     EvidenceAlreadyRevokedError,
     EvidenceVersionConflictError,
+    InvalidEvidenceContextError,
     PersistenceDataError,
     ResourceNotFoundError,
 )
@@ -205,6 +207,60 @@ def test_postgresql_round_trip_replay_and_tenant_isolation(engine: Engine) -> No
         other_service.get_history(other_actor, result.history.latest.id)
 
 
+def test_invalid_history_is_rejected_before_any_postgresql_evidence_write(
+    engine: Engine,
+) -> None:
+    actor = _seed_collecting(engine)
+    service = EvidenceService(
+        PostgreSQLUnitOfWorkFactory(engine), ContextualAuthorizer(), FakeClock(NOW)
+    )
+    invalid_registration = replace(
+        _register_command(engine, actor),
+        locator=JsonPointerLocator(
+            pointer="/company/name",
+            response_sha256=sha256(b"different artifact").hexdigest(),
+        ),
+    )
+
+    with pytest.raises(InvalidEvidenceContextError):
+        service.register(actor, invalid_registration)
+
+    with engine.connect() as connection:
+        assert connection.scalar(sa.select(sa.func.count()).select_from(evidence_table)) == 0
+        assert (
+            connection.scalar(sa.select(sa.func.count()).select_from(evidence_artifact_table)) == 0
+        )
+
+    registered = service.register(actor, _register_command(engine, actor)).history
+    invalid_correction = CorrectEvidence(
+        command_id=EvidenceCommandId.new(),
+        evidence_id=registered.latest.id,
+        expected_evidence_digest=registered.latest.evidence_digest,
+        kind=EvidenceKind.STRUCTURED_DATA,
+        language="pt-BR",
+        locator=JsonPointerLocator(
+            pointer="/company/legal_name",
+            response_sha256=sha256(b"different artifact").hexdigest(),
+        ),
+        located_content=b"Empresa Exemplo Ltda.",
+        content_original="Empresa Exemplo Ltda.",
+        extraction_method="HUMAN_CORRECTION",
+        extraction_method_version="1.0.0",
+    )
+
+    with pytest.raises(InvalidEvidenceContextError):
+        service.correct(actor, invalid_correction)
+
+    with engine.connect() as connection:
+        assert connection.scalar(sa.select(sa.func.count()).select_from(evidence_table)) == 1
+        assert (
+            connection.scalar(
+                sa.select(sa.func.count()).select_from(evidence_lifecycle_event_table)
+            )
+            == 0
+        )
+
+
 def test_postgresql_correction_revocation_and_tamper_fail_closed(engine: Engine) -> None:
     actor = _seed_collecting(engine, owner=True)
     service = EvidenceService(
@@ -271,6 +327,12 @@ def test_database_rejects_cross_tenant_artifact_scope(engine: Engine) -> None:
             sa.update(evidence_table)
             .where(evidence_table.c.id == registered.history.latest.id.value)
             .values(workspace_id=other_actor.workspace_id.value)
+        )
+    with pytest.raises(IntegrityError), engine.begin() as connection:
+        connection.execute(
+            sa.update(evidence_artifact_table)
+            .where(evidence_artifact_table.c.id == registered.history.artifact.id.value)
+            .values(original_byte_length=0)
         )
 
 

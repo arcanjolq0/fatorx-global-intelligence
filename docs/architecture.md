@@ -4,7 +4,11 @@
 
 O MVP tem como arquitetura-alvo um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
 
-No corte materializado até a F4.6, o monólito modular possui aplicação síncrona, PostgreSQL, conectores simulados e execução direta controlada de uma única operação. Workers, fila, outbox/inbox, scheduler, fan-out/fan-in e paralelismo continuam componentes-alvo não implementados e não autorizados.
+No corte materializado até a F5.1, o monólito modular possui aplicação síncrona,
+PostgreSQL, conectores simulados, execução direta controlada de uma única
+operação e o núcleo canônico de evidências ainda `PENDING`. Workers, fila,
+outbox/inbox, scheduler, fan-out/fan-in, paralelismo, claims e admissibilidade
+continuam componentes-alvo não implementados e não autorizados.
 
 O backend segue portas e adaptadores. O núcleo define tipos e portas; API, persistência, fila, storage, modelos e conectores são adaptadores substituíveis.
 
@@ -131,6 +135,14 @@ Na F4.6.2, uma divergência de descritor observada após uma tentativa é termin
 e não participa da política de retry. A tentativa já iniciada pode gerar apenas
 uma conclusão operacional redigida.
 
+Na F5.1, `intelligence.evidence` materializa artefato, versões de evidência e
+eventos de supersessão/revogação como registros puros e imutáveis. A aplicação
+autoriza pelo workspace do ator, valida a história completa antes de qualquer
+append, coordena idempotência/locks e auditoria, e a infraestrutura PostgreSQL
+implementa somente a porta append-only. Fonte e política permanecem snapshots;
+bytes integrais são transitórios, object storage não existe e nenhuma evidência
+deixa o estado `PENDING`.
+
 ### Resolução de entidades
 
 - normaliza candidatos explicitamente fornecidos por NFKC/casefold;
@@ -168,14 +180,18 @@ uma conclusão operacional redigida.
 
 ## 3. Fluxos por horizonte
 
-### 3.1 Fluxo materializado até a F4.6
+### 3.1 Fluxo materializado até a F5.1
 
 1. Aplicação cria e avança `Investigation` por comandos tenant-scoped.
 2. Matching determinístico classifica candidatos e sempre exige confirmação humana explícita.
 3. Confirmação materializa uma `Company` como âncora canônica interna, ainda não como conjunto de fatos reportáveis.
 4. Planner cria `InvestigationPlan`; ativação cria manifesto imutável e avança para `COLLECTING`.
 5. F4.6 registra ownership durável e executa diretamente um único `SEARCH` sintético em `TEST`.
-6. Somente a conclusão operacional redigida é persistida; payload, evidência, claim factual, risco e relatório não são criados.
+6. A execução F4.6 persiste somente a conclusão operacional redigida; seu
+   payload não é transformado em evidência, claim factual, risco ou relatório.
+7. Um chamador interno pode registrar evidência a partir de corpus controlado,
+   ligada à decisão humana e à Investigation em `COLLECTING`; isso não consome o
+   recibo F4.6 nem cria transição, claim ou admissibilidade factual.
 
 ### 3.2 Fluxo-alvo condicionado a fases e gates futuros
 
@@ -201,6 +217,8 @@ uma conclusão operacional redigida.
 - Antes de qualquer operação, o guard comprova que não foi invalidado, conexão aberta, transação original ativa e identidade por `connection.get_transaction()`; referências capturadas não podem acionar autobegin após commit ou rollback.
 - A Unit of Work invalida permanentemente o guard antes de tentar commit ou rollback. Falha do driver não reabre a fronteira; somente o `__exit__` pode executar rollback/close técnicos depois da invalidação.
 - Todos os repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
+- A porta de evidência oferece somente append, locks e leituras tenant-scoped;
+  a aplicação valida a história agregada antes de chamar o adapter.
 - `UnitOfWorkFactory` cria uma instância single-use por operação; os serviços executam commit explícito, e o adaptador PostgreSQL não abre conexão durante import ou construção da factory.
 - O repositório de membership expõe somente os locks e a atualização necessários ao caso de uso. Políticas de ator, alvo e papel permanecem na aplicação.
 - Transições usam versão do agregado para impedir disputa.
@@ -217,7 +235,9 @@ O produto de fila/cache não está decidido. Sua escolha exige SLA, volume, oper
 ## 5. Dados e storage
 
 - PostgreSQL: entidades, metadados, estados, claims, avaliações, índices e auditoria.
-- Storage de objetos: documentos e payloads grandes quando a política permitir.
+- Storage de objetos: componente-alvo para documentos e payloads grandes quando
+  a política permitir; a F5.1 registra somente referência workspace-scoped e não
+  possui adapter nem I/O de objetos.
 - Hash SHA-256 sobre bytes canônicos para integridade/deduplicação técnica.
 - Busca textual nativa do PostgreSQL no MVP.
 - Vetores e OpenSearch ficam adiados até haver volume e caso medido.
@@ -303,7 +323,7 @@ Itens ainda propostos nesta tabela não autorizam dependência sem a análise pr
 
 ## 11. Requisitos-alvo de implantação
 
-Os itens abaixo pertencem ao MVP-alvo; não descrevem componentes já materializados na F4.6.
+Os itens abaixo pertencem ao MVP-alvo; não descrevem componentes já materializados na F5.1.
 
 - processos separados para API e workers, ainda que compartilhem código;
 - migrations executadas como etapa controlada;

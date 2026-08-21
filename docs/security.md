@@ -178,7 +178,11 @@ somente ator, workspace, Investigation, ação, resultado e correlação. Digest
 comando usam hashes, não payload. FKs compostas ligam evidência a artefato,
 Investigation, Company e decisão no mesmo tenant. Conteúdo original integral não
 é escrito no PostgreSQL; somente trecho explicitamente permitido pode ser
-persistido. Não há endpoint, upload, URL fetch ou object storage nesta subfase.
+persistido. A história completa é validada antes de qualquer append; colisão,
+contexto inválido, versão obsoleta, revogação repetida e leitura ausente geram
+auditoria redigida sem copiar o ID potencialmente pertencente a outro tenant.
+Discriminadores de locator e escapes RFC 6901 falham na fronteira. Não há
+endpoint, upload, URL fetch ou object storage nesta subfase.
 
 ## 10. API e web
 

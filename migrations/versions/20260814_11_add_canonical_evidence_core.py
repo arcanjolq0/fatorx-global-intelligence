@@ -115,8 +115,8 @@ def upgrade() -> None:
             "created_at >= retrieved_at", name=op.f("ck_evidence_artifact_creation_order")
         ),
         sa.CheckConstraint(
-            "original_byte_length >= 0",
-            name=op.f("ck_evidence_artifact_byte_length_nonnegative"),
+            "original_byte_length > 0",
+            name=op.f("ck_evidence_artifact_byte_length_positive"),
         ),
         sa.CheckConstraint(
             "(storage_mode = 'OBJECT' AND storage_reference IS NOT NULL "

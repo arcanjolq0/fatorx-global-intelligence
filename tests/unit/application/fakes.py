@@ -620,6 +620,9 @@ class FakeEvidenceRepository:
         self._database = database
         self.lock_calls: list[tuple[WorkspaceId, EvidenceCommandId]] = []
         self.history_lock_calls: list[tuple[WorkspaceId, EvidenceId]] = []
+        self.add_initial_calls: list[tuple[Artifact, Evidence]] = []
+        self.add_correction_calls: list[tuple[Evidence, EvidenceLifecycleEvent]] = []
+        self.add_lifecycle_event_calls: list[EvidenceLifecycleEvent] = []
 
     def acquire_command_lock(
         self, workspace_id: WorkspaceId, command_id: EvidenceCommandId
@@ -630,6 +633,7 @@ class FakeEvidenceRepository:
         self.history_lock_calls.append((workspace_id, evidence_id))
 
     def add_initial(self, artifact: Artifact, evidence: Evidence) -> None:
+        self.add_initial_calls.append((artifact, evidence))
         key = (artifact.workspace_id, evidence.series_id)
         if key in self._database.evidence_histories:
             raise PersistenceConflictError("Persistence constraint conflict.")
@@ -638,6 +642,7 @@ class FakeEvidenceRepository:
         )
 
     def add_correction(self, evidence: Evidence, event: EvidenceLifecycleEvent) -> None:
+        self.add_correction_calls.append((evidence, event))
         key = (evidence.workspace_id, evidence.series_id)
         history = self._database.evidence_histories.get(key)
         if history is None:
@@ -649,6 +654,7 @@ class FakeEvidenceRepository:
         )
 
     def add_lifecycle_event(self, event: EvidenceLifecycleEvent) -> None:
+        self.add_lifecycle_event_calls.append(event)
         found = self.get_history(event.workspace_id, event.evidence_id)
         if found is None:
             raise PersistenceConflictError("Persistence constraint conflict.")

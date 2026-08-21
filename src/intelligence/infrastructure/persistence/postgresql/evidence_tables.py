@@ -110,7 +110,7 @@ evidence_artifact_table = sa.Table(
         "published_at IS NULL OR published_at <= retrieved_at", name="publication_order"
     ),
     sa.CheckConstraint("created_at >= retrieved_at", name="creation_order"),
-    sa.CheckConstraint("original_byte_length >= 0", name="byte_length_nonnegative"),
+    sa.CheckConstraint("original_byte_length > 0", name="byte_length_positive"),
     sa.CheckConstraint(
         "(storage_mode = 'OBJECT' AND storage_reference IS NOT NULL "
         "AND storage_reference LIKE 'workspace/' || workspace_id::text || '/%') OR "

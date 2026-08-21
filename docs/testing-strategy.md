@@ -176,6 +176,15 @@ Na F4.6.2, a mesma continuidade é testada após a primeira tentativa com
 `INVALID_RESPONSE` configurado como retriável. A divergência deve produzir no
 máximo uma chamada de operação e nunca iniciar novo I/O.
 
+Na F5.1, unitários cobrem hashes, políticas tipadas, os sete locators canônicos,
+discriminadores fechados, JSON Pointer RFC 6901, redaction, série contígua,
+supersessão, revogação, replay/collision, permissões e auditoria dos caminhos de
+falha. PostgreSQL real cobre round-trip, FKs tenant-scoped, reconstituição
+fail-closed, adulteração, concorrência correção×revogação, migration e recusa de
+downgrade destrutivo. Histórias novas ou corrigidas são validadas integralmente
+antes do primeiro append; regressões devem provar que uma história inválida não
+deixa artefato, versão ou evento parcial.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

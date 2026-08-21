@@ -8,6 +8,7 @@ from typing import cast
 import pytest
 
 from intelligence.application.actor_context import ActorContext
+from intelligence.application.audit import AuditActionCode, AuditReasonCode
 from intelligence.application.authorization import ContextualAuthorizer
 from intelligence.application.errors import (
     AuthorizationDeniedError,
@@ -154,6 +155,28 @@ def test_command_collision_is_fail_closed_without_duplicate_history() -> None:
         )
 
     assert len(database.evidence_histories) == 1
+    assert database.audit_events[-1].outcome is AuditOutcome.FAILURE
+    assert database.audit_events[-1].reason_code == AuditReasonCode.COMMAND_ID_COLLISION.value
+
+
+def test_invalid_aggregate_is_rejected_and_audited_before_persistence() -> None:
+    actor, database, factory, service = _setup()
+    command = replace(
+        _register_command(database),
+        locator=JsonPointerLocator(
+            pointer="/company/name",
+            response_sha256=sha256(b"different artifact").hexdigest(),
+        ),
+    )
+
+    with pytest.raises(InvalidEvidenceContextError):
+        service.register(actor, command)
+
+    assert factory.created[0].evidence.add_initial_calls == []
+    assert database.evidence_histories == {}
+    assert database.audit_events[-1].action_code == AuditActionCode.EVIDENCE_REGISTERED.value
+    assert database.audit_events[-1].outcome is AuditOutcome.FAILURE
+    assert database.audit_events[-1].reason_code == AuditReasonCode.EVIDENCE_CONTEXT_INVALID.value
 
 
 def test_commands_reject_untyped_boundary_vocabulary() -> None:
@@ -216,6 +239,8 @@ def test_stale_correction_and_revocation_are_rejected() -> None:
                 extraction_method_version="1.0.0",
             ),
         )
+    assert database.audit_events[-1].outcome is AuditOutcome.FAILURE
+    assert database.audit_events[-1].reason_code == AuditReasonCode.EVIDENCE_VERSION_CONFLICT.value
 
 
 def test_only_owner_or_admin_can_revoke_and_revocation_is_terminal() -> None:
@@ -247,6 +272,11 @@ def test_only_owner_or_admin_can_revoke_and_revocation_is_terminal() -> None:
     ]
     with pytest.raises(EvidenceAlreadyRevokedError):
         owner_service.revoke(owner, replace(revoke, command_id=EvidenceCommandId.new()))
+    assert owner_database.audit_events[-1].outcome is AuditOutcome.FAILURE
+    assert (
+        owner_database.audit_events[-1].reason_code
+        == AuditReasonCode.EVIDENCE_ALREADY_REVOKED.value
+    )
 
 
 def test_read_is_tenant_scoped_and_viewer_authorized() -> None:
@@ -271,6 +301,10 @@ def test_read_is_tenant_scoped_and_viewer_authorized() -> None:
     )
     with pytest.raises(ResourceNotFoundError):
         other_service.get_history(other_actor, history.latest.id)
+    assert other_database.audit_events[-1].action_code == AuditActionCode.EVIDENCE_READ_DENIED.value
+    assert other_database.audit_events[-1].outcome is AuditOutcome.DENIED
+    assert other_database.audit_events[-1].reason_code == AuditReasonCode.RESOURCE_NOT_FOUND.value
+    assert other_database.audit_events[-1].resource_id is None
 
 
 def test_registration_requires_collecting_and_matching_confirmed_decision() -> None:

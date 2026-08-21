@@ -148,6 +148,7 @@ class PageTextLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.PAGE_TEXT
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.PAGE_TEXT)
         _positive_int(self.page, "page")
         _nonnegative_int(self.start_offset, "start_offset")
         if not isinstance(self.end_offset, int) or self.end_offset <= self.start_offset:
@@ -165,6 +166,7 @@ class PdfRegionLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.PDF_REGION
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.PDF_REGION)
         _positive_int(self.page, "page")
         _region(self.x1, self.y1, self.x2, self.y2, "PDF_REGION")
 
@@ -177,6 +179,7 @@ class HtmlSelectorLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.HTML_SELECTOR
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.HTML_SELECTOR)
         _text(self.origin, "HTML_SELECTOR origin", maximum=2048)
         _text(self.selector, "HTML_SELECTOR selector", maximum=2048)
         _digest(self.document_sha256, "HTML_SELECTOR document")
@@ -189,10 +192,13 @@ class JsonPointerLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.JSON_POINTER
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.JSON_POINTER)
         if not isinstance(self.pointer, str) or (self.pointer and not self.pointer.startswith("/")):
             raise InvariantViolationError("JSON_POINTER must be empty or start with '/'.")
         if len(self.pointer) > 2048:
             raise InvariantViolationError("JSON_POINTER is too long.")
+        if re.search(r"~(?:[^01]|$)", self.pointer):
+            raise InvariantViolationError("JSON_POINTER contains an invalid RFC 6901 escape.")
         _digest(self.response_sha256, "JSON_POINTER response")
 
 
@@ -203,6 +209,7 @@ class SpreadsheetCellLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.SPREADSHEET_CELL
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.SPREADSHEET_CELL)
         _text(self.sheet, "SPREADSHEET_CELL sheet", maximum=255)
         _text(self.cell_range, "SPREADSHEET_CELL range", maximum=64)
 
@@ -217,6 +224,7 @@ class ImageRegionLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.IMAGE_REGION
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.IMAGE_REGION)
         _nonnegative_int(self.frame, "frame")
         _region(self.x1, self.y1, self.x2, self.y2, "IMAGE_REGION")
 
@@ -227,6 +235,7 @@ class ExternalReferenceLocator:
     type: EvidenceLocatorType = EvidenceLocatorType.EXTERNAL_REFERENCE
 
     def __post_init__(self) -> None:
+        _locator_type(self.type, EvidenceLocatorType.EXTERNAL_REFERENCE)
         _text(self.reference, "EXTERNAL_REFERENCE reference", maximum=2048)
 
 
@@ -294,7 +303,7 @@ class Artifact:
             raise InvariantViolationError("Artifact origin_type is invalid.")
         if _MEDIA_TYPE_PATTERN.fullmatch(self.media_type) is None:
             raise InvariantViolationError("Artifact media_type is invalid.")
-        _nonnegative_int(self.original_byte_length, "original_byte_length")
+        _positive_int(self.original_byte_length, "original_byte_length")
         for value, expected, name in (
             (self.storage_mode, ArtifactStorageMode, "storage_mode"),
             (self.retention_mode, RetentionMode, "retention_mode"),
@@ -950,6 +959,11 @@ def _canonical_json(value: object) -> str:
 def _typed_ids(*pairs: tuple[object, type[object]]) -> None:
     if any(not isinstance(value, expected) for value, expected in pairs):
         raise InvariantViolationError("Evidence record identifiers must be strongly typed.")
+
+
+def _locator_type(value: object, expected: EvidenceLocatorType) -> None:
+    if value is not expected:
+        raise InvariantViolationError("Evidence locator discriminator is inconsistent.")
 
 
 def _digest(value: str, name: str) -> None:

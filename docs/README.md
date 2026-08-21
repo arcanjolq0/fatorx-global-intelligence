@@ -48,11 +48,11 @@
 - `validation/f4.6.2-terminal-descriptor-divergence.md`: interrupção terminal de retries após divergência do descritor.
 - `validation/f4-gate-foundation-acceptance.md`: aceite explícito da Fase 4 somente no Gate F4-F e limites do Gate E2E.
 - `validation/f4.4.1-plan-continuity.md`: continuidade histórica, caminho crítico executável e constraint de custo corrigida.
-- `validation/f5.1-canonical-evidence-core.md`: cadeia de custódia, tenancy, concorrência, migration e gates da F5.1 ainda não promovida.
+- `validation/f5.1-canonical-evidence-core.md`: cadeia de custódia, tenancy, concorrência, migration e aceite independente da F5.1.
 
 ## Tarefas da Fase 5
 
-- `tasks/f5/F5_1_NUCLEO_CANONICO_EVIDENCIAS.md`: implementação limitada do núcleo canônico de evidências, aguardando revisão independente.
+- `tasks/f5/F5_1_NUCLEO_CANONICO_EVIDENCIAS.md`: implementação limitada do núcleo canônico de evidências, aceita após revisão independente com correções.
 
 ## Tarefas da Fase 3
 
@@ -104,7 +104,7 @@
 - `adr/0021-collection-activation-manifest.md`: seleção rank 1, lifecycle e persistência imutável do manifesto F4.5.
 - `adr/0022-direct-controlled-collection-execution.md`: execução direta controlada e recibo redigido da F4.6.
 - `adr/0023-phase-4-gate-and-phase-5-handoff.md`: decisão aceita que separa o Gate F4-F do Gate E2E antes da Fase 5.
-- `adr/0024-canonical-evidence-core.md`: decisão proposta da F5.1 sobre artefato, evidência versionada e lifecycle append-only.
+- `adr/0024-canonical-evidence-core.md`: decisão aceita da F5.1 sobre artefato, evidência versionada e lifecycle append-only.
 
 ## Regra de consistência
 

@@ -2,7 +2,7 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 5 — F5.1 implementada e aguardando revisão independente**.
+- Fase atual: **Fase 5 — somente F5.1 aceita após revisão independente com correções**.
 - Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. Subfases posteriores à F5.1 não estão autorizadas.
 - Código executável: API de saúde, shell web estático, domínio imutável, vinte e duas tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST` e núcleo F5.1 de artefato/evidência/lifecycle append-only. Não há autenticação, acesso pela API, jobs, claims, admissão factual, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
@@ -557,9 +557,9 @@ mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 
-**Status parcial: somente F5.1 implementada, aguardando revisão independente.**
-O ADR 0024 permanece `Proposed` até parecer `ACEITAR`. Claims, admissibilidade,
-derivações e revisão factual continuam não autorizados.
+**Status parcial: somente F5.1 aceita após revisão independente com correções.**
+O ADR 0024 está `Accepted` desde 2026-08-21. Claims, admissibilidade, derivações
+e revisão factual continuam não autorizados; o aceite não autoriza F5.2.
 
 #### F5.1 — Núcleo canônico de evidências
 
@@ -571,6 +571,10 @@ Entregas implementadas:
 - correção por nova versão e revogação por evento append-only;
 - porta, serviço, PostgreSQL, migration e reconstituição fail-closed;
 - testes de tenancy, idempotência, integridade, adulteração e downgrade seguro.
+
+O fechamento independente corrigiu a atomicidade da validação da história antes
+do primeiro append, completou auditoria redigida dos caminhos de falha, fechou
+discriminadores/escapes dos locators e alinhou a constraint de tamanho original.
 
 Limites: sem object storage operacional, catálogo materializado de fontes,
 claims, derivações, admissão, risco, relatório, IA, conectores ou interfaces.

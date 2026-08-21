@@ -1,6 +1,6 @@
 # ADR 0024 — Núcleo canônico de evidências
 
-- Status: Proposed — implementação F5.1 aguardando revisão independente
+- Status: Accepted — revisão independente concluída com correções em 2026-08-21
 - Data: 2026-08-14
 - Decisores: responsável pelo projeto e revisão independente da F5.1
 - Relacionados: ADR 0003, ADR 0007, ADR 0008, ADR 0011, ADR 0013 e ADR 0023
@@ -17,7 +17,7 @@ A F5.1 precisa materializar a cadeia de custódia sem transformar resultados da
 F4.6 em fatos, sem inventar aprovação de fonte e sem antecipar claims,
 admissibilidade, derivações, risco ou relatório.
 
-## Decisão proposta
+## Decisão
 
 1. O núcleo puro `intelligence.evidence` contém três registros imutáveis:
    `Artifact`, versões de `Evidence` e `EvidenceLifecycleEvent`.
@@ -87,3 +87,13 @@ admissibilidade, derivações, risco ou relatório.
 
 O status só muda para `Accepted` após suíte completa, gates estáticos, build,
 scanner, ZIP limpo e parecer independente binário `ACEITAR` para a F5.1.
+
+## Aceite independente
+
+Em 2026-08-21, a revisão da tag candidata `f5.1-review-candidate` identificou e
+corrigiu atomicidade de validação antes do append, auditoria dos caminhos de
+falha, fechamento de discriminadores/JSON Pointer e a constraint de bytes
+originais. A repetição focal, a suíte integral, PostgreSQL real, migrations,
+gates estáticos, scanner, builds e pacote criado somente de arquivos rastreados
+foram aprovados. O parecer binário é **ACEITAR**, com registro operacional
+`APPROVED_WITH_FIXES`. Este aceite não autoriza F5.2 nem fecha o Gate E2E.

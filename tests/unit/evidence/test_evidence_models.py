@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
+from typing import cast
 
 import pytest
 
@@ -25,11 +26,13 @@ from intelligence.evidence.models import (
     ArtifactOriginType,
     ArtifactStorageMode,
     Evidence,
+    EvidenceAdmissibilityStatus,
     EvidenceDisplayMode,
     EvidenceHistory,
     EvidenceKind,
     EvidenceLifecycleEventType,
     EvidenceLifecycleReason,
+    EvidenceLocatorType,
     ExternalReferenceLocator,
     HtmlSelectorLocator,
     ImageRegionLocator,
@@ -135,6 +138,8 @@ def test_artifact_requires_explicit_publication_absence_and_coherent_storage() -
             retention_mode=RetentionMode.PROHIBITED,
             storage_mode=ArtifactStorageMode.EXCERPT_ONLY,
         )
+    with pytest.raises(InvariantViolationError):
+        _artifact(original_content=b"")
 
 
 def test_all_required_locator_types_round_trip_canonically() -> None:
@@ -166,6 +171,122 @@ def test_all_required_locator_types_round_trip_canonically() -> None:
     for locator in locators:
         serialized = locator_to_canonical_json(locator)
         assert locator_from_canonical_json(serialized) == locator
+
+
+def test_locator_discriminators_and_json_pointer_escapes_are_strict() -> None:
+    digest = sha256(b"locator").hexdigest()
+    locator = JsonPointerLocator(pointer="/a~0b~1c", response_sha256=digest)
+
+    with pytest.raises(InvariantViolationError):
+        replace(locator, type=EvidenceLocatorType.PAGE_TEXT)
+    with pytest.raises(InvariantViolationError):
+        JsonPointerLocator(pointer="/a~2b", response_sha256=digest)
+    with pytest.raises(InvariantViolationError):
+        JsonPointerLocator(pointer="/a~", response_sha256=digest)
+    with pytest.raises(InvariantViolationError):
+        JsonPointerLocator(pointer="not-a-pointer", response_sha256=digest)
+    with pytest.raises(InvariantViolationError):
+        JsonPointerLocator(pointer=f"/{'a' * 2048}", response_sha256=digest)
+    with pytest.raises(InvariantViolationError):
+        PageTextLocator(page=1, start_offset=2, end_offset=2, anchor_sha256=digest)
+    with pytest.raises(InvariantViolationError):
+        PdfRegionLocator(
+            page=1,
+            x1=Decimal("2"),
+            y1=Decimal("0"),
+            x2=Decimal("1"),
+            y2=Decimal("1"),
+        )
+    with pytest.raises(InvariantViolationError):
+        SpreadsheetCellLocator(sheet=" ", cell_range="A1")
+
+
+def test_artifact_rejects_invalid_metadata_time_policy_and_schema() -> None:
+    artifact = _artifact()
+
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, media_type="invalid")
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, published_at=NOW, publication_absence_reason=None)
+    with pytest.raises(InvariantViolationError):
+        replace(
+            artifact,
+            published_at=artifact.retrieved_at + timedelta(seconds=1),
+            publication_absence_reason=None,
+        )
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, created_at=artifact.retrieved_at - timedelta(seconds=1))
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, retention_mode=RetentionMode.UNTIL, retention_until=None)
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, retention_until=NOW + timedelta(days=1))
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, display_mode=EvidenceDisplayMode.PROHIBITED)
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, storage_reference="workspace/unexpected/object")
+    with pytest.raises(InvariantViolationError):
+        replace(artifact, schema_version=2)
+    with pytest.raises(EvidenceIntegrityError):
+        replace(artifact, artifact_digest="0" * 64)
+
+
+def test_evidence_rejects_invalid_version_shape_vocabulary_and_schema() -> None:
+    artifact = _artifact()
+    evidence = _evidence(artifact)
+
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, supersedes_evidence_id=cast(EvidenceId, WorkspaceId.new()))
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, series_id=EvidenceId.new())
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, kind=cast(EvidenceKind, "TEXT"))
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, language="not_a_language")
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, locator=cast(JsonPointerLocator, object()))
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, kind=EvidenceKind.EXTERNAL_REFERENCE)
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, content_original="")
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, extraction_method=" ")
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, matching_policy_version=0)
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, admissibility_status=EvidenceAdmissibilityStatus.ADMISSIBLE)
+    with pytest.raises(InvariantViolationError):
+        replace(evidence, schema_version=2)
+    with pytest.raises(EvidenceIntegrityError):
+        replace(evidence, evidence_digest="0" * 64)
+
+
+def test_lifecycle_event_rejects_invalid_shape_vocabulary_and_digest() -> None:
+    artifact = _artifact()
+    evidence = _evidence(artifact)
+    event = build_lifecycle_event(
+        event_id=EvidenceLifecycleEventId.new(),
+        workspace_id=evidence.workspace_id,
+        investigation_id=evidence.investigation_id,
+        evidence_id=evidence.id,
+        command_id=EvidenceCommandId.new(),
+        command_digest=sha256(b"revoke").hexdigest(),
+        event_type=EvidenceLifecycleEventType.REVOKED,
+        reason=EvidenceLifecycleReason.CONTENT_INVALID,
+        actor_user_id=evidence.created_by,
+        related_evidence_id=None,
+        occurred_at=NOW + timedelta(minutes=1),
+    )
+
+    with pytest.raises(InvariantViolationError):
+        replace(event, related_evidence_id=evidence.id)
+    with pytest.raises(InvariantViolationError):
+        replace(event, reason=EvidenceLifecycleReason.CORRECTION)
+    with pytest.raises(InvariantViolationError):
+        replace(event, event_type=cast(EvidenceLifecycleEventType, "REVOKED"))
+    with pytest.raises(InvariantViolationError):
+        replace(event, schema_version=2)
+    with pytest.raises(EvidenceIntegrityError):
+        replace(event, event_digest="0" * 64)
 
 
 def test_evidence_hashes_exact_located_bytes_and_never_claims_admissibility() -> None:

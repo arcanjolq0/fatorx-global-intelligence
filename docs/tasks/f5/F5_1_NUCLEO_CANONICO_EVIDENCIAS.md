@@ -2,8 +2,8 @@
 
 ## Status
 
-**IMPLEMENTADA — AGUARDANDO REVISÃO INDEPENDENTE.** Não promovida e sem
-checkpoint final.
+**ACEITA APÓS REVISÃO INDEPENDENTE COM CORREÇÕES em 2026-08-21.** Checkpoint
+final autorizado exclusivamente para a F5.1; F5.2 permanece não autorizada.
 
 ## Objetivo
 
@@ -48,6 +48,7 @@ ou capacidades operacionais posteriores.
 
 ## Gate
 
-Somente parecer independente `ACEITAR` permite aceitar o ADR 0024, promover a
-F5.1 e criar o checkpoint final. Qualquer achado material exige correção e nova
-revisão.
+O parecer independente final foi `ACEITAR`, registrado como
+`APPROVED_WITH_FIXES` após correção e repetição integral dos gates. O ADR 0024
+está `Accepted`; o Gate E2E permanece aberto e nenhuma subfase posterior foi
+autorizada.
