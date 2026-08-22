@@ -15,6 +15,7 @@ EXECUTION_CONNECTORS_ROOT = CONNECTORS_ROOT / "execution"
 EXECUTION_CONNECTOR_TESTS_ROOT = Path(__file__).parents[1] / "connectors" / "execution"
 ENTITY_RESOLUTION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "entity_resolution"
 EVIDENCE_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "evidence"
+CLAIMS_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "claims"
 ORCHESTRATION_ROOT = Path(__file__).parents[2] / "src" / "intelligence" / "orchestration"
 F41_LIFECYCLE_PATHS = (
     DOMAIN_ROOT / "investigation_inputs.py",
@@ -208,6 +209,7 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
         "20260802_09_harden_collection_activation_history.py",
         "20260811_10_add_direct_collection_execution.py",
         "20260814_11_add_canonical_evidence_core.py",
+        "20260821_12_add_claims_contextual_evidence.py",
     }
 
 
@@ -469,6 +471,7 @@ def test_postgresql_infrastructure_imports_only_approved_layers() -> None:
                 root = module.partition(".")[0]
                 is_internal = (
                     module.startswith("intelligence.application")
+                    or module.startswith("intelligence.claims")
                     or module.startswith("intelligence.connectors")
                     or module.startswith("intelligence.domain")
                     or module.startswith("intelligence.entity_resolution")
@@ -509,6 +512,7 @@ def test_application_imports_only_domain_and_application_contracts() -> None:
                 is_internal = module.startswith(
                     (
                         "intelligence.application",
+                        "intelligence.claims",
                         "intelligence.domain",
                         "intelligence.entity_resolution",
                         "intelligence.evidence",
@@ -817,8 +821,8 @@ def test_lifecycle_exposes_only_specific_commands_without_generic_destination() 
     assert service_public_methods.isdisjoint({"set_state", "transition", "transition_to"})
 
 
-def test_f44_does_not_create_post_planning_packages_or_sensitive_audit_payloads() -> None:
-    """F4.4 adds orchestration planning, but no downstream execution domains."""
+def test_f52_does_not_create_post_claim_packages_or_sensitive_audit_payloads() -> None:
+    """F5.2 adds Claims, but no later risk or reporting domains."""
 
     source_packages = {
         path.name for path in (Path(__file__).parents[2] / "src" / "intelligence").iterdir()
@@ -826,7 +830,6 @@ def test_f44_does_not_create_post_planning_packages_or_sensitive_audit_payloads(
     assert source_packages.isdisjoint(
         {
             "candidates",
-            "claims",
             "jobs",
             "planner",
             "reporting",
@@ -862,6 +865,50 @@ def test_f51_evidence_core_is_pure_and_has_no_later_phase_capabilities() -> None
     }
     violations: list[str] = []
     for path in sorted(EVIDENCE_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            else:
+                modules = []
+            for module in modules:
+                if module.partition(".")[0] in forbidden_roots or any(
+                    module == prefix or module.startswith(f"{prefix}.")
+                    for prefix in forbidden_internal
+                ):
+                    violations.append(f"{path.name} -> {module}")
+    assert violations == []
+
+
+def test_f52_claims_core_is_pure_and_has_no_later_phase_capabilities() -> None:
+    """Claims use stable domain types without I/O, policy, persistence, risk, or reports."""
+
+    forbidden_roots = {
+        "alembic",
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "os",
+        "pathlib",
+        "psycopg",
+        "requests",
+        "socket",
+        "sqlalchemy",
+        "subprocess",
+    }
+    forbidden_internal = {
+        "intelligence.application",
+        "intelligence.connectors",
+        "intelligence.evidence",
+        "intelligence.infrastructure",
+        "intelligence.interfaces",
+        "intelligence.reporting",
+        "intelligence.risk",
+    }
+    violations: list[str] = []
+    for path in sorted(CLAIMS_ROOT.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):

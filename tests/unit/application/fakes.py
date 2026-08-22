@@ -15,9 +15,12 @@ from intelligence.application.entity_candidate_review import EntityCandidateBatc
 from intelligence.application.entity_confirmation import EntityResolutionDecisionRecord
 from intelligence.application.errors import PersistenceConflictError, PersistenceError
 from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
+from intelligence.claims.models import Claim, ClaimEvidenceLink, ClaimHistory
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
+    ClaimCommandId,
+    ClaimId,
     CollectionOperationId,
     CollectionRunId,
     CompanyId,
@@ -79,6 +82,7 @@ class FakeDatabase:
     evidence_histories: dict[tuple[WorkspaceId, EvidenceId], EvidenceHistory] = field(
         default_factory=dict
     )
+    claim_histories: dict[tuple[WorkspaceId, ClaimId], ClaimHistory] = field(default_factory=dict)
 
     def clone(self) -> FakeDatabase:
         return FakeDatabase(
@@ -96,6 +100,7 @@ class FakeDatabase:
             memberships=dict(self.memberships),
             audit_events=list(self.audit_events),
             evidence_histories=dict(self.evidence_histories),
+            claim_histories=dict(self.claim_histories),
         )
 
     def replace_with(self, other: FakeDatabase) -> None:
@@ -113,6 +118,7 @@ class FakeDatabase:
         self.memberships = dict(other.memberships)
         self.audit_events = list(other.audit_events)
         self.evidence_histories = dict(other.evidence_histories)
+        self.claim_histories = dict(other.claim_histories)
 
 
 class FakeWorkspaceRepository:
@@ -695,6 +701,62 @@ class FakeEvidenceRepository:
         )
 
 
+class FakeClaimRepository:
+    def __init__(self, database: FakeDatabase) -> None:
+        self._database = database
+        self.command_lock_calls: list[tuple[WorkspaceId, ClaimCommandId]] = []
+        self.history_lock_calls: list[tuple[WorkspaceId, ClaimId]] = []
+        self.add_initial_calls: list[tuple[Claim, tuple[ClaimEvidenceLink, ...]]] = []
+        self.add_correction_calls: list[tuple[Claim, tuple[ClaimEvidenceLink, ...]]] = []
+
+    def acquire_command_lock(self, workspace_id: WorkspaceId, command_id: ClaimCommandId) -> None:
+        self.command_lock_calls.append((workspace_id, command_id))
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> None:
+        self.history_lock_calls.append((workspace_id, claim_id))
+
+    def add_initial(self, claim: Claim, links: tuple[ClaimEvidenceLink, ...]) -> None:
+        self.add_initial_calls.append((claim, links))
+        key = (claim.workspace_id, claim.series_id)
+        if key in self._database.claim_histories:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.claim_histories[key] = ClaimHistory(versions=(claim,), links=links)
+
+    def add_correction(self, claim: Claim, links: tuple[ClaimEvidenceLink, ...]) -> None:
+        self.add_correction_calls.append((claim, links))
+        key = (claim.workspace_id, claim.series_id)
+        history = self._database.claim_histories.get(key)
+        if history is None:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.claim_histories[key] = ClaimHistory(
+            versions=(*history.versions, claim),
+            links=(*history.links, *links),
+        )
+
+    def get_history(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> ClaimHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.claim_histories.items()
+                if scope == workspace_id and any(item.id == claim_id for item in history.versions)
+            ),
+            None,
+        )
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: ClaimCommandId
+    ) -> ClaimHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.claim_histories.items()
+                if scope == workspace_id
+                and any(item.command_id == command_id for item in history.versions)
+            ),
+            None,
+        )
+
+
 class FakeUnitOfWork:
     def __init__(
         self,
@@ -757,6 +819,7 @@ class FakeUnitOfWork:
         )
         self.collection_executions = FakeCollectionExecutionRepository(self._working_database)
         self.evidence = FakeEvidenceRepository(self._working_database)
+        self.claims = FakeClaimRepository(self._working_database)
         self.users = FakeUserRepository(self._working_database)
         self.memberships = FakeWorkspaceMembershipRepository(self._working_database)
         self.audit_events = FakeAuditEventRepository(

@@ -5,6 +5,7 @@ from typing import Literal, Protocol, Self
 
 from intelligence.application.ports.repositories import (
     AuditEventRepository,
+    ClaimRepository,
     CollectionExecutionRepository,
     CollectionRunRepository,
     CompanyRepository,
@@ -62,6 +63,10 @@ class UnitOfWork(Protocol):
     @property
     def evidence(self) -> EvidenceRepository:
         """Return append-only canonical evidence records for the transaction."""
+
+    @property
+    def claims(self) -> ClaimRepository:
+        """Return append-only Claim versions and links for the transaction."""
 
     @property
     def users(self) -> UserRepository:

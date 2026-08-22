@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 5 — somente F5.1 aceita após revisão independente com correções**.
-- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. Subfases posteriores à F5.1 não estão autorizadas.
-- Código executável: API de saúde, shell web estático, domínio imutável, vinte e duas tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST` e núcleo F5.1 de artefato/evidência/lifecycle append-only. Não há autenticação, acesso pela API, jobs, claims, admissão factual, conector real ou I/O externo.
+- Fase atual: **Fase 5 — F5.1 aceita; F5.2 implementada como candidata à revisão independente**.
+- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. ADR 0025 permanece `Proposed`; F5.3 não está autorizada.
+- Código executável: API de saúde, shell web estático, domínio imutável, vinte e quatro tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST`, núcleo F5.1 de artefato/evidência/lifecycle append-only e candidato F5.2 de Claims e elegibilidade contextual. Não há autenticação, acesso pela API, jobs, admissibilidade global, revisão factual, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -557,9 +557,9 @@ mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 
-**Status parcial: somente F5.1 aceita após revisão independente com correções.**
-O ADR 0024 está `Accepted` desde 2026-08-21. Claims, admissibilidade, derivações
-e revisão factual continuam não autorizados; o aceite não autoriza F5.2.
+**Status parcial: F5.1 aceita; F5.2 implementada como candidata e aguardando revisão independente.**
+O ADR 0024 está `Accepted` desde 2026-08-21 e o ADR 0025 permanece `Proposed`.
+Admissibilidade global, derivações, revisão factual e F5.3 continuam não autorizadas.
 
 #### F5.1 — Núcleo canônico de evidências
 
@@ -578,6 +578,23 @@ discriminadores/escapes dos locators e alinhou a constraint de tamanho original.
 
 Limites: sem object storage operacional, catálogo materializado de fontes,
 claims, derivações, admissão, risco, relatório, IA, conectores ou interfaces.
+
+#### F5.2 — Claims e elegibilidade contextual de evidência
+
+Entregas implementadas no candidato:
+
+- pacote puro `intelligence.claims`, predicates/value types V1 fechados e temporalidade tipada;
+- Claim e links imutáveis, versionados, tenant-scoped, append-only e com digests;
+- política `F5_2_CONTROLLED_CORPUS_V1` e manifesto sintético interno reproduzível;
+- match simultâneo de Artifact, conteúdo, kind e locator, sem confiança em `source_id` ou `origin_type`;
+- assessment calculado em leitura (`INSUFFICIENT`, `SUPPORTED`, `CONFLICTED`);
+- comandos, serviço, permissões, auditoria, porta, UoW, PostgreSQL e migration `20260821_12`;
+- concorrência serializada com correção/revogação de Evidence e reconstituição fail-closed.
+
+Limites: mutação somente em `VERIFYING`, sem criar essa transição; Evidence permanece
+`PENDING`; não há verdade persistida, reportabilidade, decisão humana, F5.3, risco,
+scoring, relatório, IA, API, frontend, jobs ou fontes reais. A implementação não
+equivale a aceite do ADR 0025 nem a conclusão da Fase 5/G4.
 
 Escopo:
 

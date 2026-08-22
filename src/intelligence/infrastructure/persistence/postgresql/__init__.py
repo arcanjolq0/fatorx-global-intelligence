@@ -1,5 +1,9 @@
 """PostgreSQL schema metadata and configuration."""
 
+from intelligence.infrastructure.persistence.postgresql.claim_tables import (
+    claim_evidence_link_table,
+    claim_table,
+)
 from intelligence.infrastructure.persistence.postgresql.configuration import (
     DatabaseConfigurationError,
     require_database_url,
@@ -34,6 +38,8 @@ from intelligence.infrastructure.persistence.postgresql.tables import (
 __all__ = [
     "DatabaseConfigurationError",
     "audit_event_table",
+    "claim_evidence_link_table",
+    "claim_table",
     "collection_operation_dependency_table",
     "collection_operation_execution_result_table",
     "collection_operation_execution_table",

@@ -4,10 +4,11 @@
 
 O MVP tem como arquitetura-alvo um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
 
-No corte materializado até a F5.1, o monólito modular possui aplicação síncrona,
+No corte materializado até o candidato F5.2, o monólito modular possui aplicação síncrona,
 PostgreSQL, conectores simulados, execução direta controlada de uma única
-operação e o núcleo canônico de evidências ainda `PENDING`. Workers, fila,
-outbox/inbox, scheduler, fan-out/fan-in, paralelismo, claims e admissibilidade
+operação, o núcleo canônico de evidências ainda `PENDING` e Claims com
+elegibilidade estritamente contextual. Workers, fila, outbox/inbox, scheduler,
+fan-out/fan-in, paralelismo, admissibilidade global, revisão factual e F5.3
 continuam componentes-alvo não implementados e não autorizados.
 
 O backend segue portas e adaptadores. O núcleo define tipos e portas; API, persistência, fila, storage, modelos e conectores são adaptadores substituíveis.
@@ -143,6 +144,14 @@ implementa somente a porta append-only. Fonte e política permanecem snapshots;
 bytes integrais são transitórios, object storage não existe e nenhuma evidência
 deixa o estado `PENDING`.
 
+Na F5.2 candidata, `intelligence.claims` contém somente modelos puros e tipos
+fechados. A aplicação coordena locks de command/Claim/Evidence, relê históricos,
+aplica o manifesto sintético imutável e persiste Claim e links em um único UoW.
+A infraestrutura acrescenta somente `claim` e `claim_evidence_link`; a migration
+preserva a F5.1. O assessment é calculado em leitura, não persistido. O comando
+não escolhe outcome, policy ou manifesto, e metadados de fonte/origem não
+concedem confiança.
+
 ### Resolução de entidades
 
 - normaliza candidatos explicitamente fornecidos por NFKC/casefold;
@@ -156,8 +165,10 @@ deixa o estado `PENDING`.
 
 - preserva proveniência e cadeia de custódia;
 - valida política de armazenamento/exibição;
-- relaciona suporte, contradição e qualificação;
-- bloqueia afirmações críticas sem evidência admissível.
+- relaciona suporte, contradição e qualificação por versões exatas;
+- calcula `INSUFFICIENT`, `SUPPORTED` ou `CONFLICTED` sem persistir verdade;
+- usa `ELIGIBLE` somente para verificação interna no corpus sintético F5.2;
+- mantém bloqueio futuro de afirmações críticas/reportáveis fora desta subfase.
 
 ### Documentos
 
@@ -180,7 +191,7 @@ deixa o estado `PENDING`.
 
 ## 3. Fluxos por horizonte
 
-### 3.1 Fluxo materializado até a F5.1
+### 3.1 Fluxo materializado até o candidato F5.2
 
 1. Aplicação cria e avança `Investigation` por comandos tenant-scoped.
 2. Matching determinístico classifica candidatos e sempre exige confirmação humana explícita.
@@ -192,6 +203,9 @@ deixa o estado `PENDING`.
 7. Um chamador interno pode registrar evidência a partir de corpus controlado,
    ligada à decisão humana e à Investigation em `COLLECTING`; isso não consome o
    recibo F4.6 nem cria transição, claim ou admissibilidade factual.
+8. Testes e chamadores internos podem reconstituir a Investigation em
+   `VERIFYING`; OWNER/ADMIN registram ou corrigem Claim ligada à Evidence exata.
+   A política gera a decisão contextual e Evidence permanece `PENDING`.
 
 ### 3.2 Fluxo-alvo condicionado a fases e gates futuros
 
@@ -219,6 +233,8 @@ deixa o estado `PENDING`.
 - Todos os repositórios recebem o mesmo guard da Unit of Work, não abrem transações e não executam commit ou rollback. O repositório de auditoria oferece somente append.
 - A porta de evidência oferece somente append, locks e leituras tenant-scoped;
   a aplicação valida a história agregada antes de chamar o adapter.
+- A porta de Claim oferece somente locks, append inicial/correção e leituras
+  tenant-scoped; não possui update, delete, replace ou commit interno.
 - `UnitOfWorkFactory` cria uma instância single-use por operação; os serviços executam commit explícito, e o adaptador PostgreSQL não abre conexão durante import ou construção da factory.
 - O repositório de membership expõe somente os locks e a atualização necessários ao caso de uso. Políticas de ator, alvo e papel permanecem na aplicação.
 - Transições usam versão do agregado para impedir disputa.

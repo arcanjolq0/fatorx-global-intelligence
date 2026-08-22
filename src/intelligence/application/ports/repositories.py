@@ -9,9 +9,12 @@ from intelligence.application.collection_execution import (
 from intelligence.application.entity_candidate_review import EntityCandidateBatchRecord
 from intelligence.application.entity_confirmation import EntityResolutionDecisionRecord
 from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
+from intelligence.claims.models import Claim, ClaimEvidenceLink, ClaimHistory
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
+    ClaimCommandId,
+    ClaimId,
     CollectionOperationId,
     CollectionRunId,
     CompanyId,
@@ -274,6 +277,30 @@ class EvidenceRepository(Protocol):
         """Return the complete validated history affected by one command."""
 
 
+class ClaimRepository(Protocol):
+    """Append-only Claim versions and their complete immutable Evidence links."""
+
+    def acquire_command_lock(self, workspace_id: WorkspaceId, command_id: ClaimCommandId) -> None:
+        """Serialize one tenant-scoped Claim idempotency key."""
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> None:
+        """Serialize correction of the Claim series containing the exact version."""
+
+    def add_initial(self, claim: Claim, links: tuple[ClaimEvidenceLink, ...]) -> None:
+        """Append the first Claim and all of its links."""
+
+    def add_correction(self, claim: Claim, links: tuple[ClaimEvidenceLink, ...]) -> None:
+        """Append one corrected Claim version and its full replacement links."""
+
+    def get_history(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> ClaimHistory | None:
+        """Return the complete validated series containing the Claim ID."""
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: ClaimCommandId
+    ) -> ClaimHistory | None:
+        """Return the complete validated series affected by one command."""
+
+
 class UserRepository(Protocol):
     """Persistence operations for internal user identities."""
 
@@ -326,6 +353,7 @@ class AuditEventRepository(Protocol):
 
 __all__ = [
     "AuditEventRepository",
+    "ClaimRepository",
     "CollectionExecutionRepository",
     "CollectionRunRepository",
     "CompanyRepository",

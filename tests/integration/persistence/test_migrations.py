@@ -56,6 +56,8 @@ DOMAIN_TABLES = {
     "evidence_artifact",
     "evidence",
     "evidence_lifecycle_event",
+    "claim",
+    "claim_evidence_link",
 }
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 
@@ -301,6 +303,7 @@ def test_primary_keys_have_stable_names(database: DatabaseHarness) -> None:
             ],
             "collection_operation_execution": ["command_id"],
             "collection_operation_execution_result": ["command_id"],
+            "claim_evidence_link": ["claim_id", "evidence_id"],
         }
         for table_name in DOMAIN_TABLES - composite_primary_keys.keys():
             primary_key = inspector.get_pk_constraint(table_name)

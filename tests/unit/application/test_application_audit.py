@@ -49,6 +49,9 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "EVIDENCE_READ_DENIED",
         "COMPANY_READ_DENIED",
         "INVESTIGATION_READ_DENIED",
+        "CLAIM_REGISTERED",
+        "CLAIM_CORRECTED",
+        "CLAIM_READ_DENIED",
     }
     assert {
         "ACTOR_USER_NOT_FOUND",
@@ -82,6 +85,9 @@ def test_closed_audit_catalog_contains_the_required_actions_and_reasons() -> Non
         "EVIDENCE_CONTEXT_INVALID",
         "EVIDENCE_VERSION_CONFLICT",
         "EVIDENCE_ALREADY_REVOKED",
+        "CLAIM_CONTEXT_INVALID",
+        "CLAIM_VERSION_CONFLICT",
+        "CLAIM_EVIDENCE_INVALID",
         "CANCELLATION_USER_REQUESTED",
     } <= {code.value for code in AuditReasonCode}
 

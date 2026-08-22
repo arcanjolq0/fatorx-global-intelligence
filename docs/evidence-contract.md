@@ -172,3 +172,26 @@ nova transição de lifecycle.
 Não foram materializados claims, links, derivações, admissão, expiração, redação,
 expurgo, risco ou relatório. O recibo operacional F4.6 não é promovido a
 artefato ou evidência.
+
+## 15. Materialização candidata — F5.2
+
+A F5.2 candidata materializa `Claim` e `ClaimEvidenceLink` sem alterar a
+admissibilidade global da F5.1. Toda Evidence continua `PENDING`. O link registra
+a versão exata da Claim, o ID e digest exatos da Evidence, um role fechado
+(`SUPPORTS`, `CONTRADICTS`, `QUALIFIES`) e uma decisão contextual produzida
+exclusivamente pela política interna.
+
+`ELIGIBLE` significa apenas que a Evidence pode ser usada na verificação interna
+daquela Claim sob `F5_2_CONTROLLED_CORPUS_V1`. Exige match simultâneo de hash do
+Artifact, hash do conteúdo da Evidence, kind, tipo e digest do locator, além de
+`EXCERPT_ONLY`, `INDEFINITE`, `FULL` e `content_original` íntegro. Artifact
+conhecido isoladamente, `source_id` e `origin_type` não concedem confiança.
+
+Claims são imutáveis e corrigidas por nova versão contígua. Workspace,
+Investigation, Company, decisão de resolução e predicate code/version não mudam
+na série. Cada versão exige ao menos um `SUPPORTS`, embora seu assessment possa
+ser `INSUFFICIENT`. Assessment é calculado em leitura e nunca persistido.
+
+O candidato não implementa `ADMISSIBLE`, revisão humana, factualidade,
+reportabilidade, risco, scoring, relatório ou F5.3. O ADR 0025 permanece
+`Proposed` até revisão independente.

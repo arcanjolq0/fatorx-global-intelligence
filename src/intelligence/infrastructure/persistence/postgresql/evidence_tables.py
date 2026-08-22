@@ -179,6 +179,14 @@ evidence_table = sa.Table(
     sa.UniqueConstraint("id", "workspace_id", "investigation_id"),
     sa.UniqueConstraint("workspace_id", "command_id"),
     sa.UniqueConstraint("workspace_id", "series_id", "version"),
+    sa.UniqueConstraint(
+        "id",
+        "workspace_id",
+        "investigation_id",
+        "subject_company_id",
+        "entity_resolution_decision_id",
+        name="uq_evidence_claim_link_scope",
+    ),
     sa.ForeignKeyConstraint(
         ["workspace_id"], ["workspace.id"], ondelete="RESTRICT", name="fk_evidence_workspace"
     ),

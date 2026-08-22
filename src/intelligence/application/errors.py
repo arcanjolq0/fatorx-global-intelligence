@@ -238,6 +238,34 @@ class EvidenceAlreadyRevokedError(ApplicationError):
         super().__init__("Evidence history is already revoked.")
 
 
+class InvalidClaimContextError(ApplicationError):
+    """Claim does not match the investigation, entity decision, or lifecycle."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim context is invalid.")
+
+
+class ClaimCommandCollisionError(ApplicationError):
+    """A tenant-scoped Claim command ID was reused with different content."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim command identifier conflicts with prior content.")
+
+
+class ClaimVersionConflictError(ApplicationError):
+    """A Claim correction targeted a stale version or changed its predicate."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim version or predicate is stale.")
+
+
+class InvalidClaimEvidenceError(ApplicationError):
+    """A proposed Evidence link cannot be validated safely."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim Evidence link is invalid.")
+
+
 __all__ = [
     "ApplicationError",
     "AuthorizationDeniedError",
@@ -245,6 +273,8 @@ __all__ = [
     "CandidateInputDigestMismatchError",
     "CandidateNotInBatchError",
     "CandidateReviewError",
+    "ClaimCommandCollisionError",
+    "ClaimVersionConflictError",
     "CollectionActivationDeadlineError",
     "CollectionExecutionAlreadyOwnedError",
     "CollectionExecutionDependencyError",
@@ -256,6 +286,8 @@ __all__ = [
     "EvidenceCommandCollisionError",
     "EvidenceVersionConflictError",
     "InactiveCandidateBatchError",
+    "InvalidClaimContextError",
+    "InvalidClaimEvidenceError",
     "InvalidCollectionActivationError",
     "InvalidCollectionExecutionError",
     "InvalidEvidenceContextError",

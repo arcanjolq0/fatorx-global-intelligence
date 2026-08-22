@@ -292,17 +292,29 @@ aponta a nova evidência e a revogação é terminal. `ADMITTED`, `EXPIRED`,
 
 ### `Claim`
 
-Campos: `id`, `workspace_id`, `investigation_id`, `subject_ref`, `predicate_code`, `value_type`, valor tipado, `valid_from`, `valid_until`, `criticality`, `status`, `extraction_confidence`, `created_by_type`, `method_version`, `created_at`.
+Materializada no candidato F5.2 como `claim`: `id`, `series_id`, versão,
+`supersedes_claim_id`, workspace, Investigation, Company, decisão de resolução,
+command ID/digest, predicate code/version, valor tipado em snapshot fechado,
+temporalidade tipada, criticidade, método/versionamento, ator, instante, motivo de
+correção, schema e digest. A primeira versão inicia a própria série; correções
+adicionam IDs novos e versões contíguas. Escopo e predicate code/version são
+invariantes da série. Não existe coluna de status factual ou reportável.
 
-Status: `PROPOSED`, `SUPPORTED`, `CONFLICTED`, `REJECTED`, `EXPIRED`, `SUPERSEDED`.
+Predicates V1: `LEGAL_NAME`, `REGISTRATION_STATUS`, `INCORPORATION_DATE`,
+`COUNTRY_OF_REGISTRATION` e `REGISTRATION_IDENTIFIER`.
 
 ### `ClaimEvidenceLink`
 
-Campos: `claim_id`, `evidence_id`, `role`, `relevance`, `link_reason`, `created_at`.
-
-`role`: `SUPPORTS`, `CONTRADICTS`, `QUALIFIES`. Unicidade por claim/evidência/papel.
+Materializada no candidato F5.2 como `claim_evidence_link`: Claim ID/versão e
+escopo exatos, Evidence ID/digest exatos, role, decisão contextual, policy e
+manifest version/digest, finalidade, solicitante, instante, schema e digest.
+`role`: `SUPPORTS`, `CONTRADICTS`, `QUALIFIES`. Há unicidade por versão de
+Claim/Evidence, e cada versão exige ao menos um `SUPPORTS` validado na
+reconstituição. Assessment não é coluna: é recalculado em leitura.
 
 ### `ReviewDecision`
+
+Modelo futuro, não materializado nem autorizado na F5.2 candidata.
 
 Campos: `id`, `workspace_id`, `target_type`, `target_id`, `decision`, `reason_code`, `justification`, `reviewer_id`, `created_at`, `supersedes_decision_id`.
 

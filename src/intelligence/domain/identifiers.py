@@ -122,6 +122,14 @@ class EvidenceLifecycleEventId(_UUIDIdentifier):
     """Identifier for one append-only evidence lifecycle event."""
 
 
+class ClaimId(_UUIDIdentifier):
+    """Identifier for one immutable claim version."""
+
+
+class ClaimCommandId(_UUIDIdentifier):
+    """Tenant-scoped idempotency identifier for one claim command."""
+
+
 class MembershipId(_UUIDIdentifier):
     """Identifier for one user membership within a workspace."""
 
@@ -137,6 +145,8 @@ class CorrelationId(_UUIDIdentifier):
 __all__ = (
     "ArtifactId",
     "AuditEventId",
+    "ClaimCommandId",
+    "ClaimId",
     "CollectionOperationId",
     "CollectionRunId",
     "CompanyId",

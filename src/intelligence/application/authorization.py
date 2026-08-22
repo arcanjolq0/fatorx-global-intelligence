@@ -32,6 +32,9 @@ class Permission(StrEnum):
     EVIDENCE_CORRECT = "EVIDENCE_CORRECT"
     EVIDENCE_REVOKE = "EVIDENCE_REVOKE"
     EVIDENCE_READ = "EVIDENCE_READ"
+    CLAIM_READ = "CLAIM_READ"
+    CLAIM_REGISTER = "CLAIM_REGISTER"
+    CLAIM_CORRECT = "CLAIM_CORRECT"
     MEMBERSHIP_ADD = "MEMBERSHIP_ADD"
     MEMBERSHIP_CHANGE_ROLE = "MEMBERSHIP_CHANGE_ROLE"
     MEMBERSHIP_DEACTIVATE = "MEMBERSHIP_DEACTIVATE"
@@ -55,10 +58,16 @@ _CREATE_AND_READ = frozenset(
         Permission.EVIDENCE_REGISTER,
         Permission.EVIDENCE_CORRECT,
         Permission.EVIDENCE_READ,
+        Permission.CLAIM_READ,
     }
 )
 _READ_ONLY = frozenset(
-    {Permission.COMPANY_READ, Permission.INVESTIGATION_READ, Permission.EVIDENCE_READ}
+    {
+        Permission.CLAIM_READ,
+        Permission.COMPANY_READ,
+        Permission.INVESTIGATION_READ,
+        Permission.EVIDENCE_READ,
+    }
 )
 _ROLE_PERMISSIONS: dict[MembershipRole, frozenset[Permission]] = {
     MembershipRole.OWNER: _ALL_PERMISSIONS,
