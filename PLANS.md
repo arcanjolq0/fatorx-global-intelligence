@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 5 — F5.1 aceita; F5.2 implementada como candidata à revisão independente**.
-- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. ADR 0025 permanece `Proposed`; F5.3 não está autorizada.
-- Código executável: API de saúde, shell web estático, domínio imutável, vinte e quatro tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST`, núcleo F5.1 de artefato/evidência/lifecycle append-only e candidato F5.2 de Claims e elegibilidade contextual. Não há autenticação, acesso pela API, jobs, admissibilidade global, revisão factual, conector real ou I/O externo.
+- Fase atual: **Fase 5 — F5.1 e F5.2 aceitas após revisão independente com correções**.
+- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. ADR 0025 está `Accepted`; F5.3 não está autorizada.
+- Código executável: API de saúde, shell web estático, domínio imutável, vinte e quatro tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST`, núcleo F5.1 de artefato/evidência/lifecycle append-only e F5.2 aceita de Claims e elegibilidade contextual. Não há autenticação, acesso pela API, jobs, admissibilidade global, revisão factual, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -557,8 +557,9 @@ mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 
-**Status parcial: F5.1 aceita; F5.2 implementada como candidata e aguardando revisão independente.**
-O ADR 0024 está `Accepted` desde 2026-08-21 e o ADR 0025 permanece `Proposed`.
+**Status parcial: F5.1 e F5.2 aceitas após revisão independente com correções.**
+O ADR 0024 está `Accepted` desde 2026-08-21 e o ADR 0025 está `Accepted` desde
+2026-08-22.
 Admissibilidade global, derivações, revisão factual e F5.3 continuam não autorizadas.
 
 #### F5.1 — Núcleo canônico de evidências
@@ -581,7 +582,7 @@ claims, derivações, admissão, risco, relatório, IA, conectores ou interfaces
 
 #### F5.2 — Claims e elegibilidade contextual de evidência
 
-Entregas implementadas no candidato:
+Entregas aceitas:
 
 - pacote puro `intelligence.claims`, predicates/value types V1 fechados e temporalidade tipada;
 - Claim e links imutáveis, versionados, tenant-scoped, append-only e com digests;
@@ -591,10 +592,15 @@ Entregas implementadas no candidato:
 - comandos, serviço, permissões, auditoria, porta, UoW, PostgreSQL e migration `20260821_12`;
 - concorrência serializada com correção/revogação de Evidence e reconstituição fail-closed.
 
+O fechamento independente tornou os snapshots JSON fail-closed por chaves e
+tipos exatos, vinculou `requested_by`/`evaluated_at` ao ator/instante da versão,
+permitiu leitura histórica em `FAILED`/`CANCELLED` e passou a adquirir todos os
+locks de Evidence em ordem canônica antes do assessment.
+
 Limites: mutação somente em `VERIFYING`, sem criar essa transição; Evidence permanece
 `PENDING`; não há verdade persistida, reportabilidade, decisão humana, F5.3, risco,
-scoring, relatório, IA, API, frontend, jobs ou fontes reais. A implementação não
-equivale a aceite do ADR 0025 nem a conclusão da Fase 5/G4.
+scoring, relatório, IA, API, frontend, jobs ou fontes reais. O aceite do ADR 0025
+não conclui a Fase 5/G4 e não autoriza F5.3.
 
 Escopo:
 

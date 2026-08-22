@@ -4,7 +4,7 @@
 
 O MVP tem como arquitetura-alvo um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
 
-No corte materializado até o candidato F5.2, o monólito modular possui aplicação síncrona,
+No corte materializado até a F5.2 aceita, o monólito modular possui aplicação síncrona,
 PostgreSQL, conectores simulados, execução direta controlada de uma única
 operação, o núcleo canônico de evidências ainda `PENDING` e Claims com
 elegibilidade estritamente contextual. Workers, fila, outbox/inbox, scheduler,
@@ -144,13 +144,15 @@ implementa somente a porta append-only. Fonte e política permanecem snapshots;
 bytes integrais são transitórios, object storage não existe e nenhuma evidência
 deixa o estado `PENDING`.
 
-Na F5.2 candidata, `intelligence.claims` contém somente modelos puros e tipos
+Na F5.2 aceita, `intelligence.claims` contém somente modelos puros e tipos
 fechados. A aplicação coordena locks de command/Claim/Evidence, relê históricos,
 aplica o manifesto sintético imutável e persiste Claim e links em um único UoW.
 A infraestrutura acrescenta somente `claim` e `claim_evidence_link`; a migration
 preserva a F5.1. O assessment é calculado em leitura, não persistido. O comando
 não escolhe outcome, policy ou manifesto, e metadados de fonte/origem não
-concedem confiança.
+concedem confiança. A reconstituição exige snapshots JSON canônicos, a decisão
+de cada link permanece vinculada ao ator/instante da versão, e o assessment
+adquire todos os locks de Evidence em ordem antes da releitura.
 
 ### Resolução de entidades
 
@@ -191,7 +193,7 @@ concedem confiança.
 
 ## 3. Fluxos por horizonte
 
-### 3.1 Fluxo materializado até o candidato F5.2
+### 3.1 Fluxo materializado até a F5.2 aceita
 
 1. Aplicação cria e avança `Investigation` por comandos tenant-scoped.
 2. Matching determinístico classifica candidatos e sempre exige confirmação humana explícita.

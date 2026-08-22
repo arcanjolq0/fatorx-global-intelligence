@@ -194,6 +194,105 @@ def test_all_snapshots_round_trip_and_malformed_snapshots_fail_closed() -> None:
         claim_temporal_from_snapshot("POINT", {"occurred_at": "not-a-datetime"})
 
 
+@pytest.mark.parametrize(
+    ("value_type", "snapshot"),
+    [
+        ("TEXT", {"value": 123}),
+        ("TEXT", {"value": True}),
+        ("TEXT", {"value": None}),
+        ("TEXT", {"value": "123", "unexpected": "payload"}),
+        ("REGISTRATION_STATUS", {"status": 1}),
+        ("REGISTRATION_STATUS", {"status": True}),
+        ("REGISTRATION_STATUS", {"status": None}),
+        ("REGISTRATION_STATUS", {"status": "ACTIVE", "unexpected": "payload"}),
+        ("REGISTRATION_STATUS", {}),
+        ("DATE", {"value": 20200115}),
+        ("DATE", {"value": True}),
+        ("DATE", {"value": None}),
+        ("DATE", {"value": "2020-01-15", "unexpected": "payload"}),
+        ("DATE", {"value": "20200115"}),
+        ("COUNTRY_CODE", {"country": 1}),
+        ("COUNTRY_CODE", {"country": True}),
+        ("COUNTRY_CODE", {"country": None}),
+        ("COUNTRY_CODE", {"country": "BR", "unexpected": "payload"}),
+        ("COUNTRY_CODE", {}),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"identifier_type": 1, "original_value": "TEST-1", "jurisdiction": "BR"},
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"identifier_type": "SYNTHETIC_ID", "original_value": 1, "jurisdiction": "BR"},
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"identifier_type": "SYNTHETIC_ID", "original_value": "TEST-1", "jurisdiction": 1},
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {
+                "identifier_type": "SYNTHETIC_ID",
+                "original_value": "TEST-1",
+                "jurisdiction": "BR",
+                "unexpected": "payload",
+            },
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"original_value": "TEST-1", "jurisdiction": "BR"},
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"identifier_type": "SYNTHETIC_ID", "jurisdiction": "BR"},
+        ),
+        (
+            "REGISTRATION_IDENTIFIER",
+            {"identifier_type": "SYNTHETIC_ID", "original_value": "TEST-1"},
+        ),
+    ],
+)
+def test_claim_value_snapshots_reject_noncanonical_json(
+    value_type: str, snapshot: dict[str, object]
+) -> None:
+    with pytest.raises(ClaimIntegrityError):
+        claim_value_from_snapshot(value_type, snapshot)
+
+
+@pytest.mark.parametrize(
+    ("temporal_type", "snapshot"),
+    [
+        ("POINT", {"occurred_at": 1}),
+        ("POINT", {"occurred_at": True}),
+        ("POINT", {"occurred_at": None}),
+        ("POINT", {"occurred_at": FIXED_TIME.isoformat(), "unexpected": "payload"}),
+        ("POINT", {}),
+        ("POINT", {"occurred_at": "2026-08-21T12:00:00Z"}),
+        ("PERIOD", {"valid_from": 1, "valid_until": FIXED_TIME.isoformat()}),
+        ("PERIOD", {"valid_from": FIXED_TIME.isoformat(), "valid_until": True}),
+        ("PERIOD", {"valid_from": FIXED_TIME.isoformat()}),
+        ("PERIOD", {"valid_until": FIXED_TIME.isoformat()}),
+        (
+            "PERIOD",
+            {
+                "valid_from": FIXED_TIME.isoformat(),
+                "valid_until": (FIXED_TIME + timedelta(days=1)).isoformat(),
+                "unexpected": "payload",
+            },
+        ),
+        ("UNDATED", {"reason": 1}),
+        ("UNDATED", {"reason": True}),
+        ("UNDATED", {"reason": None}),
+        ("UNDATED", {"reason": "NOT_APPLICABLE", "unexpected": "payload"}),
+        ("UNDATED", {}),
+    ],
+)
+def test_claim_temporal_snapshots_reject_noncanonical_json(
+    temporal_type: str, snapshot: dict[str, object]
+) -> None:
+    with pytest.raises(ClaimIntegrityError):
+        claim_temporal_from_snapshot(temporal_type, snapshot)
+
+
 def test_rejected_decision_uses_only_explicit_prohibition_reason() -> None:
     eligible = _decision(ClaimEvidenceUseOutcome.ELIGIBLE)
     rejected = replace(

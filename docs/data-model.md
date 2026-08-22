@@ -292,29 +292,33 @@ aponta a nova evidência e a revogação é terminal. `ADMITTED`, `EXPIRED`,
 
 ### `Claim`
 
-Materializada no candidato F5.2 como `claim`: `id`, `series_id`, versão,
+Materializada na F5.2 aceita como `claim`: `id`, `series_id`, versão,
 `supersedes_claim_id`, workspace, Investigation, Company, decisão de resolução,
 command ID/digest, predicate code/version, valor tipado em snapshot fechado,
 temporalidade tipada, criticidade, método/versionamento, ator, instante, motivo de
 correção, schema e digest. A primeira versão inicia a própria série; correções
 adicionam IDs novos e versões contíguas. Escopo e predicate code/version são
-invariantes da série. Não existe coluna de status factual ou reportável.
+invariantes da série. Snapshots de valor e temporalidade aceitam somente chaves,
+tipos JSON e formas canônicas exatas. Não existe coluna de status factual ou
+reportável.
 
 Predicates V1: `LEGAL_NAME`, `REGISTRATION_STATUS`, `INCORPORATION_DATE`,
 `COUNTRY_OF_REGISTRATION` e `REGISTRATION_IDENTIFIER`.
 
 ### `ClaimEvidenceLink`
 
-Materializada no candidato F5.2 como `claim_evidence_link`: Claim ID/versão e
+Materializada na F5.2 aceita como `claim_evidence_link`: Claim ID/versão e
 escopo exatos, Evidence ID/digest exatos, role, decisão contextual, policy e
 manifest version/digest, finalidade, solicitante, instante, schema e digest.
 `role`: `SUPPORTS`, `CONTRADICTS`, `QUALIFIES`. Há unicidade por versão de
 Claim/Evidence, e cada versão exige ao menos um `SUPPORTS` validado na
-reconstituição. Assessment não é coluna: é recalculado em leitura.
+reconstituição. `requested_by` e `evaluated_at` correspondem obrigatoriamente a
+`created_by` e `created_at` da versão. Assessment não é coluna: é recalculado em
+leitura sob locks ordenados das Evidences vinculadas.
 
 ### `ReviewDecision`
 
-Modelo futuro, não materializado nem autorizado na F5.2 candidata.
+Modelo futuro, não materializado nem autorizado pela F5.2 aceita.
 
 Campos: `id`, `workspace_id`, `target_type`, `target_id`, `decision`, `reason_code`, `justification`, `reviewer_id`, `created_at`, `supersedes_decision_id`.
 

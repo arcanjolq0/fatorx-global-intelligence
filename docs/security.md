@@ -184,16 +184,18 @@ auditoria redigida sem copiar o ID potencialmente pertencente a outro tenant.
 Discriminadores de locator e escapes RFC 6901 falham na fronteira. Não há
 endpoint, upload, URL fetch ou object storage nesta subfase.
 
-Na F5.2 candidata, confiança não deriva de `source_id`, `origin_type`, IDs runtime
+Na F5.2 aceita, confiança não deriva de `source_id`, `origin_type`, IDs runtime
 ou hash do Artifact isolado. O manifesto interno exige âncora exata de Artifact,
 conteúdo, kind e locator canônico; duplicidade e adulteração falham fechado.
 Comandos não contêm outcome, reason, policy ou manifesto. FKs compostas e
 consultas tenant-scoped protegem contra IDOR/cross-tenant; digests são
 recalculados na reconstituição. Locks de Evidence serializam registro/correção
 de Claim contra correção e revogação, evitando decisão baseada em versão que
-mudou. Auditoria e `repr` excluem ClaimValue, conteúdo, locator, origem e hashes.
-Não há SQL textual derivado de input, rede, filesystem, JSON aberto, segredo,
-HTTP ou mecanismo F5.3 nesta fronteira.
+mudou; o assessment também adquire todos os locks antes da releitura. Snapshots
+JSON exigem chaves, tipos e forma canônica exatos, e a proveniência de cada
+decisão é vinculada à versão da Claim. Auditoria e `repr` excluem ClaimValue,
+conteúdo, locator, origem e hashes. Não há SQL textual derivado de input, rede,
+filesystem, JSON aberto, segredo, HTTP ou mecanismo F5.3 nesta fronteira.
 
 ## 10. API e web
 

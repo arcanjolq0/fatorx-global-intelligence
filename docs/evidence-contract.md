@@ -173,9 +173,9 @@ Não foram materializados claims, links, derivações, admissão, expiração, r
 expurgo, risco ou relatório. O recibo operacional F4.6 não é promovido a
 artefato ou evidência.
 
-## 15. Materialização candidata — F5.2
+## 15. Materialização aceita — F5.2
 
-A F5.2 candidata materializa `Claim` e `ClaimEvidenceLink` sem alterar a
+A F5.2 aceita materializa `Claim` e `ClaimEvidenceLink` sem alterar a
 admissibilidade global da F5.1. Toda Evidence continua `PENDING`. O link registra
 a versão exata da Claim, o ID e digest exatos da Evidence, um role fechado
 (`SUPPORTS`, `CONTRADICTS`, `QUALIFIES`) e uma decisão contextual produzida
@@ -192,6 +192,8 @@ Investigation, Company, decisão de resolução e predicate code/version não mu
 na série. Cada versão exige ao menos um `SUPPORTS`, embora seu assessment possa
 ser `INSUFFICIENT`. Assessment é calculado em leitura e nunca persistido.
 
-O candidato não implementa `ADMISSIBLE`, revisão humana, factualidade,
-reportabilidade, risco, scoring, relatório ou F5.3. O ADR 0025 permanece
-`Proposed` até revisão independente.
+A reconstituição rejeita snapshots JSON não canônicos e decisões cuja
+proveniência não corresponda ao ator/instante da versão. Leitura histórica
+permanece disponível em `FAILED` e `CANCELLED`; mutação continua exclusiva de
+`VERIFYING`. A F5.2 não implementa `ADMISSIBLE`, revisão humana, factualidade,
+reportabilidade, risco, scoring, relatório ou F5.3. O ADR 0025 está `Accepted`.

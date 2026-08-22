@@ -64,6 +64,8 @@ _READABLE_STATES = frozenset(
         InvestigationState.WAITING_FOR_REVIEW,
         InvestigationState.COMPLETED,
         InvestigationState.PARTIALLY_COMPLETED,
+        InvestigationState.FAILED,
+        InvestigationState.CANCELLED,
     }
 )
 
@@ -432,7 +434,10 @@ class ClaimService:
         self, unit_of_work: UnitOfWork, actor: ActorContext, history: ClaimHistory
     ) -> ClaimAssessment:
         valid: set[EvidenceId] = set()
-        for link in history.latest_links:
+        links = tuple(sorted(history.latest_links, key=lambda item: str(item.evidence_id)))
+        for link in links:
+            unit_of_work.evidence.acquire_history_lock(actor.workspace_id, link.evidence_id)
+        for link in links:
             evidence = unit_of_work.evidence.get_history(actor.workspace_id, link.evidence_id)
             if evidence is None:
                 continue

@@ -2,11 +2,12 @@
 
 ## Status
 
-**IMPLEMENTAÇÃO CANDIDATA — AGUARDA REVISÃO INDEPENDENTE.**
+**ACEITA APÓS REVISÃO INDEPENDENTE COM CORREÇÕES EM 2026-08-22.**
 
 O scoping foi aprovado e a autorização explícita de 2026-08-21 permitiu código,
-testes, migration e checkpoint candidato exclusivamente para F5.2. O ADR 0025
-permanece `Proposed`; esta implementação não é aceite e não autoriza F5.3.
+testes, migration e checkpoint candidato exclusivamente para F5.2. A revisão
+independente de 2026-08-22 aceitou a implementação com correções e promoveu o
+ADR 0025 a `Accepted`; F5.3 continua não autorizada.
 
 ## Objetivo
 
@@ -19,9 +20,8 @@ Materializar a menor fronteira de claims coerente com a F5.1:
 - persistência append-only em somente duas tabelas;
 - autorização, idempotência, auditoria e concorrência proporcionais ao risco.
 
-A estratégia arquitetural de corpus controlado foi definida no ADR 0025 e
-materializada no candidato. A revisão independente permanece obrigatória antes
-do aceite da F5.2.
+A estratégia arquitetural de corpus controlado foi definida no ADR 0025,
+materializada e aprovada na revisão independente.
 
 ## Baseline obrigatório
 
@@ -923,5 +923,13 @@ suficientes. O revisor deve:
 14. revisar segurança, redaction e ausência de escopo posterior;
 15. classificar o gate como `APPROVED`, `APPROVED_WITH_FIXES` ou `BLOCKED`.
 
-Somente parecer aprovado pode aceitar o ADR 0025, promover F5.2 e autorizar
-checkpoint final. A revisão não autoriza F5.3.
+## Fechamento independente
+
+Parecer: `APPROVED_WITH_FIXES`.
+
+Foram corrigidos snapshots JSON permissivos, leitura histórica ausente em
+`FAILED`/`CANCELLED`, vínculo incompleto da proveniência da decisão e leitura de
+assessment sem aquisição prévia de todos os locks de Evidence. Testes unitários,
+PostgreSQL, regressão F5.1, migrations, segurança, cobertura e quality gate
+passaram. O ADR 0025 foi aceito e o checkpoint final pode ser criado; a revisão
+não autoriza F5.3.

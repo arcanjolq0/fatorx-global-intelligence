@@ -1,8 +1,9 @@
 # ADR 0025 — Claims e elegibilidade contextual de evidência
 
-- Status: Proposed
+- Status: Accepted
 - Data: 2026-08-21
-- Decisores propostos: responsável pelo projeto e revisão independente da F5.2
+- Data de aceite: 2026-08-22
+- Decisores: responsável pelo projeto e revisão independente da F5.2
 - Relacionados: ADR 0003, ADR 0007, ADR 0008, ADR 0011, ADR 0013, ADR 0023 e ADR 0024
 
 ## Contexto
@@ -21,12 +22,13 @@ não pode ser reutilizado com outro significado.
 
 O ADR 0003 exige separar `Artifact`, `Evidence`, `Claim` e
 `ClaimEvidenceLink`. O contrato de evidências exige links explícitos de suporte,
-contradição ou qualificação. A implementação candidata agora materializa essa
-fronteira, mas ainda não recebeu revisão independente nem aceite arquitetural.
+contradição ou qualificação. A implementação materializa essa fronteira e foi
+aceita após revisão independente com correções em 2026-08-22.
 
 A autorização de 2026-08-21 permitiu implementar somente a F5.2 como candidata,
-sem promover este ADR. Código, migration e testes seguem a proposta abaixo;
-mudança do lifecycle, F5.3 e capacidades posteriores continuam não autorizadas.
+sem promover este ADR naquele checkpoint. O gate independente posterior aceitou
+o código, a migration e os testes; mudança do lifecycle, F5.3 e capacidades
+posteriores continuam não autorizadas.
 
 ## Problema
 
@@ -62,7 +64,7 @@ O hash do Artifact isolado também não basta. A F5.1 calcula
 distintas. Um Artifact conhecido não prova que uma Evidence específica, seu
 conteúdo localizado e seu locator pertencem ao corpus controlado.
 
-## Decisão proposta
+## Decisão
 
 ### 1. Fronteira da F5.2
 
@@ -147,14 +149,13 @@ Artifact, Evidence ou Claim não fazem parte da âncora porque variam entre
 execuções.
 
 O manifesto pertence ao código/configuração interna versionada do sistema. Na
-organização atual, o componente futuro fica previsto em
+organização atual, o componente fica em
 `src/intelligence/application/claim_evidence_policy.py`, junto à política
 cross-aggregate da F5.2 e fora de `intelligence.evidence`. Ele é uma estrutura
 Python imutável, carregada deterministicamente, sem SQL, rede, leitura de
 filesystem mutável em runtime ou variável de ambiente capaz de confiar em hash
 arbitrário. Não é parâmetro de comando, campo de Artifact/Evidence, texto do
-usuário, `source_id`, prefixo de origem nem aprovação G6. Esta decisão não cria
-o arquivo nesta execução.
+usuário, `source_id`, prefixo de origem nem aprovação G6.
 
 `locator_digest` é o SHA-256 UTF-8 de
 `locator_to_canonical_json(Evidence.locator)`, representação canônica já usada
@@ -233,9 +234,8 @@ substituem o match exato da âncora.
 A entrada no manifesto autoriza somente o uso da combinação sintética exata de
 Artifact, conteúdo localizado e locator em `INTERNAL_CLAIM_VERIFICATION`. Ela
 não prova autenticidade externa, não aprova fonte real, não satisfaz G6, não
-torna Evidence `ADMISSIBLE` e não torna Claim factual ou reportável. O scoping
-arquitetural resolve como comprovar o corpus; a implementação do
-manifesto/política e sua revisão independente ainda não ocorreram.
+torna Evidence `ADMISSIBLE` e não torna Claim factual ou reportável. O manifesto,
+a política e sua recomputação independente foram aprovados no gate final F5.2.
 
 ### 4. Modelo de Claim
 
@@ -395,7 +395,7 @@ determina o outcome.
 
 ### 11. Portas e serviços internos
 
-A futura porta `ClaimRepository` deve oferecer somente:
+A porta `ClaimRepository` oferece somente:
 
 - lock tenant-scoped de command ID;
 - lock da história da Claim;
@@ -417,7 +417,7 @@ Não existe HTTP ou interface pública nesta decisão.
 
 ### 12. Persistência proposta
 
-Somente duas tabelas futuras:
+Somente duas tabelas:
 
 1. `claim`;
 2. `claim_evidence_link`.
@@ -441,7 +441,7 @@ decisão com a versão correspondente do código/configuração interna. Ele nã
 copia os cinco campos da âncora: Evidence/Artifact históricos preservam os
 valores reconstituídos usados na avaliação.
 
-A migration futura:
+A migration:
 
 - será posterior a `20260814_11`;
 - não reescreverá a migration F5.1;
@@ -521,8 +521,7 @@ correção de Evidence e revogação de Evidence.
   digest do manifesto.
 - O outcome é reproduzível e não pode ser imposto por `OWNER` ou `ADMIN`.
 - Predicate/version permanecem estáveis em toda a série da Claim.
-- Implementação e revisão independente do manifesto/política ainda são
-  necessárias.
+- Manifesto/política foram implementados e recomputados independentemente.
 - O fluxo runtime continua sem caminho materializado até `VERIFYING`.
 
 ## Alternativas rejeitadas
@@ -581,9 +580,31 @@ correção de Evidence e revogação de Evidence.
 - API, frontend, jobs, workers, filas, scheduler, outbox e fan-out/fan-in;
 - F5.3.
 
-## Critérios objetivos para futura aceitação
+## Parecer independente e correções de fechamento
 
-Este ADR só pode mudar para `Accepted` após:
+A revisão independente de 2026-08-22 emitiu `APPROVED_WITH_FIXES`. A inspeção
+direta confirmou quatro achados, corrigidos no mesmo gate:
+
+1. snapshots JSON de valor e temporalidade aceitavam coerção por `str()` e
+   campos desconhecidos; agora exigem conjunto exato de chaves, tipos JSON
+   exatos e round-trip canônico;
+2. leitura histórica omitia `FAILED` e `CANCELLED`; ambos passaram a ser
+   legíveis, sem ampliar a mutação além de `VERIFYING`;
+3. `ClaimHistory` não vinculava `requested_by`/`evaluated_at` a
+   `created_by`/`created_at`; a proveniência agora é invariante do agregado;
+4. assessment com múltiplas Evidences podia reler estados sob snapshots de
+   statements diferentes; todos os history locks são adquiridos em ordem
+   canônica antes da releitura.
+
+A revisão recomputou bytes, conteúdo, locator e manifesto diretamente da
+fixture sintética, confirmou digest
+`535509a811baf90ccbe60651ec73a9c18b5260597f69a05762f6451fc8314c7c`,
+executou regressão F5.1, PostgreSQL, migrations e o quality gate integral. F5.3
+permanece não autorizada.
+
+## Critérios objetivos de aceitação
+
+O aceite exige, e o gate independente comprovou:
 
 1. manifesto interno e política serem implementados com
    `ControlledEvidenceAnchorV1`, digest canônico verificado, fixtures
@@ -611,5 +632,6 @@ Este ADR só pode mudar para `Accepted` após:
 18. policy V1 restringir storage/retention/display a
     `EXCERPT_ONLY`/`INDEFINITE`/`FULL` e exigir `content_original` íntegro.
 
-Até esses critérios serem cumpridos, esta decisão permanece `Proposed` e não
-autoriza implementação.
+Todos os critérios aplicáveis foram cumpridos no gate independente. Este aceite
+autoriza somente o fechamento da F5.2; não conclui a Fase 5/G4, não altera o
+Gate E2E e não autoriza F5.3.

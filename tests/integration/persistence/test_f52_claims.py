@@ -268,6 +268,42 @@ def test_database_scope_constraints_and_mapper_tamper_fail_closed(engine: Engine
         unit_of_work.claims.get_history(actor.workspace_id, claim.id)
 
 
+@pytest.mark.parametrize(
+    ("value_snapshot", "temporal_snapshot"),
+    [
+        ({"value": 123}, {"reason": "NOT_PROVIDED"}),
+        (
+            {"value": "123", "unexpected": "payload"},
+            {"reason": "NOT_PROVIDED"},
+        ),
+        (
+            {"value": "123"},
+            {"reason": "NOT_PROVIDED", "unexpected": "payload"},
+        ),
+    ],
+)
+def test_json_snapshot_tamper_fails_closed_without_digest_mismatch(
+    engine: Engine,
+    value_snapshot: dict[str, object],
+    temporal_snapshot: dict[str, object],
+) -> None:
+    actor, evidence, service = _seed_verifying(engine)
+    command = replace(_command(evidence), value=TextClaimValue("123"))
+    claim = service.register(actor, command).history.latest
+    with engine.begin() as connection:
+        connection.execute(
+            sa.update(claim_table)
+            .where(claim_table.c.id == claim.id.value)
+            .values(
+                value_snapshot=value_snapshot,
+                temporal_snapshot=temporal_snapshot,
+            )
+        )
+
+    with pytest.raises(PersistenceDataError), PostgreSQLUnitOfWork(engine) as unit_of_work:
+        unit_of_work.claims.get_history(actor.workspace_id, claim.id)
+
+
 @pytest.mark.parametrize("operation", ["correct", "revoke"])
 def test_claim_serializes_against_evidence_mutation_without_sleep(
     engine: Engine, operation: str

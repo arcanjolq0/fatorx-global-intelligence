@@ -36,4 +36,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0022 | Accepted | execução direta controlada F4.6, corrigida por F4.6.1/F4.6.2 |
 | 0023 | Accepted | separação entre Gate F4-F e Gate E2E para handoff à Fase 5 |
 | 0024 | Accepted | núcleo canônico de evidências F5.1 aceito após revisão independente com correções |
-| 0025 | Proposed | Claims F5.2 e elegibilidade contextual por corpus sintético controlado; candidata à revisão independente |
+| 0025 | Accepted | Claims F5.2 e elegibilidade contextual aceitas após revisão independente com correções |

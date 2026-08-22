@@ -185,13 +185,15 @@ downgrade destrutivo. Histórias novas ou corrigidas são validadas integralment
 antes do primeiro append; regressões devem provar que uma história inválida não
 deixa artefato, versão ou evento parcial.
 
-Na F5.2 candidata, testes unitários cobrem todos os predicates/value types V1,
+Na F5.2 aceita, testes unitários cobrem todos os predicates/value types V1,
 temporalidade, série/links, redaction, digests, assessment, comandos sem campos
 de decisão, manifesto reproduzido de bytes sintéticos e todas as condições da
 política conservadora. Testes PostgreSQL cobrem round-trip, replay, rollback
 antes do append, FKs de escopo, CHECKs fechados, adulteração, preservação F5.1,
 downgrade protegido e concorrência Claim×correção/revogação de Evidence com
-eventos de sincronização, sem `sleep()`. Testes de arquitetura impedem I/O,
+eventos de sincronização, sem `sleep()`. O fechamento independente acrescentou
+regressões para tipos/chaves JSON exatos, snapshots canônicos, proveniência do
+link, leitura terminal e locks ordenados do assessment. Testes de arquitetura impedem I/O,
 frameworks e dependências de fases posteriores no pacote `intelligence.claims`.
 O módulo `intelligence.claims` deve manter ao menos 90% de branch coverage e a
 cobertura global não pode cair abaixo de 80%.

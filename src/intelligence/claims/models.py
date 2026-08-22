@@ -405,6 +405,11 @@ class ClaimHistory:
                 or link.entity_resolution_decision_id != claim.entity_resolution_decision_id
             ):
                 raise ClaimHistoryError("Claim link scope or custody changed.")
+            if (
+                link.use_decision.requested_by != claim.created_by
+                or link.use_decision.evaluated_at != claim.created_at
+            ):
+                raise ClaimHistoryError("Claim link decision provenance changed.")
             identity = (link.claim_id, link.evidence_id)
             if identity in seen:
                 raise ClaimHistoryError("Evidence is duplicated within a Claim version.")
@@ -583,22 +588,39 @@ def claim_value_to_snapshot(value: ClaimValue) -> tuple[str, dict[str, object]]:
 def claim_value_from_snapshot(value_type: str, snapshot: dict[str, object]) -> ClaimValue:
     try:
         if value_type == "TEXT":
-            return TextClaimValue(str(snapshot["value"]))
-        if value_type == "REGISTRATION_STATUS":
-            return RegistrationStatusClaimValue(RegistrationStatus(str(snapshot["status"])))
-        if value_type == "DATE":
-            return DateClaimValue(date.fromisoformat(str(snapshot["value"])))
-        if value_type == "COUNTRY_CODE":
-            return CountryCodeClaimValue(CountryCode(str(snapshot["country"])))
-        if value_type == "REGISTRATION_IDENTIFIER":
-            return RegistrationIdentifierClaimValue(
-                identifier_type=str(snapshot["identifier_type"]),
-                original_value=str(snapshot["original_value"]),
-                jurisdiction=CountryCode(str(snapshot["jurisdiction"])),
+            _require_string_snapshot(snapshot, frozenset({"value"}), "Claim value")
+            parsed: ClaimValue = TextClaimValue(snapshot["value"])  # type: ignore[arg-type]
+        elif value_type == "REGISTRATION_STATUS":
+            _require_string_snapshot(snapshot, frozenset({"status"}), "Claim value")
+            parsed = RegistrationStatusClaimValue(
+                RegistrationStatus(snapshot["status"])  # type: ignore[arg-type]
             )
-    except (KeyError, TypeError, ValueError) as error:
+        elif value_type == "DATE":
+            _require_string_snapshot(snapshot, frozenset({"value"}), "Claim value")
+            parsed = DateClaimValue(date.fromisoformat(snapshot["value"]))  # type: ignore[arg-type]
+        elif value_type == "COUNTRY_CODE":
+            _require_string_snapshot(snapshot, frozenset({"country"}), "Claim value")
+            parsed = CountryCodeClaimValue(
+                CountryCode(snapshot["country"])  # type: ignore[arg-type]
+            )
+        elif value_type == "REGISTRATION_IDENTIFIER":
+            _require_string_snapshot(
+                snapshot,
+                frozenset({"identifier_type", "original_value", "jurisdiction"}),
+                "Claim value",
+            )
+            parsed = RegistrationIdentifierClaimValue(
+                identifier_type=snapshot["identifier_type"],  # type: ignore[arg-type]
+                original_value=snapshot["original_value"],  # type: ignore[arg-type]
+                jurisdiction=CountryCode(snapshot["jurisdiction"]),  # type: ignore[arg-type]
+            )
+        else:
+            raise ClaimIntegrityError("Persisted Claim value type is unsupported.")
+        if claim_value_to_snapshot(parsed) != (value_type, snapshot):
+            raise ClaimIntegrityError("Persisted Claim value is not canonical.")
+        return parsed
+    except (InvariantViolationError, KeyError, TypeError, ValueError) as error:
         raise ClaimIntegrityError("Persisted Claim value is invalid.") from error
-    raise ClaimIntegrityError("Persisted Claim value type is unsupported.")
 
 
 def claim_temporal_to_snapshot(value: ClaimTemporal) -> tuple[str, dict[str, object]]:
@@ -620,17 +642,41 @@ def claim_temporal_to_snapshot(value: ClaimTemporal) -> tuple[str, dict[str, obj
 def claim_temporal_from_snapshot(temporal_type: str, snapshot: dict[str, object]) -> ClaimTemporal:
     try:
         if temporal_type == "POINT":
-            return PointClaimTemporal(datetime.fromisoformat(str(snapshot["occurred_at"])))
-        if temporal_type == "PERIOD":
-            return PeriodClaimTemporal(
-                valid_from=datetime.fromisoformat(str(snapshot["valid_from"])),
-                valid_until=datetime.fromisoformat(str(snapshot["valid_until"])),
+            _require_string_snapshot(snapshot, frozenset({"occurred_at"}), "Claim temporal")
+            parsed: ClaimTemporal = PointClaimTemporal(
+                datetime.fromisoformat(snapshot["occurred_at"])  # type: ignore[arg-type]
             )
-        if temporal_type == "UNDATED":
-            return UndatedClaimTemporal(TemporalAbsenceReason(str(snapshot["reason"])))
-    except (KeyError, TypeError, ValueError) as error:
+        elif temporal_type == "PERIOD":
+            _require_string_snapshot(
+                snapshot,
+                frozenset({"valid_from", "valid_until"}),
+                "Claim temporal",
+            )
+            parsed = PeriodClaimTemporal(
+                valid_from=datetime.fromisoformat(snapshot["valid_from"]),  # type: ignore[arg-type]
+                valid_until=datetime.fromisoformat(snapshot["valid_until"]),  # type: ignore[arg-type]
+            )
+        elif temporal_type == "UNDATED":
+            _require_string_snapshot(snapshot, frozenset({"reason"}), "Claim temporal")
+            parsed = UndatedClaimTemporal(
+                TemporalAbsenceReason(snapshot["reason"])  # type: ignore[arg-type]
+            )
+        else:
+            raise ClaimIntegrityError("Persisted Claim temporal type is unsupported.")
+        if claim_temporal_to_snapshot(parsed) != (temporal_type, snapshot):
+            raise ClaimIntegrityError("Persisted Claim temporal value is not canonical.")
+        return parsed
+    except (InvariantViolationError, KeyError, TypeError, ValueError) as error:
         raise ClaimIntegrityError("Persisted Claim temporal value is invalid.") from error
-    raise ClaimIntegrityError("Persisted Claim temporal type is unsupported.")
+
+
+def _require_string_snapshot(
+    snapshot: dict[str, object], expected_keys: frozenset[str], name: str
+) -> None:
+    if not isinstance(snapshot, dict) or frozenset(snapshot) != expected_keys:
+        raise ClaimIntegrityError(f"Persisted {name} fields are invalid.")
+    if any(type(snapshot[key]) is not str for key in expected_keys):
+        raise ClaimIntegrityError(f"Persisted {name} JSON types are invalid.")
 
 
 def _claim_ids(claim: Claim) -> None:

@@ -31,14 +31,16 @@ from intelligence.claims.models import (
     ClaimCreationMethod,
     ClaimCriticality,
     ClaimEvidenceRole,
+    ClaimHistory,
     ClaimPredicate,
     RegistrationStatus,
     RegistrationStatusClaimValue,
     TemporalAbsenceReason,
     TextClaimValue,
     UndatedClaimTemporal,
+    build_claim_link,
 )
-from intelligence.domain.identifiers import ClaimCommandId
+from intelligence.domain.identifiers import ClaimCommandId, EvidenceId
 from intelligence.domain.identities import MembershipRole
 from intelligence.domain.investigations import InvestigationState
 from tests.unit.application.fakes import FakeClock, FakeDatabase, FakeUnitOfWorkFactory
@@ -216,3 +218,83 @@ def test_collecting_and_analyst_mutation_fail_closed() -> None:
     analyst, analyst_database, _, analyst_service = _setup(role=MembershipRole.ANALYST)
     with pytest.raises(AuthorizationDeniedError):
         analyst_service.register(analyst, _register(analyst_database))
+
+
+@pytest.mark.parametrize(
+    "terminal_state", [InvestigationState.CANCELLED, InvestigationState.FAILED]
+)
+def test_terminal_investigations_preserve_historical_read_but_block_mutation(
+    terminal_state: InvestigationState,
+) -> None:
+    actor, database, factory, service = _setup()
+    registered = service.register(actor, _register(database))
+    latest = registered.history.latest
+    verifying = database.investigations[(actor.workspace_id, latest.investigation_id)]
+    database.investigations[(actor.workspace_id, verifying.id)] = _later_investigation(
+        verifying,
+        state=terminal_state,
+        state_version=verifying.state_version + 1,
+    )
+
+    read_uow_index = len(factory.created)
+    read = service.get_history(actor, latest.id)
+
+    assert read.history == registered.history
+    evidence_id = registered.history.latest_links[0].evidence_id
+    assert factory.created[read_uow_index].evidence.history_lock_calls == [
+        (actor.workspace_id, evidence_id)
+    ]
+
+    with pytest.raises(InvalidClaimContextError):
+        service.correct(
+            actor,
+            CorrectClaim(
+                command_id=ClaimCommandId.new(),
+                claim_id=latest.id,
+                expected_claim_digest=latest.claim_digest,
+                predicate_code=latest.predicate_code,
+                predicate_version=latest.predicate_version,
+                value=TextClaimValue("Empresa Exemplo Corrigida S.A."),
+                temporal=latest.temporal,
+                criticality=latest.criticality,
+                creation_method=latest.creation_method,
+                creation_method_version=latest.creation_method_version,
+                correction_reason=ClaimCorrectionReason.VALUE_CORRECTION,
+                links=(
+                    ProposedClaimEvidenceLink(
+                        evidence_id,
+                        registered.history.latest_links[0].evidence_digest,
+                        ClaimEvidenceRole.SUPPORTS,
+                    ),
+                ),
+            ),
+        )
+
+
+def test_assessment_locks_all_linked_evidence_in_canonical_order_before_reading() -> None:
+    actor, database, factory, service = _setup()
+    registered = service.register(actor, _register(database))
+    claim = registered.history.latest
+    existing_link = registered.history.latest_links[0]
+    missing_evidence_id = EvidenceId.from_value("00000000-0000-4000-8000-000000000001")
+    qualifier = build_claim_link(
+        claim=claim,
+        evidence_id=missing_evidence_id,
+        evidence_digest=existing_link.evidence_digest,
+        role=ClaimEvidenceRole.QUALIFIES,
+        use_decision=existing_link.use_decision,
+    )
+    expanded = ClaimHistory(
+        versions=registered.history.versions,
+        links=(*registered.history.links, qualifier),
+    )
+    database.claim_histories[(actor.workspace_id, claim.series_id)] = expanded
+
+    read_uow_index = len(factory.created)
+    service.get_history(actor, claim.id)
+
+    locked_ids = [
+        evidence_id
+        for _, evidence_id in factory.created[read_uow_index].evidence.history_lock_calls
+    ]
+    assert locked_ids == sorted((existing_link.evidence_id, missing_evidence_id), key=str)

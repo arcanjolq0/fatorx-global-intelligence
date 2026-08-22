@@ -231,6 +231,27 @@ def test_history_requires_support_and_preserves_predicate() -> None:
     assert history.latest_links == (support,)
 
 
+@pytest.mark.parametrize("field", ["requested_by", "evaluated_at"])
+def test_history_binds_link_decision_provenance_to_claim_version(field: str) -> None:
+    claim = _claim()
+    decision = _decision(ClaimEvidenceUseOutcome.ELIGIBLE)
+    if field == "requested_by":
+        decision = replace(decision, requested_by=USER_ID.new())
+    else:
+        decision = replace(decision, evaluated_at=FIXED_TIME + timedelta(seconds=1))
+    evidence = synthetic_history().latest
+    link = build_claim_link(
+        claim=claim,
+        evidence_id=evidence.id,
+        evidence_digest=evidence.evidence_digest,
+        role=ClaimEvidenceRole.SUPPORTS,
+        use_decision=decision,
+    )
+
+    with pytest.raises(ClaimHistoryError, match="provenance"):
+        ClaimHistory((claim,), (link,))
+
+
 def test_tampered_digests_fail_closed() -> None:
     claim = _claim()
     with pytest.raises(ClaimIntegrityError, match="digest"):
