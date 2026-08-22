@@ -198,7 +198,7 @@ permanece disponível em `FAILED` e `CANCELLED`; mutação continua exclusiva de
 `VERIFYING`. A F5.2 não implementa `ADMISSIBLE`, revisão humana, factualidade,
 reportabilidade, risco, scoring, relatório ou F5.3. O ADR 0025 está `Accepted`.
 
-## 16. Implementação candidata — F5.3
+## 16. Implementação aceita — F5.3
 
 A F5.3 adiciona decisões globais imutáveis `ADMISSIBLE`, `RESTRICTED` e `REJECTED`
 para uma versão exata de Evidence. O status efetivo é projetado com corte `as_of`:
@@ -212,3 +212,10 @@ O único basis V1 é `CONTROLLED_TEST_EVIDENCE`, para purpose
 kind, locator type e digest da canonicalização F5.1. Não há fonte real nem Gate G6.
 `ADMIT` exige ator diferente de `created_by` da versão exata; `RESTRICT` e `REJECT`
 podem ser aplicados pelo criador. Isso ainda não torna Claim factual ou reportável.
+
+Read, replay e supersession revalidam toda decisão persistida contra a versão exata.
+Para `ADMISSIBLE`, a policy reaplica self-approval, âncora completa,
+storage/retention/display e SHA do conteúdo original; digests e snapshots estruturais
+isolados não bastam. Decisões negativas não exigem âncora positiva. A leitura bloqueia
+e relê Evidence e admissibilidade na ordem canônica antes de projetar, evitando estado
+misto sob `READ COMMITTED` sem persistir o resultado efetivo.

@@ -14,7 +14,10 @@ from intelligence.application.errors import (
     InvalidEvidenceAdmissibilityError,
     ResourceNotFoundError,
 )
-from intelligence.application.evidence_admissibility import DecideEvidenceAdmissibility
+from intelligence.application.evidence_admissibility import (
+    DecideEvidenceAdmissibility,
+    digest_decide_evidence_admissibility,
+)
 from intelligence.application.evidence_admissibility_policy import (
     ControlledTestEvidenceAnchorV1,
     EvidenceAdmissibilityPolicyV1,
@@ -27,6 +30,7 @@ from intelligence.application.services.evidence_admissibility import (
 from intelligence.domain.identifiers import (
     CorrelationId,
     EvidenceAdmissibilityCommandId,
+    EvidenceAdmissibilityDecisionId,
     EvidenceId,
     MembershipId,
     UserId,
@@ -42,8 +46,13 @@ from intelligence.domain.identities import (
 from intelligence.domain.investigations import InvestigationState
 from intelligence.evidence.admissibility import (
     EffectiveEvidenceAdmissibilityStatus,
+    EvidenceAdmissibilityDecisionOutcome,
+    EvidenceAdmissibilityHistory,
+    EvidenceAdmissibilityPurpose,
     EvidenceAdmissibilityReason,
     EvidenceAdmissibilityRequestedAction,
+    EvidenceAdmissionBasis,
+    build_evidence_admissibility_decision,
 )
 from intelligence.evidence.models import EvidenceHistory
 from tests.unit.application.fakes import FakeClock, FakeDatabase, FakeUnitOfWorkFactory
@@ -271,3 +280,57 @@ def test_replay_fails_closed_if_its_evidence_history_disappears() -> None:
     database.evidence_histories.clear()
     with pytest.raises(InvalidEvidenceAdmissibilityError):
         service.decide(actor, command)
+
+
+def test_forged_persisted_admission_blocks_read_replay_and_supersession() -> None:
+    creator, database, _, service, evidence = _service_setup()
+    command = _command(evidence, action=EvidenceAdmissibilityRequestedAction.ADMIT)
+    target = evidence.latest
+    manifest = build_manifest(
+        (
+            ControlledTestEvidenceAnchorV1(
+                artifact_original_sha256=evidence.artifact.original_content_sha256,
+                evidence_content_sha256=target.content_sha256,
+                evidence_kind=target.kind,
+                locator_type=target.locator.type,
+                locator_digest=locator_digest(target.locator),
+            ),
+        )
+    )
+    forged = build_evidence_admissibility_decision(
+        decision_id=EvidenceAdmissibilityDecisionId.new(),
+        evidence=target,
+        decision_sequence=1,
+        supersedes_decision_id=None,
+        outcome=EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE,
+        reason_code=EvidenceAdmissibilityReason.CONTROLLED_TEST_EVIDENCE_ADMITTED,
+        policy_id="F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1",
+        policy_version=1,
+        purpose=EvidenceAdmissibilityPurpose.INTERNAL_FACTUAL_EVIDENCE_USE,
+        admission_basis=EvidenceAdmissionBasis.CONTROLLED_TEST_EVIDENCE,
+        controlled_trust_root_id=manifest.manifest_id,
+        controlled_trust_root_version=manifest.version,
+        controlled_trust_root_digest=manifest.digest,
+        valid_until=None,
+        command_id=command.command_id,
+        command_digest=digest_decide_evidence_admissibility(creator, command),
+        decided_by=creator.user_id,
+        decided_at=NOW,
+    )
+    forged_history = EvidenceAdmissibilityHistory(decisions=(forged,))
+    database.evidence_admissibility_histories[(creator.workspace_id, target.id)] = forged_history
+
+    with pytest.raises(InvalidEvidenceAdmissibilityError):
+        service.read(creator, target.id, as_of=NOW)
+    with pytest.raises(InvalidEvidenceAdmissibilityError):
+        service.decide(creator, command)
+    with pytest.raises(InvalidEvidenceAdmissibilityError):
+        service.decide(
+            creator,
+            _command(evidence, previous=forged.decision_digest),
+        )
+    assert (
+        database.evidence_admissibility_histories[(creator.workspace_id, target.id)]
+        == forged_history
+    )
+    assert all(event.resource_id is None for event in database.audit_events)

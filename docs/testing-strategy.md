@@ -198,12 +198,20 @@ frameworks e dependências de fases posteriores no pacote `intelligence.claims`.
 O módulo `intelligence.claims` deve manter ao menos 90% de branch coverage e a
 cobertura global não pode cair abaixo de 80%.
 
-Na implementação candidata F5.3, testes focais cobrem vocabulários fechados, trust
+Na implementação aceita F5.3, testes focais cobrem vocabulários fechados, trust
 root recomputável, self-approval, outcomes negativos, projeção histórica, expiração,
 revogação não retroativa, replay com `decided_at` persistido, binding composto,
 reconstituição fail-closed, constraints PostgreSQL e downgrade protegido. Regressões
 F5.1/F5.2 devem continuar confirmando Evidence persistida `PENDING` e elegibilidade
 contextual sem promoção global.
+
+A revisão independente F5.3 acrescenta persistência semanticamente forjada com
+digests válidos para self-approval, laundering da raiz e violação de policy positiva;
+read, replay e supersession devem falhar fechado. A matriz PostgreSQL usa
+`threading.Event`/`Barrier`, nunca `sleep()`, para read × decisão inicial,
+read × supersession, read × correção, read × revogação, decisão × correção,
+decisão × revogação e decisão × decisão. Cada cenário exige ausência de deadlock e
+resultado coerente com alguma serialização válida.
 
 ### 3.4 Testes de segurança
 

@@ -50,13 +50,13 @@
 - `validation/f4.4.1-plan-continuity.md`: continuidade histórica, caminho crítico executável e constraint de custo corrigida.
 - `validation/f5.1-canonical-evidence-core.md`: cadeia de custódia, tenancy, concorrência, migration e aceite independente da F5.1.
 - `validation/f5.2-claims-contextual-evidence-eligibility.md`: revisão independente F5.2, correções, corpus sintético, Claims, PostgreSQL, concorrência, segurança e gates finais.
-- `validation/f5.3-global-evidence-admissibility.md`: implementação candidata F5.3, trust root próprio, projeção temporal, PostgreSQL e gates.
+- `validation/f5.3-global-evidence-admissibility.md`: revisão independente F5.3, correções de integridade semântica e concorrência, trust root, PostgreSQL e gates finais.
 
 ## Tarefas da Fase 5
 
 - `tasks/f5/F5_1_NUCLEO_CANONICO_EVIDENCIAS.md`: implementação limitada do núcleo canônico de evidências, aceita após revisão independente com correções.
 - `tasks/f5/F5_2_CLAIMS_E_ADMISSIBILIDADE_CONTEXTUAL.md`: escopo e critérios da F5.2 aceita após revisão independente com correções.
-- `tasks/f5/F5_3_ADMISSIBILIDADE_GLOBAL_EVIDENCIAS.md`: escopo e critérios da implementação candidata F5.3.
+- `tasks/f5/F5_3_ADMISSIBILIDADE_GLOBAL_EVIDENCIAS.md`: escopo, critérios e fechamento independente da F5.3 aceita com correções.
 
 ## Tarefas da Fase 3
 
@@ -110,7 +110,7 @@
 - `adr/0023-phase-4-gate-and-phase-5-handoff.md`: decisão aceita que separa o Gate F4-F do Gate E2E antes da Fase 5.
 - `adr/0024-canonical-evidence-core.md`: decisão aceita da F5.1 sobre artefato, evidência versionada e lifecycle append-only.
 - `adr/0025-claims-and-contextual-evidence-admissibility.md`: arquitetura aceita para Claims F5.2 e elegibilidade contextual por corpus sintético controlado.
-- `adr/0026-global-evidence-admissibility-decisions.md`: arquitetura `Proposed` implementada como candidata para decisões globais F5.3.
+- `adr/0026-global-evidence-admissibility-decisions.md`: arquitetura `Accepted` das decisões globais F5.3.
 
 ## Regra de consistência
 

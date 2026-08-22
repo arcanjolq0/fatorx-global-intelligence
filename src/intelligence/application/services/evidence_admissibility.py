@@ -144,7 +144,7 @@ class EvidenceAdmissibilityService:
                 ):
                     raise EvidenceAdmissibilityPredecessorError()
                 if prior is not None:
-                    prior.validate_against(evidence_history)
+                    self._validate_persisted_history(evidence_history, prior)
                 evaluation = self._policy.evaluate(
                     history=evidence_history,
                     expected_evidence_id=command.evidence_id,
@@ -256,16 +256,16 @@ class EvidenceAdmissibilityService:
                 Permission.EVIDENCE_ADMISSIBILITY_READ,
                 AuditActionCode.EVIDENCE_ADMISSIBILITY_READ_DENIED,
             )
-            evidence = unit_of_work.evidence.get_history(actor.workspace_id, evidence_id)
-            if evidence is None:
-                self._reject(
-                    unit_of_work,
-                    actor,
-                    AuditActionCode.EVIDENCE_ADMISSIBILITY_READ_DENIED,
-                    AuditReasonCode.RESOURCE_NOT_FOUND,
-                    ResourceNotFoundError(),
-                )
             try:
+                evidence = self._locked_read_history(unit_of_work, actor, evidence_id)
+                if evidence is None:
+                    self._reject(
+                        unit_of_work,
+                        actor,
+                        AuditActionCode.EVIDENCE_ADMISSIBILITY_READ_DENIED,
+                        AuditReasonCode.RESOURCE_NOT_FOUND,
+                        ResourceNotFoundError(),
+                    )
                 self._validate_context(
                     unit_of_work,
                     actor,
@@ -279,7 +279,11 @@ class EvidenceAdmissibilityService:
                 effective = project_effective_evidence_admissibility(
                     evidence_history=evidence, decision_histories=histories, as_of=cutoff
                 )
-            except (InvalidEvidenceAdmissibilityError, DomainError) as cause:
+            except (
+                EvidenceAdmissibilityPolicyError,
+                InvalidEvidenceAdmissibilityError,
+                DomainError,
+            ) as cause:
                 error = InvalidEvidenceAdmissibilityError()
                 error.__cause__ = cause
                 self._reject(
@@ -346,8 +350,47 @@ class EvidenceAdmissibilityService:
             is not None
         )
         for history in result:
-            history.validate_against(evidence)
+            self._validate_persisted_history(evidence, history)
         return result
+
+    def _locked_read_history(
+        self,
+        unit_of_work: UnitOfWork,
+        actor: ActorContext,
+        evidence_id: EvidenceId,
+    ) -> EvidenceHistory | None:
+        """Stabilize the current Evidence version, then lock its decisions."""
+
+        observed = unit_of_work.evidence.get_history(actor.workspace_id, evidence_id)
+        while observed is not None:
+            observed_current_id = observed.latest.id
+            unit_of_work.evidence.acquire_history_lock(actor.workspace_id, observed_current_id)
+            locked = unit_of_work.evidence.get_history(actor.workspace_id, evidence_id)
+            if locked is None:
+                return None
+            if locked.latest.id != observed_current_id:
+                observed = locked
+                continue
+            unit_of_work.evidence_admissibility.acquire_history_lock(
+                actor.workspace_id, observed_current_id
+            )
+            stable = unit_of_work.evidence.get_history(actor.workspace_id, evidence_id)
+            if stable is None or stable.latest.id != observed_current_id:
+                raise InvalidEvidenceAdmissibilityError()
+            return stable
+        return None
+
+    def _validate_persisted_history(
+        self,
+        evidence: EvidenceHistory,
+        history: EvidenceAdmissibilityHistory,
+    ) -> None:
+        history.validate_against(evidence)
+        for decision in history.decisions:
+            self._policy.validate_persisted_decision(
+                history=evidence,
+                decision=decision,
+            )
 
     def _replay(
         self,
@@ -376,13 +419,24 @@ class EvidenceAdmissibilityService:
                 AuditReasonCode.EVIDENCE_ADMISSIBILITY_HISTORY_INVALID,
                 InvalidEvidenceAdmissibilityError(),
             )
-        original_history = history.through(persisted.id)
-        original_history.validate_against(evidence)
-        effective = project_effective_evidence_admissibility(
-            evidence_history=evidence,
-            decision_histories=(original_history,),
-            as_of=persisted.decided_at,
-        )
+        try:
+            self._validate_persisted_history(evidence, history)
+            original_history = history.through(persisted.id)
+            effective = project_effective_evidence_admissibility(
+                evidence_history=evidence,
+                decision_histories=(original_history,),
+                as_of=persisted.decided_at,
+            )
+        except (EvidenceAdmissibilityPolicyError, DomainError) as cause:
+            error = InvalidEvidenceAdmissibilityError()
+            error.__cause__ = cause
+            self._reject(
+                unit_of_work,
+                actor,
+                AuditActionCode.EVIDENCE_ADMISSIBILITY_DECIDED,
+                AuditReasonCode.EVIDENCE_ADMISSIBILITY_HISTORY_INVALID,
+                error,
+            )
         unit_of_work.commit()
         return EvidenceAdmissibilityOperationResult(
             history=original_history, effective=effective, replayed=True

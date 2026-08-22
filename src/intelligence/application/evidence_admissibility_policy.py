@@ -12,6 +12,7 @@ from intelligence.domain.errors import InvariantViolationError
 from intelligence.domain.identifiers import EvidenceId, UserId
 from intelligence.domain.time import normalize_utc
 from intelligence.evidence.admissibility import (
+    EvidenceAdmissibilityDecision,
     EvidenceAdmissibilityDecisionOutcome,
     EvidenceAdmissibilityPurpose,
     EvidenceAdmissibilityReason,
@@ -20,6 +21,7 @@ from intelligence.evidence.admissibility import (
 )
 from intelligence.evidence.models import (
     ArtifactStorageMode,
+    Evidence,
     EvidenceDisplayMode,
     EvidenceHistory,
     EvidenceKind,
@@ -216,9 +218,82 @@ class EvidenceAdmissibilityPolicyV1:
                 else EvidenceAdmissibilityDecisionOutcome.REJECTED
             )
             return self._evaluation(outcome, reason_code, None)
+        self._validate_positive_preconditions(
+            history=history,
+            evidence=evidence,
+            decided_by=decided_by,
+            decided_at=instant,
+            valid_until=requested_valid_until,
+        )
+        return self._evaluation(
+            EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE,
+            reason_code,
+            requested_valid_until,
+        )
+
+    def validate_persisted_decision(
+        self,
+        *,
+        history: EvidenceHistory,
+        decision: EvidenceAdmissibilityDecision,
+    ) -> None:
+        """Reproduce the policy semantics of one persisted exact-version decision."""
+
+        if not isinstance(history, EvidenceHistory) or not isinstance(
+            decision, EvidenceAdmissibilityDecision
+        ):
+            raise TypeError("history and decision must be F5.3 domain records")
+        evidence = next(
+            (item for item in history.versions if item.id == decision.evidence_id),
+            None,
+        )
+        if evidence is None or any(
+            (
+                decision.workspace_id != evidence.workspace_id,
+                decision.investigation_id != evidence.investigation_id,
+                decision.subject_company_id != evidence.subject_company_id,
+                decision.entity_resolution_decision_id != evidence.entity_resolution_decision_id,
+                decision.evidence_series_id != evidence.series_id,
+                decision.evidence_version != evidence.version,
+                decision.evidence_digest != evidence.evidence_digest,
+            )
+        ):
+            raise EvidenceAdmissibilityPolicyError(
+                "Persisted decision does not bind the exact Evidence version."
+            )
+        if (
+            decision.policy_id != EVIDENCE_ADMISSIBILITY_POLICY_ID
+            or decision.policy_version != EVIDENCE_ADMISSIBILITY_POLICY_VERSION
+            or decision.purpose is not EvidenceAdmissibilityPurpose.INTERNAL_FACTUAL_EVIDENCE_USE
+            or decision.admission_basis is not EvidenceAdmissionBasis.CONTROLLED_TEST_EVIDENCE
+            or decision.controlled_trust_root_id != self._manifest.manifest_id
+            or decision.controlled_trust_root_version != self._manifest.version
+            or decision.controlled_trust_root_digest != self._manifest.digest
+        ):
+            raise EvidenceAdmissibilityPolicyError(
+                "Persisted admissibility policy snapshot is unsupported."
+            )
+        if decision.outcome is EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE:
+            self._validate_positive_preconditions(
+                history=history,
+                evidence=evidence,
+                decided_by=decision.decided_by,
+                decided_at=decision.decided_at,
+                valid_until=decision.valid_until,
+            )
+
+    def _validate_positive_preconditions(
+        self,
+        *,
+        history: EvidenceHistory,
+        evidence: Evidence,
+        decided_by: UserId,
+        decided_at: datetime,
+        valid_until: datetime | None,
+    ) -> None:
         if decided_by == evidence.created_by:
             raise EvidenceSelfApprovalPolicyError("Evidence creator cannot self-approve ADMIT.")
-        if requested_valid_until is not None and requested_valid_until <= instant:
+        if valid_until is not None and valid_until <= decided_at:
             raise EvidenceAdmissibilityPolicyError("Expiration must follow decision time.")
         artifact_matches = tuple(
             item
@@ -246,11 +321,6 @@ class EvidenceAdmissibilityPolicyV1:
             or sha256(evidence.content_original.encode()).hexdigest() != evidence.content_sha256
         ):
             raise EvidenceAdmissibilityPolicyError("Retained Evidence content is unavailable.")
-        return self._evaluation(
-            EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE,
-            reason_code,
-            requested_valid_until,
-        )
 
     def _evaluation(
         self,

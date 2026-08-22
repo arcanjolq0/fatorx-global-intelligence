@@ -1,8 +1,8 @@
 # ADR 0026 — Decisões globais de admissibilidade de Evidence
 
-- Status: Proposed
+- Status: Accepted
 - Data: 2026-08-22
-- Decisores: responsável pelo projeto e futura revisão independente da F5.3
+- Decisores: responsável pelo projeto e revisão independente da F5.3
 - Relacionados: ADR 0003, ADR 0007, ADR 0008, ADR 0011, ADR 0013, ADR 0024 e ADR 0025
 
 ## Contexto
@@ -379,6 +379,13 @@ O serviço de admissibilidade não adquire lock de Claim. Uma futura revisão de
 Claim deverá respeitar a direção Claim → Evidences ordenadas → decisões de
 admissibilidade para não introduzir ciclo.
 
+Leituras também precisam representar um ponto transacional coerente sob o
+isolamento `READ COMMITTED`. O serviço faz uma leitura preliminar para descobrir
+a versão corrente observada, adquire o lock da história de Evidence dessa versão,
+relê até estabilizar o `latest`, adquire o lock da história de admissibilidade e
+relê antes de validar e projetar. A ordem Evidence → admissibilidade é a mesma das
+mutações e evita ciclo de locks. A leitura não altera o domínio.
+
 ### 15. Autorização
 
 | Papel   | Read | Admit | Restrict | Reject | Supersede |
@@ -415,6 +422,8 @@ trilha detalhada necessária.
 - comando não controla outcome, política, trust root ou instante;
 - source snapshots e manifesto F5.2 não concedem admissão;
 - reconstituição recalcula digests e falha fechado;
+- toda decisão persistida é revalidada semanticamente contra a versão exata de
+  Evidence e o snapshot da policy antes de read, replay ou supersession;
 - decisões fora do intervalo de existência da versão falham fechado;
 - toda decisão V1 preserva policy/purpose/basis e trust-root snapshot, sem
   transformar snapshot negativo em match positivo;
@@ -451,6 +460,10 @@ tratamento de contradições admissíveis e revisão humana factual em uma F5.4.
 - Corpus sintético permite validar a arquitetura sem inventar fonte real.
 - Separação de funções impede a promoção positiva pelo autor da versão.
 - Uma tabela e uma porta especializadas evitam um workflow genérico prematuro.
+- Digest, CHECK e identidade do manifesto são defesas estruturais, não prova
+  suficiente de uma admissão positiva: `ADMISSIBLE` persistido reaplica
+  self-approval, âncora exata, políticas de storage/retention/display e integridade
+  do conteúdo original.
 - O caso de uso continuará inalcançável pelo fluxo runtime normal até que a
   orchestration materialize a entrada em `VERIFYING`.
 - A F5.4 e o Gate G4 permanecem explicitamente abertos.
@@ -483,7 +496,6 @@ tratamento de contradições admissíveis e revisão humana factual em uma F5.4.
 
 ## Itens adiados
 
-- implementação da própria F5.3, dependente de autorização posterior;
 - fonte real, catálogo de fontes e Gate G6;
 - política de admissibilidade posterior para fontes aprovadas;
 - transições até `VERIFYING`;
@@ -494,10 +506,9 @@ tratamento de contradições admissíveis e revisão humana factual em uma F5.4.
 - HTTP, frontend, jobs, workers, filas, scheduler e outbox;
 - fechamento do Gate G4.
 
-## Critérios objetivos de aceite futuro
+## Critérios objetivos de aceite
 
-O status deste ADR só poderá mudar para `Accepted` depois que uma implementação
-explicitamente autorizada comprovar:
+O aceite foi condicionado a uma implementação explicitamente autorizada comprovar:
 
 1. Evidence F5.1 e seu status persistido continuam inalterados e `PENDING`;
 2. uma única tabela append-only e uma porta sem commit/update/delete;
@@ -522,5 +533,6 @@ explicitamente autorizada comprovar:
     builds e pacote limpo foram aprovados;
 20. revisão independente emitiu parecer binário de aceite.
 
-Até esse gate, este ADR permanece `Proposed`, a implementação permanece
-`NOT_STARTED` e o Gate G4 permanece aberto.
+O gate independente de 2026-08-22 emitiu `APPROVED_WITH_FIXES` após corrigir a
+revalidação semântica de decisões persistidas e a consistência transacional de
+read. O ADR passa a `Accepted`; o Gate G4 permanece aberto.

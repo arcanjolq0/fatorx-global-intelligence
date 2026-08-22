@@ -2,12 +2,12 @@
 
 ## Status
 
-**DRAFT ARQUITETURAL — IMPLEMENTAÇÃO NÃO INICIADA.**
+**CLOSED — APPROVED_WITH_FIXES.**
 
-Esta task documenta a unidade futura aprovada para desenho arquitetural. Não
-autoriza código, testes, migration, banco, dependência, commit, tag, F5.4,
-lifecycle, fonte real ou fechamento do Gate G4. O ADR 0026 permanece
-`Proposed` até implementação e revisão independente futuras.
+Esta task registra o contrato arquitetural e a implementação aceita da F5.3. O
+ADR 0026 está `Accepted` após todos os gates da revisão independente. F5.4,
+lifecycle adicional, fonte real e fechamento do
+Gate G4 continuam não autorizados.
 
 ## Baseline obrigatório
 
@@ -28,7 +28,7 @@ antes de alterar arquivos.
 
 ## Objetivo
 
-Materializar futuramente a menor fronteira capaz de decidir se uma versão exata
+Materializar a menor fronteira capaz de decidir se uma versão exata
 de Evidence é admissível para `INTERNAL_FACTUAL_EVIDENCE_USE`, sob política
 versionada, corpus sintético controlado, decisão humana rastreável e projeção
 efetiva reproduzível, sem alterar Evidence F5.1 nem antecipar revisão de Claim.
@@ -503,6 +503,18 @@ operação posterior relê e falha por stale/superseded/revoked quando necessár
 Replay sempre usa `operation_as_of = persisted_decision.decided_at`; não adquire
 Clock para refletir expiração que ocorreu depois da operação original.
 
+Leituras seguem Evidence → admissibilidade: descobrem preliminarmente a versão
+corrente, bloqueiam e relêem a série até estabilizar o `latest`, bloqueiam a
+história de decisões da versão corrente e relêem antes da projeção. Isso impede
+mistura de commits em read × decisão, read × correção e read × revogação sem
+alterar o isolamento global.
+
+Antes de read, replay ou supersession, cada decisão persistida é revalidada
+semanticamente contra a versão exata de Evidence. Uma admissão positiva reaplica
+self-approval, match integral da âncora, storage `EXCERPT_ONLY`, retention
+`INDEFINITE`, display `FULL`, conteúdo original e SHA; decisões negativas não
+exigem match positivo, mas preservam o snapshot fechado da policy.
+
 ## Persistência PostgreSQL
 
 ### Tabela evidence_admissibility_decision
@@ -882,12 +894,17 @@ O pacote candidato futuro deverá ser revisado sem assumir que a suíte existent
 13. confirmar que F5.4/G4 continuam abertos;
 14. classificar o gate como `APPROVED`, `APPROVED_WITH_FIXES` ou `BLOCKED`.
 
-## Estado deste draft
+## Estado da entrega
 
-- ADR 0026: `Proposed`;
-- implementação: `NOT_STARTED`;
-- migration: inexistente;
-- testes: não escritos;
+- ADR 0026: `Accepted`;
+- implementação: `CLOSED — APPROVED_WITH_FIXES`;
+- migration: `20260822_13`;
+- hardening independente: validação semântica de decisões persistidas e leitura
+  coerente sob concorrência;
+- testes focais: 75 aprovados, incluindo a matriz PostgreSQL sem `sleep()`;
+- regressões focais: F5.1 com 29 e F5.2 com 91 testes aprovados;
+- quality gate: 1592 testes Python e 1 Web aprovados, cobertura global 89,84%,
+  cobertura F5.3 95,25%, análise estática, scanner e builds aprovados;
 - F5.4: `NOT_STARTED / NOT_AUTHORIZED`;
 - Gate G4: aberto;
 - fonte real/G6: não iniciados.

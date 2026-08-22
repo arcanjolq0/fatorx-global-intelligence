@@ -316,7 +316,7 @@ reconstituição. `requested_by` e `evaluated_at` correspondem obrigatoriamente 
 `created_by` e `created_at` da versão. Assessment não é coluna: é recalculado em
 leitura sob locks ordenados das Evidences vinculadas.
 
-### EvidenceAdmissibilityDecision — candidata F5.3
+### EvidenceAdmissibilityDecision — aceita F5.3
 
 Materializada como `evidence_admissibility_decision`, uma linha imutável por decisão.
 A FK composta vincula `evidence_id`, série, versão, workspace, Investigation, Company e
@@ -330,7 +330,7 @@ Não existe tabela de projeção: `PENDING`, `EXPIRED` e `REVOKED` são derivado
 
 ### `ReviewDecision`
 
-Modelo futuro de F5.4, não materializado nem autorizado pela implementação candidata F5.3.
+Modelo futuro de F5.4, não materializado nem autorizado pela implementação aceita F5.3.
 
 Campos: `id`, `workspace_id`, `target_type`, `target_id`, `decision`, `reason_code`, `justification`, `reviewer_id`, `created_at`, `supersedes_decision_id`.
 

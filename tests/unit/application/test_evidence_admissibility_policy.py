@@ -20,11 +20,20 @@ from intelligence.application.evidence_admissibility_policy import (
     manifest_digest,
 )
 from intelligence.domain.errors import InvariantViolationError
-from intelligence.domain.identifiers import EvidenceId, UserId
+from intelligence.domain.identifiers import (
+    EvidenceAdmissibilityCommandId,
+    EvidenceAdmissibilityDecisionId,
+    EvidenceId,
+    UserId,
+)
 from intelligence.evidence.admissibility import (
+    EvidenceAdmissibilityDecision,
     EvidenceAdmissibilityDecisionOutcome,
+    EvidenceAdmissibilityPurpose,
     EvidenceAdmissibilityReason,
     EvidenceAdmissibilityRequestedAction,
+    EvidenceAdmissionBasis,
+    build_evidence_admissibility_decision,
 )
 from intelligence.evidence.models import (
     ArtifactOriginType,
@@ -46,6 +55,47 @@ from tests.claims.synthetic_fixtures import (
 )
 
 DECIDER = UserId.from_value("40000000-0000-4000-8000-000000000001")
+
+
+def _persisted_decision(
+    history: EvidenceHistory,
+    *,
+    actor: UserId = DECIDER,
+    outcome: EvidenceAdmissibilityDecisionOutcome = (
+        EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE
+    ),
+) -> EvidenceAdmissibilityDecision:
+    reason = {
+        EvidenceAdmissibilityDecisionOutcome.ADMISSIBLE: (
+            EvidenceAdmissibilityReason.CONTROLLED_TEST_EVIDENCE_ADMITTED
+        ),
+        EvidenceAdmissibilityDecisionOutcome.RESTRICTED: (
+            EvidenceAdmissibilityReason.POLICY_OR_VERIFIABILITY_RESTRICTED
+        ),
+        EvidenceAdmissibilityDecisionOutcome.REJECTED: (
+            EvidenceAdmissibilityReason.CONTENT_OR_CONTEXT_REJECTED
+        ),
+    }[outcome]
+    return build_evidence_admissibility_decision(
+        decision_id=EvidenceAdmissibilityDecisionId.new(),
+        evidence=history.latest,
+        decision_sequence=1,
+        supersedes_decision_id=None,
+        outcome=outcome,
+        reason_code=reason,
+        policy_id="F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1",
+        policy_version=1,
+        purpose=EvidenceAdmissibilityPurpose.INTERNAL_FACTUAL_EVIDENCE_USE,
+        admission_basis=EvidenceAdmissionBasis.CONTROLLED_TEST_EVIDENCE,
+        controlled_trust_root_id=F5_3_CONTROLLED_TEST_EVIDENCE_MANIFEST_V1.manifest_id,
+        controlled_trust_root_version=F5_3_CONTROLLED_TEST_EVIDENCE_MANIFEST_V1.version,
+        controlled_trust_root_digest=F5_3_CONTROLLED_TEST_EVIDENCE_MANIFEST_V1.digest,
+        valid_until=None,
+        command_id=EvidenceAdmissibilityCommandId.new(),
+        command_digest=sha256(b"persisted-decision-command").hexdigest(),
+        decided_by=actor,
+        decided_at=FIXED_TIME,
+    )
 
 
 def _evaluate(
@@ -110,6 +160,43 @@ def test_exact_anchor_allows_admit_and_self_approval_is_denied() -> None:
     )
     with pytest.raises(EvidenceAdmissibilityPolicyError):
         _evaluate(actor=USER_ID)
+
+
+@pytest.mark.parametrize(
+    ("history", "actor"),
+    [
+        (synthetic_history(), USER_ID),
+        (synthetic_history(located=b"Different controlled text"), DECIDER),
+        (synthetic_history(storage_mode=ArtifactStorageMode.OBJECT), DECIDER),
+    ],
+)
+def test_persisted_admissible_semantic_forgery_fails_closed(
+    history: EvidenceHistory,
+    actor: UserId,
+) -> None:
+    decision = _persisted_decision(history, actor=actor)
+    with pytest.raises(EvidenceAdmissibilityPolicyError):
+        F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1.validate_persisted_decision(
+            history=history,
+            decision=decision,
+        )
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        EvidenceAdmissibilityDecisionOutcome.RESTRICTED,
+        EvidenceAdmissibilityDecisionOutcome.REJECTED,
+    ],
+)
+def test_persisted_negative_decisions_do_not_require_positive_anchor_match(
+    outcome: EvidenceAdmissibilityDecisionOutcome,
+) -> None:
+    history = synthetic_history(located=b"Not present in the positive trust root")
+    F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1.validate_persisted_decision(
+        history=history,
+        decision=_persisted_decision(history, actor=USER_ID, outcome=outcome),
+    )
 
 
 @pytest.mark.parametrize(
