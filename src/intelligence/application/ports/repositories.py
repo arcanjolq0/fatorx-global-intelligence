@@ -20,6 +20,7 @@ from intelligence.domain.identifiers import (
     CompanyId,
     EntityCandidateBatchId,
     EntityResolutionDecisionId,
+    EvidenceAdmissibilityCommandId,
     EvidenceCommandId,
     EvidenceId,
     InvestigationCommandId,
@@ -31,6 +32,10 @@ from intelligence.domain.identifiers import (
 from intelligence.domain.identities import EmailAddress, UserAccount, WorkspaceMembership
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
+from intelligence.evidence.admissibility import (
+    EvidenceAdmissibilityDecision,
+    EvidenceAdmissibilityHistory,
+)
 from intelligence.evidence.models import Artifact, Evidence, EvidenceHistory, EvidenceLifecycleEvent
 from intelligence.orchestration.collection_activation import CollectionRun
 from intelligence.orchestration.planning import InvestigationPlan
@@ -301,6 +306,34 @@ class ClaimRepository(Protocol):
         """Return the complete validated series affected by one command."""
 
 
+class EvidenceAdmissibilityDecisionRepository(Protocol):
+    """Append-only persistence for exact-version global admissibility decisions."""
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: EvidenceAdmissibilityCommandId
+    ) -> None:
+        """Serialize one tenant-scoped admissibility idempotency key."""
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, evidence_id: EvidenceId) -> None:
+        """Serialize decisions for one exact Evidence version."""
+
+    def add_initial(self, decision: EvidenceAdmissibilityDecision) -> None:
+        """Append the first decision for one exact Evidence version."""
+
+    def add_superseding(self, decision: EvidenceAdmissibilityDecision) -> None:
+        """Append a decision that supersedes the immediately prior decision."""
+
+    def get_history(
+        self, workspace_id: WorkspaceId, evidence_id: EvidenceId
+    ) -> EvidenceAdmissibilityHistory | None:
+        """Return the complete validated decision history for an Evidence version."""
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: EvidenceAdmissibilityCommandId
+    ) -> EvidenceAdmissibilityHistory | None:
+        """Return the validated history containing one command."""
+
+
 class UserRepository(Protocol):
     """Persistence operations for internal user identities."""
 
@@ -359,6 +392,7 @@ __all__ = [
     "CompanyRepository",
     "EntityCandidateBatchRepository",
     "EntityResolutionDecisionRepository",
+    "EvidenceAdmissibilityDecisionRepository",
     "EvidenceRepository",
     "InvestigationPlanRepository",
     "InvestigationRepository",

@@ -316,9 +316,21 @@ reconstituição. `requested_by` e `evaluated_at` correspondem obrigatoriamente 
 `created_by` e `created_at` da versão. Assessment não é coluna: é recalculado em
 leitura sob locks ordenados das Evidences vinculadas.
 
+### EvidenceAdmissibilityDecision — candidata F5.3
+
+Materializada como `evidence_admissibility_decision`, uma linha imutável por decisão.
+A FK composta vincula `evidence_id`, série, versão, workspace, Investigation, Company e
+entity-resolution decision à mesma linha real de `evidence`; `evidence_digest` é
+revalidado na reconstituição. Sequência e predecessor são tenant-scoped e o histórico
+é append-only. Policy, purpose, basis e snapshot do trust root são colunas fechadas,
+inclusive em outcomes negativos. `valid_until` existe somente para `ADMISSIBLE`.
+
+Não existe tabela de projeção: `PENDING`, `EXPIRED` e `REVOKED` são derivados por
+`as_of`. A coluna F5.1 `evidence.admissibility_status` permanece `PENDING`.
+
 ### `ReviewDecision`
 
-Modelo futuro, não materializado nem autorizado pela F5.2 aceita.
+Modelo futuro de F5.4, não materializado nem autorizado pela implementação candidata F5.3.
 
 Campos: `id`, `workspace_id`, `target_type`, `target_id`, `decision`, `reason_code`, `justification`, `reviewer_id`, `created_at`, `supersedes_decision_id`.
 

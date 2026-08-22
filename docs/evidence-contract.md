@@ -197,3 +197,18 @@ proveniência não corresponda ao ator/instante da versão. Leitura histórica
 permanece disponível em `FAILED` e `CANCELLED`; mutação continua exclusiva de
 `VERIFYING`. A F5.2 não implementa `ADMISSIBLE`, revisão humana, factualidade,
 reportabilidade, risco, scoring, relatório ou F5.3. O ADR 0025 está `Accepted`.
+
+## 16. Implementação candidata — F5.3
+
+A F5.3 adiciona decisões globais imutáveis `ADMISSIBLE`, `RESTRICTED` e `REJECTED`
+para uma versão exata de Evidence. O status efetivo é projetado com corte `as_of`:
+ausência de decisão resulta em `PENDING`, expiração explícita resulta em `EXPIRED` e
+revogação F5.1 prevalece como `REVOKED` sem efeito retroativo.
+
+O único basis V1 é `CONTROLLED_TEST_EVIDENCE`, para purpose
+`INTERNAL_FACTUAL_EVIDENCE_USE`, sob policy
+`F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1`. O manifesto independente
+`F5_3_CONTROLLED_TEST_EVIDENCE_MANIFEST_V1` vincula hashes do Artifact e conteúdo,
+kind, locator type e digest da canonicalização F5.1. Não há fonte real nem Gate G6.
+`ADMIT` exige ator diferente de `created_by` da versão exata; `RESTRICT` e `REJECT`
+podem ser aplicados pelo criador. Isso ainda não torna Claim factual ou reportável.

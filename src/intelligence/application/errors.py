@@ -238,6 +238,27 @@ class EvidenceAlreadyRevokedError(ApplicationError):
         super().__init__("Evidence history is already revoked.")
 
 
+class InvalidEvidenceAdmissibilityError(ApplicationError):
+    """A global admissibility decision cannot be produced safely."""
+
+    def __init__(self) -> None:
+        super().__init__("Evidence admissibility request is invalid.")
+
+
+class EvidenceAdmissibilityCommandCollisionError(ApplicationError):
+    """An admissibility command ID was reused with different content."""
+
+    def __init__(self) -> None:
+        super().__init__("Admissibility command identifier conflicts with prior content.")
+
+
+class EvidenceAdmissibilityPredecessorError(ApplicationError):
+    """The expected prior admissibility decision is stale."""
+
+    def __init__(self) -> None:
+        super().__init__("Admissibility decision predecessor is stale.")
+
+
 class InvalidClaimContextError(ApplicationError):
     """Claim does not match the investigation, entity decision, or lifecycle."""
 
@@ -282,6 +303,8 @@ __all__ = [
     "CollectionRunAlreadyExistsError",
     "ConcurrentInvestigationUpdateError",
     "EntityConfirmationReasonError",
+    "EvidenceAdmissibilityCommandCollisionError",
+    "EvidenceAdmissibilityPredecessorError",
     "EvidenceAlreadyRevokedError",
     "EvidenceCommandCollisionError",
     "EvidenceVersionConflictError",
@@ -290,6 +313,7 @@ __all__ = [
     "InvalidClaimEvidenceError",
     "InvalidCollectionActivationError",
     "InvalidCollectionExecutionError",
+    "InvalidEvidenceAdmissibilityError",
     "InvalidEvidenceContextError",
     "InvalidInvestigationPlanningError",
     "InvalidMaterializationPolicyError",

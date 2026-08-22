@@ -37,3 +37,4 @@ Cada ADR registra contexto, decisão, consequências e status. Status possíveis
 | 0023 | Accepted | separação entre Gate F4-F e Gate E2E para handoff à Fase 5 |
 | 0024 | Accepted | núcleo canônico de evidências F5.1 aceito após revisão independente com correções |
 | 0025 | Accepted | Claims F5.2 e elegibilidade contextual aceitas após revisão independente com correções |
+| 0026 | Proposed | Decisões globais F5.3 implementadas como candidata; revisão independente pendente |

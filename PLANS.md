@@ -2,9 +2,9 @@
 
 ## 1. Estado
 
-- Fase atual: **Fase 5 — F5.1 e F5.2 aceitas após revisão independente com correções**.
-- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. ADR 0025 está `Accepted`; F5.3 não está autorizada.
-- Código executável: API de saúde, shell web estático, domínio imutável, vinte e quatro tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST`, núcleo F5.1 de artefato/evidência/lifecycle append-only e F5.2 aceita de Claims e elegibilidade contextual. Não há autenticação, acesso pela API, jobs, admissibilidade global, revisão factual, conector real ou I/O externo.
+- Fase atual: **Fase 5 — F5.1/F5.2 aceitas; F5.3 implementada e aguardando revisão independente**.
+- Status: **Fase 4 concluída exclusivamente no Gate F4-F pelo ADR 0023 `Accepted`; Gate E2E aberto e obrigatório antes do piloto**. ADRs 0024/0025 estão `Accepted`; ADR 0026 permanece `Proposed`; G4 segue aberto.
+- Código executável: API de saúde, shell web estático, domínio imutável, vinte e cinco tabelas PostgreSQL versionadas, portas/adaptadores Core e Unit of Work síncrona, serviços tenant-scoped, contratos de conectores `1.0.0`, simulador sintético, runner local de operação única, lifecycle transacional, matching determinístico, confirmação humana, plano determinístico, manifesto imutável, execução direta controlada de um `SEARCH` em modo `TEST`, núcleo F5.1, Claims F5.2 e decisões globais F5.3 com projeção temporal. Não há autenticação, acesso pela API, jobs, revisão factual de Claim, conector real ou I/O externo.
 - Conectores reais e integrações externas: inexistentes e não autorizados.
 - Dependências de aplicação: fixadas nos lockfiles e justificadas em `docs/dependencies.md`.
 
@@ -557,10 +557,11 @@ mudança deste critério depende do aceite do ADR 0023.
 
 ### Fase 5 — Evidências, claims e revisão
 
-**Status parcial: F5.1 e F5.2 aceitas após revisão independente com correções.**
+**Status parcial: F5.1 e F5.2 aceitas; F5.3 implementada como candidata.**
 O ADR 0024 está `Accepted` desde 2026-08-21 e o ADR 0025 está `Accepted` desde
 2026-08-22.
-Admissibilidade global, derivações, revisão factual e F5.3 continuam não autorizadas.
+F5.3 materializa admissibilidade global somente para Evidence sintética controlada. Derivações,
+revisão factual e F5.4 continuam não autorizadas; G4 permanece aberto.
 
 #### F5.1 — Núcleo canônico de evidências
 

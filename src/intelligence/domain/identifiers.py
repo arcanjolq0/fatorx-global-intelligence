@@ -122,6 +122,14 @@ class EvidenceLifecycleEventId(_UUIDIdentifier):
     """Identifier for one append-only evidence lifecycle event."""
 
 
+class EvidenceAdmissibilityDecisionId(_UUIDIdentifier):
+    """Identifier for one immutable global Evidence admissibility decision."""
+
+
+class EvidenceAdmissibilityCommandId(_UUIDIdentifier):
+    """Tenant-scoped idempotency identifier for an admissibility command."""
+
+
 class ClaimId(_UUIDIdentifier):
     """Identifier for one immutable claim version."""
 
@@ -154,6 +162,8 @@ __all__ = (
     "EntityCandidateBatchId",
     "EntityCandidateId",
     "EntityResolutionDecisionId",
+    "EvidenceAdmissibilityCommandId",
+    "EvidenceAdmissibilityDecisionId",
     "EvidenceCommandId",
     "EvidenceId",
     "EvidenceLifecycleEventId",

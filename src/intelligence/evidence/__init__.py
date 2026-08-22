@@ -1,9 +1,27 @@
 """Canonical evidence records and custody invariants."""
 
+from intelligence.evidence.admissibility import (
+    EVIDENCE_ADMISSIBILITY_DECISION_SCHEMA_VERSION,
+    EffectiveEvidenceAdmissibility,
+    EffectiveEvidenceAdmissibilityStatus,
+    EvidenceAdmissibilityDecision,
+    EvidenceAdmissibilityDecisionOutcome,
+    EvidenceAdmissibilityHistory,
+    EvidenceAdmissibilityPurpose,
+    EvidenceAdmissibilityReason,
+    EvidenceAdmissibilityRequestedAction,
+    EvidenceAdmissionBasis,
+    build_evidence_admissibility_decision,
+    project_effective_evidence_admissibility,
+)
 from intelligence.evidence.errors import (
+    EvidenceAdmissibilityError,
+    EvidenceAdmissibilityHistoryError,
+    EvidenceAdmissibilityIntegrityError,
     EvidenceError,
     EvidenceHistoryError,
     EvidenceIntegrityError,
+    EvidenceNotExistingAtCutoffError,
 )
 from intelligence.evidence.models import (
     ARTIFACT_SCHEMA_VERSION,
@@ -39,13 +57,26 @@ from intelligence.evidence.models import (
 
 __all__ = [
     "ARTIFACT_SCHEMA_VERSION",
+    "EVIDENCE_ADMISSIBILITY_DECISION_SCHEMA_VERSION",
     "EVIDENCE_LIFECYCLE_SCHEMA_VERSION",
     "EVIDENCE_SCHEMA_VERSION",
     "Artifact",
     "ArtifactOriginType",
     "ArtifactStorageMode",
+    "EffectiveEvidenceAdmissibility",
+    "EffectiveEvidenceAdmissibilityStatus",
     "Evidence",
+    "EvidenceAdmissibilityDecision",
+    "EvidenceAdmissibilityDecisionOutcome",
+    "EvidenceAdmissibilityError",
+    "EvidenceAdmissibilityHistory",
+    "EvidenceAdmissibilityHistoryError",
+    "EvidenceAdmissibilityIntegrityError",
+    "EvidenceAdmissibilityPurpose",
+    "EvidenceAdmissibilityReason",
+    "EvidenceAdmissibilityRequestedAction",
     "EvidenceAdmissibilityStatus",
+    "EvidenceAdmissionBasis",
     "EvidenceDisplayMode",
     "EvidenceError",
     "EvidenceHistory",
@@ -57,6 +88,7 @@ __all__ = [
     "EvidenceLifecycleReason",
     "EvidenceLocator",
     "EvidenceLocatorType",
+    "EvidenceNotExistingAtCutoffError",
     "ExternalReferenceLocator",
     "HtmlSelectorLocator",
     "ImageRegionLocator",
@@ -69,5 +101,7 @@ __all__ = [
     "SpreadsheetCellLocator",
     "build_artifact",
     "build_evidence",
+    "build_evidence_admissibility_decision",
     "build_lifecycle_event",
+    "project_effective_evidence_admissibility",
 ]

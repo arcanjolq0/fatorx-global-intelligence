@@ -210,6 +210,7 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
         "20260811_10_add_direct_collection_execution.py",
         "20260814_11_add_canonical_evidence_core.py",
         "20260821_12_add_claims_contextual_evidence.py",
+        "20260822_13_add_global_evidence_admissibility.py",
     }
 
 

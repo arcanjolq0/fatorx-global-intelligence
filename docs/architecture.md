@@ -4,11 +4,11 @@
 
 O MVP tem como arquitetura-alvo um **monólito modular com interfaces e workers assíncronos**. O objetivo é manter consistência transacional e baixa complexidade operacional sem sacrificar fronteiras que permitam extrair componentes no futuro.
 
-No corte materializado até a F5.2 aceita, o monólito modular possui aplicação síncrona,
+No corte materializado até a implementação candidata F5.3, o monólito modular possui aplicação síncrona,
 PostgreSQL, conectores simulados, execução direta controlada de uma única
-operação, o núcleo canônico de evidências ainda `PENDING` e Claims com
+operação, o núcleo canônico de evidências ainda persistido como `PENDING`, Claims com
 elegibilidade estritamente contextual. Workers, fila, outbox/inbox, scheduler,
-fan-out/fan-in, paralelismo, admissibilidade global, revisão factual e F5.3
+fan-out/fan-in, paralelismo, revisão factual e F5.4
 continuam componentes-alvo não implementados e não autorizados.
 
 O backend segue portas e adaptadores. O núcleo define tipos e portas; API, persistência, fila, storage, modelos e conectores são adaptadores substituíveis.
@@ -208,6 +208,16 @@ adquire todos os locks de Evidence em ordem antes da releitura.
 8. Testes e chamadores internos podem reconstituir a Investigation em
    `VERIFYING`; OWNER/ADMIN registram ou corrigem Claim ligada à Evidence exata.
    A política gera a decisão contextual e Evidence permanece `PENDING`.
+
+### 3.2 Fronteira candidata F5.3
+
+`intelligence.evidence.admissibility` define a decisão global imutável, sua cadeia
+append-only e a projeção pura por `as_of`. A aplicação valida Investigation,
+entity-resolution e a versão corrente sob a ordem de locks comando → Evidence →
+história de decisão. A policy `F5_3_CONTROLLED_TEST_ADMISSIBILITY_V1` concede
+`ADMISSIBLE` somente à âncora sintética exata e bloqueia self-approval. Infraestrutura
+persiste apenas `evidence_admissibility_decision`; não há status materializado,
+relógio no domínio, Claim review ou dependência de F5.2 para conceder trust.
 
 ### 3.2 Fluxo-alvo condicionado a fases e gates futuros
 

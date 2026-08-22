@@ -9,6 +9,9 @@ from intelligence.infrastructure.persistence.postgresql import (  # noqa: F401
     claim_tables as _claim_tables,
 )
 from intelligence.infrastructure.persistence.postgresql import (  # noqa: F401
+    evidence_admissibility_tables as _evidence_admissibility_tables,
+)
+from intelligence.infrastructure.persistence.postgresql import (  # noqa: F401
     evidence_tables as _evidence_tables,
 )
 from intelligence.infrastructure.persistence.postgresql import tables as _tables  # noqa: F401

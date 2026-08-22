@@ -8,6 +8,9 @@ from intelligence.infrastructure.persistence.postgresql.configuration import (
     DatabaseConfigurationError,
     require_database_url,
 )
+from intelligence.infrastructure.persistence.postgresql.evidence_admissibility_tables import (
+    evidence_admissibility_decision_table,
+)
 from intelligence.infrastructure.persistence.postgresql.evidence_tables import (
     evidence_artifact_table,
     evidence_lifecycle_event_table,
@@ -50,6 +53,7 @@ __all__ = [
     "entity_candidate_dimension_score_table",
     "entity_candidate_table",
     "entity_resolution_decision_table",
+    "evidence_admissibility_decision_table",
     "evidence_artifact_table",
     "evidence_lifecycle_event_table",
     "evidence_table",

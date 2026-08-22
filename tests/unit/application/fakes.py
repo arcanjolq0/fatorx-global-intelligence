@@ -26,6 +26,7 @@ from intelligence.domain.identifiers import (
     CompanyId,
     EntityCandidateBatchId,
     EntityResolutionDecisionId,
+    EvidenceAdmissibilityCommandId,
     EvidenceCommandId,
     EvidenceId,
     InvestigationCommandId,
@@ -43,6 +44,10 @@ from intelligence.domain.identities import (
 )
 from intelligence.domain.investigations import Investigation
 from intelligence.domain.workspaces import Workspace
+from intelligence.evidence.admissibility import (
+    EvidenceAdmissibilityDecision,
+    EvidenceAdmissibilityHistory,
+)
 from intelligence.evidence.models import Artifact, Evidence, EvidenceHistory, EvidenceLifecycleEvent
 from intelligence.orchestration.collection_activation import CollectionRun
 from intelligence.orchestration.planning import InvestigationPlan
@@ -82,6 +87,9 @@ class FakeDatabase:
     evidence_histories: dict[tuple[WorkspaceId, EvidenceId], EvidenceHistory] = field(
         default_factory=dict
     )
+    evidence_admissibility_histories: dict[
+        tuple[WorkspaceId, EvidenceId], EvidenceAdmissibilityHistory
+    ] = field(default_factory=dict)
     claim_histories: dict[tuple[WorkspaceId, ClaimId], ClaimHistory] = field(default_factory=dict)
 
     def clone(self) -> FakeDatabase:
@@ -100,6 +108,7 @@ class FakeDatabase:
             memberships=dict(self.memberships),
             audit_events=list(self.audit_events),
             evidence_histories=dict(self.evidence_histories),
+            evidence_admissibility_histories=dict(self.evidence_admissibility_histories),
             claim_histories=dict(self.claim_histories),
         )
 
@@ -118,6 +127,7 @@ class FakeDatabase:
         self.memberships = dict(other.memberships)
         self.audit_events = list(other.audit_events)
         self.evidence_histories = dict(other.evidence_histories)
+        self.evidence_admissibility_histories = dict(other.evidence_admissibility_histories)
         self.claim_histories = dict(other.claim_histories)
 
 
@@ -701,6 +711,60 @@ class FakeEvidenceRepository:
         )
 
 
+class FakeEvidenceAdmissibilityDecisionRepository:
+    def __init__(self, database: FakeDatabase) -> None:
+        self._database = database
+        self.command_lock_calls: list[tuple[WorkspaceId, EvidenceAdmissibilityCommandId]] = []
+        self.history_lock_calls: list[tuple[WorkspaceId, EvidenceId]] = []
+        self.add_initial_calls: list[EvidenceAdmissibilityDecision] = []
+        self.add_superseding_calls: list[EvidenceAdmissibilityDecision] = []
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: EvidenceAdmissibilityCommandId
+    ) -> None:
+        self.command_lock_calls.append((workspace_id, command_id))
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, evidence_id: EvidenceId) -> None:
+        self.history_lock_calls.append((workspace_id, evidence_id))
+
+    def add_initial(self, decision: EvidenceAdmissibilityDecision) -> None:
+        self.add_initial_calls.append(decision)
+        key = (decision.workspace_id, decision.evidence_id)
+        if key in self._database.evidence_admissibility_histories:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.evidence_admissibility_histories[key] = EvidenceAdmissibilityHistory(
+            decisions=(decision,)
+        )
+
+    def add_superseding(self, decision: EvidenceAdmissibilityDecision) -> None:
+        self.add_superseding_calls.append(decision)
+        key = (decision.workspace_id, decision.evidence_id)
+        history = self._database.evidence_admissibility_histories.get(key)
+        if history is None:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.evidence_admissibility_histories[key] = EvidenceAdmissibilityHistory(
+            decisions=(*history.decisions, decision)
+        )
+
+    def get_history(
+        self, workspace_id: WorkspaceId, evidence_id: EvidenceId
+    ) -> EvidenceAdmissibilityHistory | None:
+        return self._database.evidence_admissibility_histories.get((workspace_id, evidence_id))
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: EvidenceAdmissibilityCommandId
+    ) -> EvidenceAdmissibilityHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.evidence_admissibility_histories.items()
+                if scope == workspace_id
+                and any(item.command_id == command_id for item in history.decisions)
+            ),
+            None,
+        )
+
+
 class FakeClaimRepository:
     def __init__(self, database: FakeDatabase) -> None:
         self._database = database
@@ -819,6 +883,9 @@ class FakeUnitOfWork:
         )
         self.collection_executions = FakeCollectionExecutionRepository(self._working_database)
         self.evidence = FakeEvidenceRepository(self._working_database)
+        self.evidence_admissibility = FakeEvidenceAdmissibilityDecisionRepository(
+            self._working_database
+        )
         self.claims = FakeClaimRepository(self._working_database)
         self.users = FakeUserRepository(self._working_database)
         self.memberships = FakeWorkspaceMembershipRepository(self._working_database)

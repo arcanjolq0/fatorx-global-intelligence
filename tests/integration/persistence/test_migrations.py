@@ -56,6 +56,7 @@ DOMAIN_TABLES = {
     "evidence_artifact",
     "evidence",
     "evidence_lifecycle_event",
+    "evidence_admissibility_decision",
     "claim",
     "claim_evidence_link",
 }

@@ -11,6 +11,7 @@ from intelligence.application.ports.repositories import (
     CompanyRepository,
     EntityCandidateBatchRepository,
     EntityResolutionDecisionRepository,
+    EvidenceAdmissibilityDecisionRepository,
     EvidenceRepository,
     InvestigationPlanRepository,
     InvestigationRepository,
@@ -63,6 +64,10 @@ class UnitOfWork(Protocol):
     @property
     def evidence(self) -> EvidenceRepository:
         """Return append-only canonical evidence records for the transaction."""
+
+    @property
+    def evidence_admissibility(self) -> EvidenceAdmissibilityDecisionRepository:
+        """Return append-only global Evidence admissibility decisions."""
 
     @property
     def claims(self) -> ClaimRepository:

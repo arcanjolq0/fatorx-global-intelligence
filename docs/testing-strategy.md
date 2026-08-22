@@ -198,6 +198,13 @@ frameworks e dependências de fases posteriores no pacote `intelligence.claims`.
 O módulo `intelligence.claims` deve manter ao menos 90% de branch coverage e a
 cobertura global não pode cair abaixo de 80%.
 
+Na implementação candidata F5.3, testes focais cobrem vocabulários fechados, trust
+root recomputável, self-approval, outcomes negativos, projeção histórica, expiração,
+revogação não retroativa, replay com `decided_at` persistido, binding composto,
+reconstituição fail-closed, constraints PostgreSQL e downgrade protegido. Regressões
+F5.1/F5.2 devem continuar confirmando Evidence persistida `PENDING` e elegibilidade
+contextual sem promoção global.
+
 ### 3.4 Testes de segurança
 
 - SSRF: loopback, RFC1918, link-local, IPv6, DNS rebinding simulado e cadeia de redirects;

@@ -197,6 +197,13 @@ decisão é vinculada à versão da Claim. Auditoria e `repr` excluem ClaimValue
 conteúdo, locator, origem e hashes. Não há SQL textual derivado de input, rede,
 filesystem, JSON aberto, segredo, HTTP ou mecanismo F5.3 nesta fronteira.
 
+Na implementação candidata F5.3, confiança positiva exige match exato no manifesto
+F5.3 próprio; rótulos como `source_id`, filename, método ou `origin_type` não concedem
+trust e a raiz F5.2 não é suficiente. `ADMIT` bloqueia self-approval da versão exata.
+Locks e revalidação impedem aprovação stale, após supersession ou revogação. A FK
+composta impede desacoplamento ID/série/versão/contexto. Audit não contém conteúdo,
+locator, hashes ou digest do manifesto, e downgrade recusa apagar história existente.
+
 ## 10. API e web
 
 - validação estrita de payload e limites;

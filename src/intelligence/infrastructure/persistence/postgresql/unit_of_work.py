@@ -18,6 +18,9 @@ from intelligence.application.errors import (
 from intelligence.infrastructure.persistence.postgresql.claim_repository import (
     PostgreSQLClaimRepository,
 )
+from intelligence.infrastructure.persistence.postgresql.evidence_admissibility_repository import (
+    PostgreSQLEvidenceAdmissibilityDecisionRepository,
+)
 from intelligence.infrastructure.persistence.postgresql.evidence_repository import (
     PostgreSQLEvidenceRepository,
 )
@@ -56,6 +59,9 @@ class PostgreSQLUnitOfWork:
         self._collection_runs: PostgreSQLCollectionRunRepository | None = None
         self._collection_executions: PostgreSQLCollectionExecutionRepository | None = None
         self._evidence: PostgreSQLEvidenceRepository | None = None
+        self._evidence_admissibility: PostgreSQLEvidenceAdmissibilityDecisionRepository | None = (
+            None
+        )
         self._claims: PostgreSQLClaimRepository | None = None
         self._entity_candidate_batches: PostgreSQLEntityCandidateBatchRepository | None = None
         self._entity_resolution_decisions: PostgreSQLEntityResolutionDecisionRepository | None = (
@@ -151,6 +157,14 @@ class PostgreSQLUnitOfWork:
         return repository
 
     @property
+    def evidence_admissibility(self) -> PostgreSQLEvidenceAdmissibilityDecisionRepository:
+        self._require_active()
+        repository = self._evidence_admissibility
+        if repository is None:
+            raise PersistenceStateError("Evidence admissibility repository is unavailable.")
+        return repository
+
+    @property
     def claims(self) -> PostgreSQLClaimRepository:
         self._require_active()
         repository = self._claims
@@ -220,6 +234,9 @@ class PostgreSQLUnitOfWork:
         self._collection_runs = PostgreSQLCollectionRunRepository(transaction_guard)
         self._collection_executions = PostgreSQLCollectionExecutionRepository(transaction_guard)
         self._evidence = PostgreSQLEvidenceRepository(transaction_guard)
+        self._evidence_admissibility = PostgreSQLEvidenceAdmissibilityDecisionRepository(
+            transaction_guard
+        )
         self._claims = PostgreSQLClaimRepository(transaction_guard)
         self._users = PostgreSQLUserRepository(transaction_guard)
         self._memberships = PostgreSQLWorkspaceMembershipRepository(transaction_guard)
