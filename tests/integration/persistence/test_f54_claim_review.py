@@ -28,6 +28,7 @@ from intelligence.application.errors import (
     ClaimReviewPredecessorError,
     InvalidClaimReviewError,
     PersistenceConflictError,
+    PersistenceDataError,
 )
 from intelligence.application.evidence import EvidenceOperationResult
 from intelligence.application.ports.unit_of_work import UnitOfWorkFactory
@@ -1254,6 +1255,19 @@ def test_controlled_f53_admissible_evidence_enables_persisted_f54_accept(
         )
     with pytest.raises(InvalidClaimReviewError):
         service.read(reviewer, claim.id, as_of=NOW)
+
+
+def test_repository_fails_closed_when_persisted_review_digest_is_tampered(engine: Engine) -> None:
+    reviewer, claim, _evidence, service, command = _accepted_review_inputs(engine)
+    result = service.decide(reviewer, command)
+    with engine.begin() as connection:
+        connection.execute(
+            sa.update(claim_review_decision_table)
+            .where(claim_review_decision_table.c.id == result.history.latest.id.value)
+            .values(decision_digest="0" * 64)
+        )
+    with PostgreSQLUnitOfWork(engine) as unit_of_work, pytest.raises(PersistenceDataError):
+        unit_of_work.claim_reviews.get_history(reviewer.workspace_id, claim.id)
 
 
 def test_empty_f54_downgrade_reupgrade_and_metadata_check(engine: Engine) -> None:
