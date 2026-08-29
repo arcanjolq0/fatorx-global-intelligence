@@ -59,6 +59,7 @@ DOMAIN_TABLES = {
     "evidence_admissibility_decision",
     "claim",
     "claim_evidence_link",
+    "claim_review_decision",
 }
 CREATED_AT = datetime(2026, 7, 28, 12, tzinfo=UTC)
 

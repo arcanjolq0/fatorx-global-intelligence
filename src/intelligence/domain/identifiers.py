@@ -138,6 +138,14 @@ class ClaimCommandId(_UUIDIdentifier):
     """Tenant-scoped idempotency identifier for one claim command."""
 
 
+class ClaimReviewDecisionId(_UUIDIdentifier):
+    """Identifier for one immutable human factual Claim review."""
+
+
+class ClaimReviewCommandId(_UUIDIdentifier):
+    """Tenant-scoped idempotency identifier for one Claim-review command."""
+
+
 class MembershipId(_UUIDIdentifier):
     """Identifier for one user membership within a workspace."""
 
@@ -155,6 +163,8 @@ __all__ = (
     "AuditEventId",
     "ClaimCommandId",
     "ClaimId",
+    "ClaimReviewCommandId",
+    "ClaimReviewDecisionId",
     "CollectionOperationId",
     "CollectionRunId",
     "CompanyId",

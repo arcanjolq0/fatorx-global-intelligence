@@ -70,6 +70,16 @@ claim_table = sa.Table(
     ),
     sa.UniqueConstraint("workspace_id", "command_id"),
     sa.UniqueConstraint("workspace_id", "series_id", "version"),
+    sa.UniqueConstraint(
+        "id",
+        "series_id",
+        "version",
+        "workspace_id",
+        "investigation_id",
+        "subject_company_id",
+        "entity_resolution_decision_id",
+        name="uq_claim_review_exact_scope",
+    ),
     sa.ForeignKeyConstraint(
         ["workspace_id"], ["workspace.id"], ondelete="RESTRICT", name="fk_claim_workspace"
     ),

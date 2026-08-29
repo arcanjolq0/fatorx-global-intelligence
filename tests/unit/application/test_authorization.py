@@ -42,6 +42,7 @@ CREATE_AND_READ = {
     Permission.EVIDENCE_READ,
     Permission.EVIDENCE_ADMISSIBILITY_READ,
     Permission.CLAIM_READ,
+    Permission.CLAIM_REVIEW_READ,
 }
 EXPECTED: dict[MembershipRole, set[Permission]] = {
     MembershipRole.OWNER: set(Permission),
@@ -53,6 +54,7 @@ EXPECTED: dict[MembershipRole, set[Permission]] = {
         Permission.EVIDENCE_READ,
         Permission.EVIDENCE_ADMISSIBILITY_READ,
         Permission.CLAIM_READ,
+        Permission.CLAIM_REVIEW_READ,
     },
 }
 
