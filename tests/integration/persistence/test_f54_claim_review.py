@@ -377,6 +377,20 @@ def _accepted_review_inputs(
     return reviewer, claim, evidence, service, command
 
 
+def test_repository_returns_typed_absence_for_unknown_history_and_command(engine: Engine) -> None:
+    """Absent tenant-scoped Claim-review rows never reconstruct a history."""
+
+    creator = f53_seed_collecting(engine, owner=True)
+    with PostgreSQLUnitOfWork(engine) as unit_of_work:
+        assert unit_of_work.claim_reviews.get_history(creator.workspace_id, ClaimId.new()) is None
+        assert (
+            unit_of_work.claim_reviews.get_history_by_command(
+                creator.workspace_id, ClaimReviewCommandId.new()
+            )
+            is None
+        )
+
+
 def _claim_correction(claim: Claim, evidence: EvidenceHistory) -> CorrectClaim:
     """Create a fresh exact-version F5.2 correction for the controlled Claim."""
 
