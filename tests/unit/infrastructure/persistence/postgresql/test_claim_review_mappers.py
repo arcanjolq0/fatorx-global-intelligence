@@ -27,3 +27,17 @@ def test_mapper_round_trip_and_rejects_invalid_persisted_values() -> None:
         corrupted[field] = invalid
         with pytest.raises(ValueError, match=r"Persisted Claim-review field|UNKNOWN"):
             claim_review_decision_from_values(corrupted)
+
+
+def test_mapper_round_trips_non_null_persisted_predecessor() -> None:
+    _creator, reviewer, _factory, reviews, claim, _admitted = _setup()
+    initial = reviews.decide(reviewer, _command(claim)).history.latest
+    superseding = reviews.decide(
+        reviewer,
+        _command(claim, expected_previous_decision_digest=initial.decision_digest),
+    ).history.latest
+
+    mapped = claim_review_decision_from_values(claim_review_decision_to_values(superseding))
+
+    assert mapped.decision_sequence == 2
+    assert mapped.supersedes_decision_id == initial.id
