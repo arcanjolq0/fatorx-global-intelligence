@@ -188,7 +188,7 @@ def test_connectors_have_no_network_database_or_import_time_io_surface() -> None
 
 
 def test_f33_allows_simulation_and_single_operation_execution_without_later_phases() -> None:
-    """F4.6 adds only its receipt schema while real connector adapters stay absent."""
+    """Real connector adapters stay absent and only approved migrations may exist."""
 
     forbidden_parts = {"adapters", "http", "real"}
     assert all(
@@ -211,6 +211,7 @@ def test_f33_allows_simulation_and_single_operation_execution_without_later_phas
         "20260814_11_add_canonical_evidence_core.py",
         "20260821_12_add_claims_contextual_evidence.py",
         "20260822_13_add_global_evidence_admissibility.py",
+        "20260825_14_add_claim_review_decision.py",
     }
 
 
@@ -884,7 +885,7 @@ def test_f51_evidence_core_is_pure_and_has_no_later_phase_capabilities() -> None
 
 
 def test_f52_claims_core_is_pure_and_has_no_later_phase_capabilities() -> None:
-    """Claims use stable domain types without I/O, policy, persistence, risk, or reports."""
+    """F5.2 remains pure; F5.4 review may use only the F5.3 admissibility vocabulary."""
 
     forbidden_roots = {
         "alembic",
@@ -919,9 +920,16 @@ def test_f52_claims_core_is_pure_and_has_no_later_phase_capabilities() -> None:
             else:
                 modules = []
             for module in modules:
-                if module.partition(".")[0] in forbidden_roots or any(
-                    module == prefix or module.startswith(f"{prefix}.")
-                    for prefix in forbidden_internal
+                is_f54_admissibility_vocabulary = (
+                    path.relative_to(CLAIMS_ROOT).as_posix() == "review.py"
+                    and module == "intelligence.evidence.admissibility"
+                )
+                if module.partition(".")[0] in forbidden_roots or (
+                    any(
+                        module == prefix or module.startswith(f"{prefix}.")
+                        for prefix in forbidden_internal
+                    )
+                    and not is_f54_admissibility_vocabulary
                 ):
                     violations.append(f"{path.name} -> {module}")
     assert violations == []

@@ -18,6 +18,9 @@ from intelligence.application.errors import (
 from intelligence.infrastructure.persistence.postgresql.claim_repository import (
     PostgreSQLClaimRepository,
 )
+from intelligence.infrastructure.persistence.postgresql.claim_review_repository import (
+    PostgreSQLClaimReviewDecisionRepository,
+)
 from intelligence.infrastructure.persistence.postgresql.evidence_admissibility_repository import (
     PostgreSQLEvidenceAdmissibilityDecisionRepository,
 )
@@ -63,6 +66,7 @@ class PostgreSQLUnitOfWork:
             None
         )
         self._claims: PostgreSQLClaimRepository | None = None
+        self._claim_reviews: PostgreSQLClaimReviewDecisionRepository | None = None
         self._entity_candidate_batches: PostgreSQLEntityCandidateBatchRepository | None = None
         self._entity_resolution_decisions: PostgreSQLEntityResolutionDecisionRepository | None = (
             None
@@ -173,6 +177,14 @@ class PostgreSQLUnitOfWork:
         return repository
 
     @property
+    def claim_reviews(self) -> PostgreSQLClaimReviewDecisionRepository:
+        self._require_active()
+        repository = self._claim_reviews
+        if repository is None:
+            raise PersistenceStateError("Claim-review repository is unavailable.")
+        return repository
+
+    @property
     def users(self) -> PostgreSQLUserRepository:
         self._require_active()
         repository = self._users
@@ -238,6 +250,7 @@ class PostgreSQLUnitOfWork:
             transaction_guard
         )
         self._claims = PostgreSQLClaimRepository(transaction_guard)
+        self._claim_reviews = PostgreSQLClaimReviewDecisionRepository(transaction_guard)
         self._users = PostgreSQLUserRepository(transaction_guard)
         self._memberships = PostgreSQLWorkspaceMembershipRepository(transaction_guard)
         self._audit_events = PostgreSQLAuditEventRepository(transaction_guard)

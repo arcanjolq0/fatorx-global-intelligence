@@ -16,11 +16,13 @@ from intelligence.application.entity_confirmation import EntityResolutionDecisio
 from intelligence.application.errors import PersistenceConflictError, PersistenceError
 from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
 from intelligence.claims.models import Claim, ClaimEvidenceLink, ClaimHistory
+from intelligence.claims.review import ClaimReviewDecision, ClaimReviewHistory
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
     ClaimCommandId,
     ClaimId,
+    ClaimReviewCommandId,
     CollectionOperationId,
     CollectionRunId,
     CompanyId,
@@ -91,6 +93,9 @@ class FakeDatabase:
         tuple[WorkspaceId, EvidenceId], EvidenceAdmissibilityHistory
     ] = field(default_factory=dict)
     claim_histories: dict[tuple[WorkspaceId, ClaimId], ClaimHistory] = field(default_factory=dict)
+    claim_review_histories: dict[tuple[WorkspaceId, ClaimId], ClaimReviewHistory] = field(
+        default_factory=dict
+    )
 
     def clone(self) -> FakeDatabase:
         return FakeDatabase(
@@ -110,6 +115,7 @@ class FakeDatabase:
             evidence_histories=dict(self.evidence_histories),
             evidence_admissibility_histories=dict(self.evidence_admissibility_histories),
             claim_histories=dict(self.claim_histories),
+            claim_review_histories=dict(self.claim_review_histories),
         )
 
     def replace_with(self, other: FakeDatabase) -> None:
@@ -129,6 +135,7 @@ class FakeDatabase:
         self.evidence_histories = dict(other.evidence_histories)
         self.evidence_admissibility_histories = dict(other.evidence_admissibility_histories)
         self.claim_histories = dict(other.claim_histories)
+        self.claim_review_histories = dict(other.claim_review_histories)
 
 
 class FakeWorkspaceRepository:
@@ -765,6 +772,58 @@ class FakeEvidenceAdmissibilityDecisionRepository:
         )
 
 
+class FakeClaimReviewDecisionRepository:
+    def __init__(self, database: FakeDatabase) -> None:
+        self._database = database
+        self.command_lock_calls: list[tuple[WorkspaceId, ClaimReviewCommandId]] = []
+        self.history_lock_calls: list[tuple[WorkspaceId, ClaimId]] = []
+        self.add_initial_calls: list[ClaimReviewDecision] = []
+        self.add_superseding_calls: list[ClaimReviewDecision] = []
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: ClaimReviewCommandId
+    ) -> None:
+        self.command_lock_calls.append((workspace_id, command_id))
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> None:
+        self.history_lock_calls.append((workspace_id, claim_id))
+
+    def add_initial(self, decision: ClaimReviewDecision) -> None:
+        self.add_initial_calls.append(decision)
+        key = (decision.workspace_id, decision.claim_id)
+        if key in self._database.claim_review_histories:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.claim_review_histories[key] = ClaimReviewHistory(decisions=(decision,))
+
+    def add_superseding(self, decision: ClaimReviewDecision) -> None:
+        self.add_superseding_calls.append(decision)
+        key = (decision.workspace_id, decision.claim_id)
+        history = self._database.claim_review_histories.get(key)
+        if history is None:
+            raise PersistenceConflictError("Persistence constraint conflict.")
+        self._database.claim_review_histories[key] = ClaimReviewHistory(
+            decisions=(*history.decisions, decision)
+        )
+
+    def get_history(
+        self, workspace_id: WorkspaceId, claim_id: ClaimId
+    ) -> ClaimReviewHistory | None:
+        return self._database.claim_review_histories.get((workspace_id, claim_id))
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: ClaimReviewCommandId
+    ) -> ClaimReviewHistory | None:
+        return next(
+            (
+                history
+                for (scope, _), history in self._database.claim_review_histories.items()
+                if scope == workspace_id
+                and any(item.command_id == command_id for item in history.decisions)
+            ),
+            None,
+        )
+
+
 class FakeClaimRepository:
     def __init__(self, database: FakeDatabase) -> None:
         self._database = database
@@ -887,6 +946,7 @@ class FakeUnitOfWork:
             self._working_database
         )
         self.claims = FakeClaimRepository(self._working_database)
+        self.claim_reviews = FakeClaimReviewDecisionRepository(self._working_database)
         self.users = FakeUserRepository(self._working_database)
         self.memberships = FakeWorkspaceMembershipRepository(self._working_database)
         self.audit_events = FakeAuditEventRepository(

@@ -280,6 +280,27 @@ class ClaimVersionConflictError(ApplicationError):
         super().__init__("Claim version or predicate is stale.")
 
 
+class InvalidClaimReviewError(ApplicationError):
+    """A factual Claim review cannot be produced or read safely."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim review request is invalid.")
+
+
+class ClaimReviewCommandCollisionError(ApplicationError):
+    """A Claim-review command ID was reused with different content."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim-review command identifier conflicts with prior content.")
+
+
+class ClaimReviewPredecessorError(ApplicationError):
+    """The expected prior Claim-review decision is stale."""
+
+    def __init__(self) -> None:
+        super().__init__("Claim-review decision predecessor is stale.")
+
+
 class InvalidClaimEvidenceError(ApplicationError):
     """A proposed Evidence link cannot be validated safely."""
 
@@ -295,6 +316,8 @@ __all__ = [
     "CandidateNotInBatchError",
     "CandidateReviewError",
     "ClaimCommandCollisionError",
+    "ClaimReviewCommandCollisionError",
+    "ClaimReviewPredecessorError",
     "ClaimVersionConflictError",
     "CollectionActivationDeadlineError",
     "CollectionExecutionAlreadyOwnedError",
@@ -311,6 +334,7 @@ __all__ = [
     "InactiveCandidateBatchError",
     "InvalidClaimContextError",
     "InvalidClaimEvidenceError",
+    "InvalidClaimReviewError",
     "InvalidCollectionActivationError",
     "InvalidCollectionExecutionError",
     "InvalidEvidenceAdmissibilityError",

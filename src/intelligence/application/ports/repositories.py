@@ -10,11 +10,13 @@ from intelligence.application.entity_candidate_review import EntityCandidateBatc
 from intelligence.application.entity_confirmation import EntityResolutionDecisionRecord
 from intelligence.application.investigation_lifecycle import InvestigationTransitionRecord
 from intelligence.claims.models import Claim, ClaimEvidenceLink, ClaimHistory
+from intelligence.claims.review import ClaimReviewDecision, ClaimReviewHistory
 from intelligence.domain.audit import AuditEvent
 from intelligence.domain.companies import Company
 from intelligence.domain.identifiers import (
     ClaimCommandId,
     ClaimId,
+    ClaimReviewCommandId,
     CollectionOperationId,
     CollectionRunId,
     CompanyId,
@@ -334,6 +336,34 @@ class EvidenceAdmissibilityDecisionRepository(Protocol):
         """Return the validated history containing one command."""
 
 
+class ClaimReviewDecisionRepository(Protocol):
+    """Append-only persistence for exact-version F5.4 Claim reviews."""
+
+    def acquire_command_lock(
+        self, workspace_id: WorkspaceId, command_id: ClaimReviewCommandId
+    ) -> None:
+        """Serialize one tenant-scoped Claim-review idempotency key."""
+
+    def acquire_history_lock(self, workspace_id: WorkspaceId, claim_id: ClaimId) -> None:
+        """Serialize reviews for one exact Claim version."""
+
+    def add_initial(self, decision: ClaimReviewDecision) -> None:
+        """Append the first review for one exact Claim version."""
+
+    def add_superseding(self, decision: ClaimReviewDecision) -> None:
+        """Append a review superseding the immediate predecessor."""
+
+    def get_history(
+        self, workspace_id: WorkspaceId, claim_id: ClaimId
+    ) -> ClaimReviewHistory | None:
+        """Return the complete validated review history for an exact Claim."""
+
+    def get_history_by_command(
+        self, workspace_id: WorkspaceId, command_id: ClaimReviewCommandId
+    ) -> ClaimReviewHistory | None:
+        """Return the validated review history containing one command."""
+
+
 class UserRepository(Protocol):
     """Persistence operations for internal user identities."""
 
@@ -387,6 +417,7 @@ class AuditEventRepository(Protocol):
 __all__ = [
     "AuditEventRepository",
     "ClaimRepository",
+    "ClaimReviewDecisionRepository",
     "CollectionExecutionRepository",
     "CollectionRunRepository",
     "CompanyRepository",
