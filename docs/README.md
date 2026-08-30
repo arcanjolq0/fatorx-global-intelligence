@@ -51,12 +51,14 @@
 - `validation/f5.1-canonical-evidence-core.md`: cadeia de custódia, tenancy, concorrência, migration e aceite independente da F5.1.
 - `validation/f5.2-claims-contextual-evidence-eligibility.md`: revisão independente F5.2, correções, corpus sintético, Claims, PostgreSQL, concorrência, segurança e gates finais.
 - `validation/f5.3-global-evidence-admissibility.md`: revisão independente F5.3, correções de integridade semântica e concorrência, trust root, PostgreSQL e gates finais.
+- `validation/f5.4-internal-factual-claim-review.md`: revisão factual interna F5.4, candidate, revisão independente aprovada e fechamento de G4.
 
 ## Tarefas da Fase 5
 
 - `tasks/f5/F5_1_NUCLEO_CANONICO_EVIDENCIAS.md`: implementação limitada do núcleo canônico de evidências, aceita após revisão independente com correções.
 - `tasks/f5/F5_2_CLAIMS_E_ADMISSIBILIDADE_CONTEXTUAL.md`: escopo e critérios da F5.2 aceita após revisão independente com correções.
 - `tasks/f5/F5_3_ADMISSIBILIDADE_GLOBAL_EVIDENCIAS.md`: escopo, critérios e fechamento independente da F5.3 aceita com correções.
+- `tasks/f5/F5_4_REVISAO_FACTUAL_INTERNA_CLAIM.md`: escopo, critérios e fechamento independente aprovado da F5.4.
 
 ## Tarefas da Fase 3
 
@@ -111,6 +113,7 @@
 - `adr/0024-canonical-evidence-core.md`: decisão aceita da F5.1 sobre artefato, evidência versionada e lifecycle append-only.
 - `adr/0025-claims-and-contextual-evidence-admissibility.md`: arquitetura aceita para Claims F5.2 e elegibilidade contextual por corpus sintético controlado.
 - `adr/0026-global-evidence-admissibility-decisions.md`: arquitetura `Accepted` das decisões globais F5.3.
+- `adr/0027-claim-factual-review-and-effective-status.md`: arquitetura `Accepted` da revisão factual interna F5.4 e de sua projeção efetiva.
 
 ## Regra de consistência
 

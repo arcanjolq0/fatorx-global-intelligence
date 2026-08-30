@@ -2,7 +2,7 @@
 
 ## Status e baseline
 
-**NOT_STARTED.** Implementação futura governada pelo ADR 0027, cujo status é `Proposed`. Baseline: `main` e `origin/main` em `27200988c3762fcd0196ae81ba6d10e9d6b8ecea`, migration head `20260822_13`; F5.1/F5.2/F5.3 fechadas e ADRs 0024–0026 `Accepted`; G4 aberto.
+**FINAL — APPROVED.** Implementação aceita após revisão independente `APPROVED`, sem achados bloqueantes ou não bloqueantes. Baseline F5.3: `27200988c3762fcd0196ae81ba6d10e9d6b8ecea`; candidate preservada: `dccd4a0ab240e3f68b858617c046e25639a3a0f7` pela tag `f5.4-review-candidate`; migration head `20260825_14`; ADR 0027 `Accepted`; G4 fechado. A entrega final está na tag `f5.4-final`.
 
 ## Objetivo e escopo
 

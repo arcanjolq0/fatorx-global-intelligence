@@ -1,6 +1,6 @@
 # ADR 0027 — Revisão factual interna de Claim e status efetivo
 
-- Status: Proposed
+- Status: Accepted
 - Data: 2026-08-24
 - Decisores: responsável pelo projeto
 - Relacionados: ADR 0003, ADR 0008, ADR 0011, ADR 0013 e ADR 0023–0026
@@ -9,9 +9,9 @@
 
 F5.1 materializou cadeia de custódia, F5.2 Claims e links contextuais, e F5.3 a admissibilidade global temporal de Evidence. Nenhuma entrega torna Claim factual, verdadeira ou reportável. O `ReviewDecision` genérico previsto em `docs/data-model.md` não preserva vínculo suficiente com versão da Claim, links e admissibilidade; este ADR o substitui como placeholder arquitetural para Claim review.
 
-## Decisão proposta
+## Decisão
 
-F5.4 materializará futuramente `ClaimReviewDecision`, humano e append-only, para o único purpose V1 `INTERNAL_FACTUAL_CLAIM_USE`. Aceite significa exclusivamente que a versão exata da Claim foi aceita sob policy F5.4 V1 e base factual vinculada. Não significa verdade, publicação, reportabilidade, exportação, crédito, risco, scoring, recomendação ou aprovação externa.
+F5.4 materializa `ClaimReviewDecision`, humano e append-only, para o único purpose V1 `INTERNAL_FACTUAL_CLAIM_USE`. Aceite significa exclusivamente que a versão exata da Claim foi aceita sob policy F5.4 V1 e base factual vinculada. Não significa verdade, publicação, reportabilidade, exportação, crédito, risco, scoring, recomendação ou aprovação externa.
 
 As camadas são independentes: F5.2 `ELIGIBLE` para `INTERNAL_CLAIM_VERIFICATION`; F5.3 `ADMISSIBLE` para `INTERNAL_FACTUAL_EVIDENCE_USE`; F5.4 `ACCEPTED_FOR_INTERNAL_FACTUAL_USE` para `INTERNAL_FACTUAL_CLAIM_USE`. Nenhuma implica automaticamente a seguinte.
 
@@ -53,9 +53,9 @@ O desenho inicial usa apenas `claim_review_decision`, append-only, sem tabela de
 
 ## Limites, ameaças e critérios
 
-Derivation não pertence a F5.4 nem é requisito G4 sem transformação habilitada; OCR, tradução, extração e cálculo exigirão subfase própria antes de seu uso. F5.4 pode fechar G4 apenas após implementação e aceite independente; não fecha G6, Gate E2E, fontes reais, relatório ou piloto.
+Derivation não pertence a F5.4 nem é requisito G4 sem transformação habilitada; OCR, tradução, extração e cálculo exigirão subfase própria antes de seu uso. F5.4 fecha G4 após implementação e aceite independente aprovados; não fecha G6, Gate E2E, fontes reais, relatório ou piloto.
 
-Os testes futuros devem cobrir self-review, outcome controlado pelo ator, laundering F5.2/F5.3, decisões forjadas/stale, correção/revogação/expiração/supersessão, contradições, `QUALIFIES`, auto-reativação, basis drift, cross-tenant, IDOR, replay, snapshot misto, deadlock, leakage e mutação destrutiva. Devem provar aceite antes e invalidação no cutoff do evento, não reativação por readmissão futura, novo aceite restaurando efeito, digest histórico válido após mudança legítima, tamper histórico fail-closed, decisões negativas sem gate positivo e persistentes, correção iniciando `PENDING`, Evidence não vinculada inócua e a regra de múltiplos suportes. O ADR só poderá ser aceito após implementação restrita, migration, testes, quality gates e revisão independente.
+Os testes implementados cobrem self-review, outcome controlado pelo ator, laundering F5.2/F5.3, decisões forjadas/stale, correção/revogação/expiração/supersessão, contradições, `QUALIFIES`, auto-reativação, basis drift, cross-tenant, IDOR, replay, snapshot misto, deadlock, leakage e mutação destrutiva. Eles provam aceite antes e invalidação no cutoff do evento, não reativação por readmissão futura, novo aceite restaurando efeito, digest histórico válido após mudança legítima, tamper histórico fail-closed, decisões negativas sem gate positivo e persistentes, correção iniciando `PENDING`, Evidence não vinculada inócua e a regra de múltiplos suportes. O ADR foi aceito após implementação restrita, migration, testes, quality gates e revisão independente aprovada.
 
 ## Alternativas rejeitadas
 
