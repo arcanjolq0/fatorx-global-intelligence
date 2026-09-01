@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   appRoutes,
+  getEntityConfirmationPath,
   getInvestigationDetailPath,
   getRouteBreadcrumbs,
   getRouteByPathname,
@@ -11,6 +12,7 @@ const expectedPaths = [
   "/",
   "/investigacoes",
   "/investigacoes/nova",
+  "/investigacoes/nova/confirmacao",
   "/investigacoes/:investigationId",
   "/entidades",
   "/evidencias",
@@ -49,5 +51,18 @@ describe("navigation configuration", () => {
       "investigation-detail",
     );
     expect(getRouteByPathname("/investigacoes/nova")?.id).toBe("new-investigation");
+    expect(getRouteByPathname("/investigacoes/nova/confirmacao")?.id).toBe("entity-confirmation");
+    expect(getEntityConfirmationPath("Atlas & Filhos")).toBe(
+      "/investigacoes/nova/confirmacao?identifier=Atlas+%26+Filhos",
+    );
+  });
+
+  it("builds all breadcrumb levels for entity confirmation", () => {
+    const route = getRouteByPathname("/investigacoes/nova/confirmacao");
+    expect(route === undefined ? [] : getRouteBreadcrumbs(route).map((item) => item.id)).toEqual([
+      "investigations",
+      "new-investigation",
+      "entity-confirmation",
+    ]);
   });
 });

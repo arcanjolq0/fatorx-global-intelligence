@@ -22,31 +22,69 @@ export interface FixtureDataSet {
 
 const entities = {
   atlasMeridian: {
+    aliases: ["Atlas Meridian Comércio"],
+    confirmation: {
+      basis: ["Identificador sintético", "Nome legal", "Jurisdição"],
+      confirmedAt: "2026-08-27T12:18:00Z",
+      status: "CONFIRMED",
+    },
     id: "entity-atlas-meridian",
+    identifiers: [
+      { label: "Registro sintético", value: "BR-FX-000184" },
+      { label: "Domínio sintético", value: "atlas-meridian.example" },
+    ],
     legalName: "Atlas Meridian Comércio S.A.",
     primaryIdentifier: { label: "Registro sintético", value: "BR-FX-000184" },
     jurisdiction: { code: "BR", label: "Brasil" },
   },
   northstar: {
+    aliases: ["Northstar Components"],
+    confirmation: {
+      basis: ["Identificador sintético", "Nome legal", "Jurisdição"],
+      confirmedAt: "2026-08-28T12:24:00Z",
+      status: "CONFIRMED",
+    },
     id: "entity-northstar-components",
+    identifiers: [{ label: "Registro sintético", value: "GB-FX-004271" }],
     legalName: "Northstar Components Ltd.",
     primaryIdentifier: { label: "Registro sintético", value: "GB-FX-004271" },
     jurisdiction: { code: "GB", label: "Reino Unido" },
   },
   rheinbruck: {
+    aliases: ["Rheinbruck Maschinen"],
+    confirmation: {
+      basis: ["Identificador sintético", "Jurisdição"],
+      confirmedAt: "2026-08-28T12:32:00Z",
+      status: "CONFIRMED",
+    },
     id: "entity-rheinbruck-machines",
+    identifiers: [{ label: "Registro sintético", value: "DE-FX-003580" }],
     legalName: "Rheinbruck Maschinen GmbH",
     primaryIdentifier: { label: "Registro sintético", value: "DE-FX-003580" },
     jurisdiction: { code: "DE", label: "Alemanha" },
   },
   solandia: {
+    aliases: ["Solandia Exportaciones"],
+    confirmation: {
+      basis: ["Identificador sintético", "Nome legal", "Jurisdição"],
+      confirmedAt: "2026-08-30T09:18:00Z",
+      status: "CONFIRMED",
+    },
     id: "entity-solandia-exports",
+    identifiers: [{ label: "Registro sintético", value: "ES-FX-002906" }],
     legalName: "Solandia Exportaciones S.L.",
     primaryIdentifier: { label: "Registro sintético", value: "ES-FX-002906" },
     jurisdiction: { code: "ES", label: "Espanha" },
   },
   pacifica: {
+    aliases: ["Pacifica Renewables"],
+    confirmation: {
+      basis: ["Identificador sintético", "Nome legal", "Jurisdição"],
+      confirmedAt: "2026-08-28T12:42:00Z",
+      status: "CONFIRMED",
+    },
     id: "entity-pacifica-renewables",
+    identifiers: [{ label: "Registro sintético", value: "SG-FX-001728" }],
     legalName: "Pacifica Renewables Pte. Ltd.",
     primaryIdentifier: { label: "Registro sintético", value: "SG-FX-001728" },
     jurisdiction: { code: "SG", label: "Singapura" },
@@ -84,7 +122,7 @@ const investigations = [
   {
     id: "inv-solandia-exports",
     entity: entities.solandia,
-    lifecycleStatus: "WAITING_FOR_ENTITY_CONFIRMATION",
+    lifecycleStatus: "PLANNING",
     updatedAt: "2026-08-30T09:10:00Z",
     evidenceCount: 0,
     pendingClaimCount: 0,
@@ -334,17 +372,22 @@ const factualReviews = claims.map((claim, index) => ({
 const entityCandidatesByInvestigation: Readonly<Record<string, readonly EntityCandidate[]>> = {
   "inv-atlas-meridian": [
     {
+      aliases: ["Atlas Meridian Comércio", "Atlas Meridian"],
+      ambiguityNote: "Os identificadores coincidem; a confirmação humana ainda é necessária.",
       id: "candidate-atlas-01",
       legalName: "Atlas Meridian Comércio S.A.",
       primaryIdentifier: { label: "Registro sintético", value: "BR-FX-000184" },
       jurisdiction: { code: "BR", label: "Brasil" },
       matchStrength: "HIGH",
-      requiresHumanReview: false,
+      requiresHumanReview: true,
       matchingSignals: ["Identificador coincidente", "Jurisdição coincidente"],
     },
   ],
   "inv-solandia-exports": [
     {
+      aliases: ["Solandia Exportaciones", "Solandia Exports"],
+      ambiguityNote:
+        "O nome e o identificador são compatíveis, mas a seleção deve ser confirmada por uma pessoa.",
       id: "candidate-solandia-01",
       legalName: "Solandia Exportaciones S.L.",
       primaryIdentifier: { label: "Registro sintético", value: "ES-FX-002906" },
@@ -354,16 +397,24 @@ const entityCandidatesByInvestigation: Readonly<Record<string, readonly EntityCa
       matchingSignals: ["Nome coincidente", "Identificador fornecido"],
     },
     {
+      aliases: ["Solandia Export Services"],
+      ambiguityNote:
+        "Há semelhança de nome, porém falta um identificador primário para diferenciar a entidade.",
       id: "candidate-solandia-02",
       legalName: "Solandia Export Services S.L.",
       primaryIdentifier: null,
       jurisdiction: { code: "ES", label: "Espanha" },
-      matchStrength: "LOW",
+      matchStrength: "EXCLUDED",
       requiresHumanReview: true,
       matchingSignals: ["Nome semelhante", "Identificador ausente"],
     },
   ],
 };
+
+export const entitySearchCandidates = [
+  ...(entityCandidatesByInvestigation["inv-atlas-meridian"] ?? []),
+  ...(entityCandidatesByInvestigation["inv-solandia-exports"] ?? []),
+] as const satisfies readonly EntityCandidate[];
 
 const investigationDetails = investigations.map((investigation) => ({
   ...investigation,
@@ -401,7 +452,7 @@ const recentActivity = [
     id: "activity-04",
     investigationId: "inv-solandia-exports",
     occurredAt: "2026-08-30T09:10:00Z",
-    summary: "Confirmação humana de entidade permanece pendente.",
+    summary: "Confirmação humana sintética de entidade registrada.",
     type: "LIFECYCLE_UPDATED",
   },
   {

@@ -5,6 +5,7 @@ export type AppRouteId =
   | "investigations"
   | "investigation-detail"
   | "new-investigation"
+  | "entity-confirmation"
   | "entities"
   | "evidence"
   | "claims"
@@ -66,10 +67,22 @@ export const appRoutes = [
     title: "Nova investigação",
     eyebrow: "Fluxo de investigação",
     description:
-      "O fluxo será construído sobre fixtures tipadas; esta rota não cria registros nem chama a API.",
+      "Busca local em fixtures tipadas para iniciar o fluxo sem criar registros no backend.",
     icon: "add",
     group: "workspace",
     parentId: "investigations",
+    showInSidebar: false,
+  },
+  {
+    id: "entity-confirmation",
+    path: "/investigacoes/nova/confirmacao",
+    label: "Confirmação de entidade",
+    title: "Confirmação de entidade",
+    eyebrow: "Fluxo de investigação",
+    description: "Seleção humana entre candidatos sintéticos, sem confirmar identidade no backend.",
+    icon: "entities",
+    group: "workspace",
+    parentId: "new-investigation",
     showInSidebar: false,
   },
   {
@@ -79,7 +92,7 @@ export const appRoutes = [
     title: "Detalhe da investigação",
     eyebrow: "Workspace investigativo",
     description:
-      "A rota está preparada para navegação; o detalhe completo permanece fora desta entrega.",
+      "Leitura sintética da investigação com identidade, resumo e limites factuais explícitos.",
     icon: "investigations",
     group: "workspace",
     parentId: "investigations",
@@ -182,6 +195,10 @@ export const appRoutes = [
   },
 ] as const satisfies readonly AppRouteDefinition[];
 
+const appRoutesById = new Map<AppRouteId, AppRouteDefinition>(
+  appRoutes.map((route) => [route.id, route]),
+);
+
 export const notFoundRoute = {
   id: "not-found",
   path: "*",
@@ -218,11 +235,25 @@ export function getInvestigationDetailPath(investigationId: string): string {
   return `/investigacoes/${encodeURIComponent(investigationId)}`;
 }
 
+export function getEntityConfirmationPath(identifier: string): string {
+  const searchParameters = new URLSearchParams({ identifier });
+  return `/investigacoes/nova/confirmacao?${searchParameters.toString()}`;
+}
+
 export function getRouteBreadcrumbs(route: AppRouteDefinition): readonly AppRouteDefinition[] {
-  if (route.parentId === undefined) {
-    return [route];
+  const breadcrumbs: AppRouteDefinition[] = [route];
+  let currentRoute: AppRouteDefinition = route;
+  const visitedIds = new Set<AppRouteId>([route.id]);
+
+  while (currentRoute.parentId !== undefined) {
+    const parent = appRoutesById.get(currentRoute.parentId);
+    if (parent === undefined || visitedIds.has(parent.id)) {
+      break;
+    }
+    breadcrumbs.unshift(parent);
+    visitedIds.add(parent.id);
+    currentRoute = parent;
   }
 
-  const parent = appRoutes.find((candidate) => candidate.id === route.parentId);
-  return parent === undefined ? [route] : [parent, route];
+  return breadcrumbs;
 }

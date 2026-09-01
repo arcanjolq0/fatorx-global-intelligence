@@ -33,14 +33,25 @@ export interface PrimaryIdentifierPresentation {
   readonly value: string;
 }
 
+export interface EntityConfirmationPresentation {
+  readonly basis: readonly string[];
+  readonly confirmedAt: IsoDateTime | null;
+  readonly status: "CONFIRMED" | "PENDING_HUMAN_CONFIRMATION";
+}
+
 export interface EntitySummary {
+  readonly aliases: readonly string[];
+  readonly confirmation: EntityConfirmationPresentation;
   readonly id: string;
+  readonly identifiers: readonly PrimaryIdentifierPresentation[];
   readonly legalName: string;
   readonly primaryIdentifier: PrimaryIdentifierPresentation;
   readonly jurisdiction: JurisdictionPresentation;
 }
 
 export interface EntityCandidate {
+  readonly aliases: readonly string[];
+  readonly ambiguityNote: string;
   readonly id: string;
   readonly legalName: string;
   readonly primaryIdentifier: PrimaryIdentifierPresentation | null;

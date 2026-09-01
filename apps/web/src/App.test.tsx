@@ -47,7 +47,9 @@ describe("App", () => {
       "aria-current",
       "page",
     );
-    expect(screen.getByText(/não cria registros nem chama a API/i)).toBeVisible();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Localizar a empresa investigada" }),
+    ).toBeVisible();
   });
 
   it("renders an explicit not-found route", async () => {

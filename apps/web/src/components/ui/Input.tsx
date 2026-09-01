@@ -1,13 +1,16 @@
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import type { InputHTMLAttributes } from "react";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  readonly error?: string;
-  readonly helperText?: string;
+  readonly error?: string | undefined;
+  readonly helperText?: string | undefined;
   readonly label: string;
 }
 
-export function Input({ error, helperText, id, label, required, ...props }: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { error, helperText, id, label, required, ...props },
+  reference,
+) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const descriptionId =
@@ -24,6 +27,7 @@ export function Input({ error, helperText, id, label, required, ...props }: Inpu
         aria-describedby={descriptionId}
         aria-invalid={error === undefined ? undefined : true}
         id={inputId}
+        ref={reference}
         required={required}
       />
       {error === undefined && helperText === undefined ? null : (
@@ -37,4 +41,4 @@ export function Input({ error, helperText, id, label, required, ...props }: Inpu
       )}
     </label>
   );
-}
+});

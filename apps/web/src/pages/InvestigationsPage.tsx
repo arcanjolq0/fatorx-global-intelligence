@@ -14,6 +14,10 @@ import type { TableColumn } from "../components/ui/Table";
 import type { IntelligenceDataSource } from "../data/IntelligenceDataSource";
 import { fixtureIntelligenceDataSource } from "../data/fixtures/FixtureIntelligenceDataSource";
 import type { InvestigationLifecycleStatus, InvestigationSummary } from "../data/types";
+import {
+  getInvestigationStatusTone,
+  investigationStatusLabels,
+} from "../presentation/investigationPresentation";
 
 interface InvestigationsPageProps {
   readonly dataSource?: IntelligenceDataSource;
@@ -24,25 +28,9 @@ type InvestigationsLoadState =
   | { readonly status: "ready"; readonly investigations: readonly InvestigationSummary[] }
   | { readonly status: "error" };
 
-const statusLabels: Readonly<Record<InvestigationLifecycleStatus, string>> = {
-  CREATED: "Criada",
-  IDENTIFYING: "Identificando",
-  WAITING_FOR_ENTITY_CONFIRMATION: "Aguardando entidade",
-  PLANNING: "Planejamento",
-  COLLECTING: "Coleta",
-  NORMALIZING: "Normalização",
-  VERIFYING: "Verificação",
-  ANALYZING: "Análise",
-  WAITING_FOR_REVIEW: "Aguardando revisão",
-  COMPLETED: "Concluída",
-  PARTIALLY_COMPLETED: "Parcialmente concluída",
-  FAILED: "Falhou",
-  CANCELLED: "Cancelada",
-};
-
 const statusOptions = [
   { value: "all", label: "Todos os estados" },
-  ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+  ...Object.entries(investigationStatusLabels).map(([value, label]) => ({ value, label })),
 ];
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -50,24 +38,6 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
   timeZone: "UTC",
 });
-
-function getStatusTone(
-  status: InvestigationLifecycleStatus,
-): "neutral" | "info" | "success" | "warning" | "danger" {
-  if (status === "COMPLETED") {
-    return "success";
-  }
-  if (status === "FAILED" || status === "CANCELLED") {
-    return "danger";
-  }
-  if (status === "WAITING_FOR_ENTITY_CONFIRMATION" || status === "WAITING_FOR_REVIEW") {
-    return "warning";
-  }
-  if (status === "CREATED") {
-    return "neutral";
-  }
-  return "info";
-}
 
 function normalizeSearchValue(value: string): string {
   return value
@@ -118,8 +88,8 @@ const investigationColumns: readonly TableColumn<InvestigationSummary>[] = [
     id: "status",
     header: "Estado",
     cell: (investigation) => (
-      <Badge tone={getStatusTone(investigation.lifecycleStatus)}>
-        {statusLabels[investigation.lifecycleStatus]}
+      <Badge tone={getInvestigationStatusTone(investigation.lifecycleStatus)}>
+        {investigationStatusLabels[investigation.lifecycleStatus]}
       </Badge>
     ),
   },
@@ -213,7 +183,12 @@ export function InvestigationsPage({
             fonte real ou dado produtivo.
           </p>
         </div>
-        <Badge tone="info">Dados sintéticos</Badge>
+        <div className="page-intro__actions">
+          <Badge tone="info">Dados sintéticos</Badge>
+          <Link className="button button--primary" to="/investigacoes/nova">
+            Nova investigação
+          </Link>
+        </div>
       </section>
 
       <Card className="investigation-filters">
