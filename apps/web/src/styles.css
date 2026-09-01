@@ -561,6 +561,78 @@ a {
   padding: var(--space-3);
 }
 
+.investigation-filters {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.investigation-filters__fields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.investigation-results-count {
+  margin: 0;
+  color: var(--color-text-faint);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-medium);
+}
+
+.investigations-list-card {
+  padding: var(--space-3);
+}
+
+.investigation-loading {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.investigation-entity,
+.identifier-value,
+.pending-counts {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.investigation-entity a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--color-primary);
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.investigation-entity a:hover {
+  color: var(--color-primary-hover);
+  text-decoration-color: currentColor;
+}
+
+.investigation-entity small,
+.identifier-value small,
+.muted-value {
+  color: var(--color-text-faint);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-regular);
+}
+
+.identifier-value span,
+.investigation-entity small,
+.pending-counts,
+.table time {
+  font-variant-numeric: tabular-nums;
+}
+
+.pending-counts span {
+  white-space: nowrap;
+}
+
 .badge {
   display: inline-flex;
   min-height: 1.625rem;
@@ -719,6 +791,14 @@ select:focus {
 input[aria-invalid="true"],
 select[aria-invalid="true"] {
   border-color: var(--color-danger);
+}
+
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-faint);
+  opacity: 0.65;
 }
 
 .field__helper,
@@ -1008,6 +1088,12 @@ select[aria-invalid="true"] {
     text-align: left;
     text-transform: uppercase;
   }
+
+  .investigation-entity,
+  .identifier-value,
+  .pending-counts {
+    justify-items: end;
+  }
 }
 
 @media (min-width: 48rem) {
@@ -1036,6 +1122,18 @@ select[aria-invalid="true"] {
 
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .investigation-filters__fields {
+    grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr);
+  }
+
+  .investigations-list-card {
+    padding: var(--space-4);
+  }
+
+  .investigations-list-card .table {
+    min-width: 70rem;
   }
 
   input,

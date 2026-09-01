@@ -3,6 +3,7 @@ import type { IconName } from "../components/icons/Icon";
 export type AppRouteId =
   | "overview"
   | "investigations"
+  | "investigation-detail"
   | "new-investigation"
   | "entities"
   | "evidence"
@@ -67,6 +68,19 @@ export const appRoutes = [
     description:
       "O fluxo será construído sobre fixtures tipadas; esta rota não cria registros nem chama a API.",
     icon: "add",
+    group: "workspace",
+    parentId: "investigations",
+    showInSidebar: false,
+  },
+  {
+    id: "investigation-detail",
+    path: "/investigacoes/:investigationId",
+    label: "Detalhe da investigação",
+    title: "Detalhe da investigação",
+    eyebrow: "Workspace investigativo",
+    description:
+      "A rota está preparada para navegação; o detalhe completo permanece fora desta entrega.",
+    icon: "investigations",
     group: "workspace",
     parentId: "investigations",
     showInSidebar: false,
@@ -179,7 +193,29 @@ export const notFoundRoute = {
 
 export function getRouteByPathname(pathname: string): AppRouteDefinition | undefined {
   const normalizedPath = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
-  return appRoutes.find((route) => route.path === normalizedPath);
+  const exactRoute = appRoutes.find((route) => route.path === normalizedPath);
+  if (exactRoute !== undefined) {
+    return exactRoute;
+  }
+
+  return appRoutes.find((route) => {
+    if (!route.path.includes(":")) {
+      return false;
+    }
+
+    const routeSegments = route.path.split("/");
+    const pathnameSegments = normalizedPath.split("/");
+    return (
+      routeSegments.length === pathnameSegments.length &&
+      routeSegments.every(
+        (segment, index) => segment.startsWith(":") || segment === pathnameSegments[index],
+      )
+    );
+  });
+}
+
+export function getInvestigationDetailPath(investigationId: string): string {
+  return `/investigacoes/${encodeURIComponent(investigationId)}`;
 }
 
 export function getRouteBreadcrumbs(route: AppRouteDefinition): readonly AppRouteDefinition[] {

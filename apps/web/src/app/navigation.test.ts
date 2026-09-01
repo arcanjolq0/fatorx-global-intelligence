@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { appRoutes, getRouteBreadcrumbs, getRouteByPathname } from "./navigation";
+import {
+  appRoutes,
+  getInvestigationDetailPath,
+  getRouteBreadcrumbs,
+  getRouteByPathname,
+} from "./navigation";
 
 const expectedPaths = [
   "/",
   "/investigacoes",
   "/investigacoes/nova",
+  "/investigacoes/:investigationId",
   "/entidades",
   "/evidencias",
   "/claims",
@@ -33,5 +39,15 @@ describe("navigation configuration", () => {
       "investigations",
       "new-investigation",
     ]);
+  });
+
+  it("resolves a typed investigation detail path without shadowing the new route", () => {
+    expect(getInvestigationDetailPath("inv-atlas-meridian")).toBe(
+      "/investigacoes/inv-atlas-meridian",
+    );
+    expect(getRouteByPathname("/investigacoes/inv-atlas-meridian")?.id).toBe(
+      "investigation-detail",
+    );
+    expect(getRouteByPathname("/investigacoes/nova")?.id).toBe("new-investigation");
   });
 });
