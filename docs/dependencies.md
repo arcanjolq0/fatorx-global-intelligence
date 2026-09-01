@@ -32,6 +32,7 @@ Critérios comuns de manutenção: release estável disponível, repositório p�
 |---|---:|---|---|---|---|
 | React | 19.2.8 | Biblioteca de UI exigida pelo planejamento. | Projeto ativo mantido pela equipe React. | MIT | Preact/vanilla reduziriam peso, mas divergiriam da decisão de stack. |
 | React DOM | 19.2.8 | Renderer oficial do React no navegador. | Mantido e versionado com React. | MIT | Renderer próprio não é justificável. |
+| React Router | 8.3.0 | Roteamento declarativo client-side para um shell persistente, deep links e configuração única de navegação, sem criar backend ou endpoints. | Projeto ativo do ecossistema React. | MIT | Roteamento manual com `history` duplicaria parsing, estado de navegação e acessibilidade de links. |
 
 ## 5. Build, tipos, lint e formatação web
 
