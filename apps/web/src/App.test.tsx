@@ -13,7 +13,7 @@ describe("App", () => {
     await router.navigate("/");
   });
 
-  it("renders the accessible application foundation without business data", () => {
+  it("renders the accessible application shell with the fixture dashboard", async () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Visão Geral" })).toBeVisible();
@@ -22,7 +22,9 @@ describe("App", () => {
       "href",
       "/investigacoes",
     );
-    expect(screen.getByText("Módulo ainda não implementado")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Intelligence workspace em uma visão" }),
+    ).toBeVisible();
 
     const search = screen.getByRole("searchbox", { name: "Busca global" });
     expect(search).toHaveAttribute("readonly");

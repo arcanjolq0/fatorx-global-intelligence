@@ -185,4 +185,59 @@ export interface DashboardSummary {
   readonly investigationsAwaitingReview: number;
   readonly evidenceItems: number;
   readonly claims: number;
+  readonly pendingReviews: number;
+}
+
+export type ControlledSourceKind =
+  | "SYNTHETIC_REGISTRY"
+  | "CONTROLLED_TEXT_CORPUS"
+  | "CONTROLLED_DOCUMENT_CORPUS"
+  | "CONTROLLED_REFERENCE_CORPUS";
+
+export interface ControlledSourceSummary {
+  readonly coverage: readonly JurisdictionPresentation[];
+  readonly id: string;
+  readonly kind: ControlledSourceKind;
+  readonly label: string;
+  readonly limitations: readonly string[];
+  readonly status: "CONTROLLED_TEST_FIXTURE" | "TEST_SUSPENDED";
+  readonly validatedAt: IsoDateTime;
+}
+
+export type AuditEventCategory =
+  "INVESTIGATION" | "ENTITY" | "EVIDENCE" | "CLAIM" | "FACTUAL_REVIEW";
+
+export type AuditEventResult = "RECORDED" | "PENDING" | "NEEDS_ATTENTION" | "INVALIDATED";
+
+export interface AuditEventSummary {
+  readonly action: string;
+  readonly actor: {
+    readonly displayName: string;
+    readonly id: string;
+  } | null;
+  readonly category: AuditEventCategory;
+  readonly id: string;
+  readonly investigationId: string;
+  readonly objectReference: string;
+  readonly occurredAt: IsoDateTime;
+  readonly result: AuditEventResult;
+}
+
+export interface ReportTraceabilityEntry {
+  readonly claimId: string;
+  readonly claimVersion: number;
+  readonly evidence: readonly {
+    readonly evidenceId: string;
+    readonly evidenceVersion: number;
+  }[];
+  readonly factualReviewId: string;
+}
+
+export interface ReportPreviewSummary {
+  readonly asOf: IsoDateTime;
+  readonly availability: "PREVIEW_AVAILABLE" | "NOT_AVAILABLE";
+  readonly id: string;
+  readonly investigationId: string;
+  readonly limitations: readonly string[];
+  readonly traceability: readonly ReportTraceabilityEntry[];
 }

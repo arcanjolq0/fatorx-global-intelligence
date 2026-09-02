@@ -1,11 +1,14 @@
 import type {
   ActivityItem,
+  AuditEventSummary,
   ClaimReviewSummary,
   ClaimSummary,
+  ControlledSourceSummary,
   DashboardSummary,
   EvidenceSummary,
   InvestigationDetail,
   InvestigationSummary,
+  ReportPreviewSummary,
 } from "./types";
 
 export interface IntelligenceDataSource {
@@ -18,4 +21,7 @@ export interface IntelligenceDataSource {
   listFactualReviews(investigationId?: string): Promise<readonly ClaimReviewSummary[]>;
   getFactualReviewDetail(reviewId: string): Promise<ClaimReviewSummary | null>;
   getRecentActivity(): Promise<readonly ActivityItem[]>;
+  listControlledSources(): Promise<readonly ControlledSourceSummary[]>;
+  listAuditEvents(): Promise<readonly AuditEventSummary[]>;
+  listReportPreviews(): Promise<readonly ReportPreviewSummary[]>;
 }

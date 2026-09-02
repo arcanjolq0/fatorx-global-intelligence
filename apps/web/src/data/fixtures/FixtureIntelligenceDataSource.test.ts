@@ -9,13 +9,26 @@ describe("FixtureIntelligenceDataSource", () => {
   it("provides coherent typed read models without sharing mutable fixture references", async () => {
     const dataSource = new FixtureIntelligenceDataSource();
 
-    const [dashboard, investigations, evidence, claims, reviews, activity] = await Promise.all([
+    const [
+      dashboard,
+      investigations,
+      evidence,
+      claims,
+      reviews,
+      activity,
+      sources,
+      audit,
+      reports,
+    ] = await Promise.all([
       dataSource.getDashboardSummary(),
       dataSource.listInvestigations(),
       dataSource.listEvidence(),
       dataSource.listClaims(),
       dataSource.listFactualReviews(),
       dataSource.getRecentActivity(),
+      dataSource.listControlledSources(),
+      dataSource.listAuditEvents(),
+      dataSource.listReportPreviews(),
     ]);
 
     expect(investigations).toHaveLength(5);
@@ -26,6 +39,22 @@ describe("FixtureIntelligenceDataSource", () => {
     });
     expect(reviews).toHaveLength(claims.length);
     expect(activity.length).toBeGreaterThan(0);
+    expect(sources).toHaveLength(4);
+    expect(new Set(sources.map((source) => source.status))).toEqual(
+      new Set(["CONTROLLED_TEST_FIXTURE", "TEST_SUSPENDED"]),
+    );
+    expect(audit).toHaveLength(6);
+    expect(reports).toHaveLength(investigations.length);
+    expect(reports.find((report) => report.availability === "PREVIEW_AVAILABLE")).toMatchObject({
+      investigationId: "inv-atlas-meridian",
+      traceability: [
+        {
+          claimId: "claim-atlas-legal-name",
+          claimVersion: 1,
+          factualReviewId: "review-01",
+        },
+      ],
+    });
 
     const secondRead = await dataSource.listInvestigations();
     expect(secondRead).toEqual(investigations);
@@ -106,7 +135,11 @@ describe("FixtureIntelligenceDataSource", () => {
       totalInvestigations: 0,
       evidenceItems: 0,
       claims: 0,
+      pendingReviews: 0,
     });
+    await expect(emptyDataSource.listControlledSources()).resolves.toEqual([]);
+    await expect(emptyDataSource.listAuditEvents()).resolves.toEqual([]);
+    await expect(emptyDataSource.listReportPreviews()).resolves.toEqual([]);
     await expect(errorDataSource.listInvestigations()).rejects.toBeInstanceOf(
       FixtureDataSourceError,
     );

@@ -1,12 +1,15 @@
 import type { IntelligenceDataSource } from "../IntelligenceDataSource";
 import type {
   ActivityItem,
+  AuditEventSummary,
   ClaimReviewSummary,
   ClaimSummary,
+  ControlledSourceSummary,
   DashboardSummary,
   EvidenceSummary,
   InvestigationDetail,
   InvestigationSummary,
+  ReportPreviewSummary,
 } from "../types";
 import { emptyFixtureData, populatedFixtureData } from "./intelligenceFixtures";
 import type { FixtureDataSet } from "./intelligenceFixtures";
@@ -76,6 +79,18 @@ export class FixtureIntelligenceDataSource implements IntelligenceDataSource {
 
   getRecentActivity(): Promise<readonly ActivityItem[]> {
     return this.#read(this.#data.recentActivity);
+  }
+
+  listControlledSources(): Promise<readonly ControlledSourceSummary[]> {
+    return this.#read(this.#data.controlledSources);
+  }
+
+  listAuditEvents(): Promise<readonly AuditEventSummary[]> {
+    return this.#read(this.#data.auditEvents);
+  }
+
+  listReportPreviews(): Promise<readonly ReportPreviewSummary[]> {
+    return this.#read(this.#data.reportPreviews);
   }
 
   #filterByInvestigation<Row extends { readonly investigationId: string }>(

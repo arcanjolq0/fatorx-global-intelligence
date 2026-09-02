@@ -45,7 +45,7 @@ export const appRoutes = [
     title: "Visão Geral",
     eyebrow: "Workspace investigativo",
     description:
-      "A estrutura da visão operacional está pronta; indicadores e atividade aguardam fixtures tipadas.",
+      "Indicadores operacionais derivados das fixtures tipadas, sem score ou inferência de risco.",
     icon: "overview",
     group: "workspace",
     showInSidebar: true,
@@ -178,7 +178,7 @@ export const appRoutes = [
     title: "Fontes",
     eyebrow: "Cobertura e política",
     description:
-      "Não existe catálogo aprovado nem fonte real habilitada; a interface não promete cobertura.",
+      "Canais sintéticos controlados, suas limitações e cobertura exclusiva de demonstração.",
     icon: "sources",
     group: "governance",
     showInSidebar: true,
@@ -190,7 +190,7 @@ export const appRoutes = [
     title: "Relatórios",
     eyebrow: "Resultado investigativo",
     description:
-      "Relatórios produtivos e exportação não existem no baseline e permanecem indisponíveis.",
+      "Preview visual rastreável e não produtivo, sem geração, exportação ou decisão de risco.",
     icon: "reports",
     group: "governance",
     showInSidebar: true,
@@ -202,7 +202,7 @@ export const appRoutes = [
     title: "Auditoria",
     eyebrow: "Governança",
     description:
-      "A foundation não consulta eventos persistidos; filtros e projeções serão definidos posteriormente.",
+      "Projeção local somente leitura de eventos sintéticos, sem conteúdo bruto ou sensível.",
     icon: "audit",
     group: "governance",
     showInSidebar: true,

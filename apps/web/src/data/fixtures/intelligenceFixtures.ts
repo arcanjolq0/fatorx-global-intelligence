@@ -1,13 +1,16 @@
 import type {
   ActivityItem,
+  AuditEventSummary,
   ClaimReviewSummary,
   ClaimSummary,
+  ControlledSourceSummary,
   DashboardSummary,
   EntityCandidate,
   EntitySummary,
   EvidenceSummary,
   InvestigationDetail,
   InvestigationSummary,
+  ReportPreviewSummary,
 } from "../types";
 
 export interface FixtureDataSet {
@@ -18,6 +21,9 @@ export interface FixtureDataSet {
   readonly claims: readonly ClaimSummary[];
   readonly factualReviews: readonly ClaimReviewSummary[];
   readonly recentActivity: readonly ActivityItem[];
+  readonly controlledSources: readonly ControlledSourceSummary[];
+  readonly auditEvents: readonly AuditEventSummary[];
+  readonly reportPreviews: readonly ReportPreviewSummary[];
 }
 
 const entities = {
@@ -712,6 +718,160 @@ const recentActivity = [
   },
 ] as const satisfies readonly ActivityItem[];
 
+const controlledSources = [
+  {
+    coverage: [
+      entities.atlasMeridian.jurisdiction,
+      entities.northstar.jurisdiction,
+      entities.rheinbruck.jurisdiction,
+    ],
+    id: "fixture.controlled.registry",
+    kind: "SYNTHETIC_REGISTRY",
+    label: "Canal registral sintético",
+    limitations: [
+      "Dados inteiramente fictícios e mantidos no repositório.",
+      "Sem acesso de rede, licença de provedor ou cobertura produtiva.",
+    ],
+    status: "CONTROLLED_TEST_FIXTURE",
+    validatedAt: "2026-08-31T12:00:00Z",
+  },
+  {
+    coverage: [entities.atlasMeridian.jurisdiction, entities.northstar.jurisdiction],
+    id: "fixture.controlled.text",
+    kind: "CONTROLLED_TEXT_CORPUS",
+    label: "Corpus textual controlado",
+    limitations: [
+      "Textos sintéticos para exercitar proveniência e revisão.",
+      "Não representa publicação, órgão ou fonte externa real.",
+    ],
+    status: "CONTROLLED_TEST_FIXTURE",
+    validatedAt: "2026-08-31T12:05:00Z",
+  },
+  {
+    coverage: [entities.atlasMeridian.jurisdiction],
+    id: "fixture.controlled.documents",
+    kind: "CONTROLLED_DOCUMENT_CORPUS",
+    label: "Corpus documental controlado",
+    limitations: [
+      "Documentos de demonstração sem valor oficial.",
+      "Sem ingestão, atualização ou retenção de documentos reais.",
+    ],
+    status: "CONTROLLED_TEST_FIXTURE",
+    validatedAt: "2026-08-31T12:10:00Z",
+  },
+  {
+    coverage: [entities.northstar.jurisdiction],
+    id: "fixture.controlled.references",
+    kind: "CONTROLLED_REFERENCE_CORPUS",
+    label: "Referências externas simuladas",
+    limitations: [
+      "Referências não resolvem para URLs externas.",
+      "Canal suspenso no cenário de teste para demonstrar indisponibilidade.",
+    ],
+    status: "TEST_SUSPENDED",
+    validatedAt: "2026-08-31T12:15:00Z",
+  },
+] as const satisfies readonly ControlledSourceSummary[];
+
+const auditEvents = [
+  {
+    action: "Encaminhamento para revisão interna",
+    actor: null,
+    category: "INVESTIGATION",
+    id: "audit-01",
+    investigationId: "inv-atlas-meridian",
+    objectReference: "inv-atlas-meridian",
+    occurredAt: "2026-08-31T14:35:00Z",
+    result: "PENDING",
+  },
+  {
+    action: "Revisão factual devolvida para correção",
+    actor: { displayName: "Rafael Nunes", id: "reviewer-02" },
+    category: "FACTUAL_REVIEW",
+    id: "audit-02",
+    investigationId: "inv-northstar-components",
+    objectReference: "claim-northstar-registration-status · v2",
+    occurredAt: "2026-08-31T11:00:00Z",
+    result: "NEEDS_ATTENTION",
+  },
+  {
+    action: "Decisão factual invalidada",
+    actor: { displayName: "Rafael Nunes", id: "reviewer-02" },
+    category: "FACTUAL_REVIEW",
+    id: "audit-03",
+    investigationId: "inv-atlas-meridian",
+    objectReference: "claim-atlas-prior-identifier · v1",
+    occurredAt: "2026-08-31T09:10:00Z",
+    result: "INVALIDATED",
+  },
+  {
+    action: "Evidence registrada na camada de demonstração",
+    actor: null,
+    category: "EVIDENCE",
+    id: "audit-04",
+    investigationId: "inv-rheinbruck-machines",
+    objectReference: "EVD-RHE-001 · v1",
+    occurredAt: "2026-08-30T16:30:00Z",
+    result: "RECORDED",
+  },
+  {
+    action: "Confirmação humana de entidade registrada",
+    actor: null,
+    category: "ENTITY",
+    id: "audit-05",
+    investigationId: "inv-solandia-exports",
+    objectReference: "entity-solandia-exports",
+    occurredAt: "2026-08-30T09:10:00Z",
+    result: "RECORDED",
+  },
+  {
+    action: "Claim registrada para revisão factual",
+    actor: null,
+    category: "CLAIM",
+    id: "audit-06",
+    investigationId: "inv-northstar-components",
+    objectReference: "claim-northstar-registration · v1",
+    occurredAt: "2026-08-30T09:30:00Z",
+    result: "PENDING",
+  },
+] as const satisfies readonly AuditEventSummary[];
+
+const reportPreviews = investigations.map((investigation) => {
+  if (investigation.id === "inv-atlas-meridian") {
+    return {
+      asOf: "2026-08-31T15:00:00Z",
+      availability: "PREVIEW_AVAILABLE",
+      id: "report-preview-atlas",
+      investigationId: investigation.id,
+      limitations: [
+        "Preview visual local; não é relatório produtivo nem documento aprovado.",
+        "Contém somente Claims aceitas para uso factual interno e sua Evidence exata.",
+        "Não contém risk score, decisão de crédito, assinatura ou garantia de verdade externa.",
+      ],
+      traceability: [
+        {
+          claimId: "claim-atlas-legal-name",
+          claimVersion: 1,
+          evidence: [{ evidenceId: "ev-atlas-registration", evidenceVersion: 2 }],
+          factualReviewId: "review-01",
+        },
+      ],
+    } as const;
+  }
+
+  return {
+    asOf: "2026-08-31T15:00:00Z",
+    availability: "NOT_AVAILABLE",
+    id: `report-preview-${investigation.id}`,
+    investigationId: investigation.id,
+    limitations: [
+      "Nenhuma Claim aceita para uso factual interno está disponível nesta fixture.",
+      "A indisponibilidade não constitui conclusão sobre a entidade investigada.",
+    ],
+    traceability: [],
+  } as const;
+}) satisfies readonly ReportPreviewSummary[];
+
 export const populatedFixtureData: FixtureDataSet = {
   dashboard: {
     asOf: "2026-08-31T15:00:00Z",
@@ -720,6 +880,7 @@ export const populatedFixtureData: FixtureDataSet = {
     investigationsAwaitingReview: 1,
     evidenceItems: evidence.length,
     claims: claims.length,
+    pendingReviews: factualReviews.filter((review) => review.effectiveStatus === "PENDING").length,
   },
   investigations,
   investigationDetails,
@@ -727,6 +888,9 @@ export const populatedFixtureData: FixtureDataSet = {
   claims,
   factualReviews,
   recentActivity,
+  controlledSources,
+  auditEvents,
+  reportPreviews,
 };
 
 export const emptyFixtureData: FixtureDataSet = {
@@ -737,6 +901,7 @@ export const emptyFixtureData: FixtureDataSet = {
     investigationsAwaitingReview: 0,
     evidenceItems: 0,
     claims: 0,
+    pendingReviews: 0,
   },
   investigations: [],
   investigationDetails: [],
@@ -744,4 +909,7 @@ export const emptyFixtureData: FixtureDataSet = {
   claims: [],
   factualReviews: [],
   recentActivity: [],
+  controlledSources: [],
+  auditEvents: [],
+  reportPreviews: [],
 };

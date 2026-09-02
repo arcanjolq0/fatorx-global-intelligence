@@ -5,6 +5,7 @@ import { Badge, Card, Skeleton, StatePanel } from "../components/ui";
 import { EvidenceCollection } from "../components/intelligence/EvidenceCollection";
 import { ClaimsCollection } from "../components/intelligence/ClaimsCollection";
 import { ReviewsCollection } from "../components/intelligence/ReviewsCollection";
+import { Timeline } from "../components/intelligence/Timeline";
 import type { IntelligenceDataSource } from "../data/IntelligenceDataSource";
 import { fixtureIntelligenceDataSource } from "../data/fixtures/FixtureIntelligenceDataSource";
 import type { ActivityItem, ClaimSummary, InvestigationDetail } from "../data/types";
@@ -121,18 +122,13 @@ function InvestigationOverview({
           </div>
         </Card>
         <Card title="Atividade recente">
-          {activity.length === 0 ? (
-            <p className="empty-inline">Nenhuma atividade sintética registrada.</p>
-          ) : (
-            <ol className="timeline">
-              {activity.slice(0, 4).map((item) => (
-                <li key={item.id}>
-                  <strong>{item.summary}</strong>
-                  <time dateTime={item.occurredAt}>{formatDate(item.occurredAt)}</time>
-                </li>
-              ))}
-            </ol>
-          )}
+          <Timeline
+            entries={activity.slice(0, 4).map((item) => ({
+              id: item.id,
+              occurredAt: item.occurredAt,
+              title: item.summary,
+            }))}
+          />
         </Card>
       </section>
 
