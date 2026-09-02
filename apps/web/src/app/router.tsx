@@ -3,6 +3,11 @@ import type { RouteObject } from "react-router";
 
 import { AppLayout } from "../components/layout/AppLayout";
 import { EntityConfirmationPage } from "../pages/EntityConfirmationPage";
+import { ClaimDetailPage } from "../pages/ClaimDetailPage";
+import { ClaimsPage } from "../pages/ClaimsPage";
+import { EvidenceExplorerPage } from "../pages/EvidenceExplorerPage";
+import { FactualReviewDetailPage } from "../pages/FactualReviewDetailPage";
+import { FactualReviewsPage } from "../pages/FactualReviewsPage";
 import { InvestigationDetailPage } from "../pages/InvestigationDetailPage";
 import { InvestigationsPage } from "../pages/InvestigationsPage";
 import { NewInvestigationPage } from "../pages/NewInvestigationPage";
@@ -20,6 +25,11 @@ const foundationRoutes: RouteObject[] = appRoutes.map((route) =>
           if (route.id === "new-investigation") return <NewInvestigationPage />;
           if (route.id === "entity-confirmation") return <EntityConfirmationPage />;
           if (route.id === "investigation-detail") return <InvestigationDetailPage />;
+          if (route.id === "evidence") return <EvidenceExplorerPage />;
+          if (route.id === "claims") return <ClaimsPage />;
+          if (route.id === "claim-detail") return <ClaimDetailPage />;
+          if (route.id === "reviews") return <FactualReviewsPage />;
+          if (route.id === "review-detail") return <FactualReviewDetailPage />;
           return <PlaceholderPage route={route} />;
         })(),
       },

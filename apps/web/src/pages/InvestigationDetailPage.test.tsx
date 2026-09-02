@@ -52,8 +52,19 @@ describe("InvestigationDetailPage", () => {
     expect(entityTab).toHaveAttribute("href", "/investigacoes/inv-atlas-meridian?tab=entity");
 
     fireEvent.click(screen.getByRole("link", { name: "Evidências" }));
-    expect(await screen.findByText("Evidências em próxima etapa")).toBeVisible();
-    expect(screen.getByText(/Evidence Explorer não faz parte desta entrega/)).toBeVisible();
+    expect(await screen.findByText("EVD-ATL-002")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Filtrar Evidence" })).toBeVisible();
+    expect(screen.queryByText("EVD-NOR-001")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "Claims" }));
+    expect(
+      await screen.findByText("Denominação registrada corresponde a Atlas Meridian Comércio S.A."),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "Revisões" }));
+    expect(
+      await screen.findByText("Fila de revisões factuais somente leitura"),
+    ).toBeInTheDocument();
   });
 
   it("renders not-found, loading and error states", async () => {

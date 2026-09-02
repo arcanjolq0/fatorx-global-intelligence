@@ -9,7 +9,9 @@ export type AppRouteId =
   | "entities"
   | "evidence"
   | "claims"
+  | "claim-detail"
   | "reviews"
+  | "review-detail"
   | "sources"
   | "reports"
   | "audit"
@@ -117,7 +119,7 @@ export const appRoutes = [
     title: "Evidências",
     eyebrow: "Rastreabilidade",
     description:
-      "O Evidence Explorer não faz parte desta entrega e nenhuma admissibilidade é inferida pela interface.",
+      "Explore Evidence sintética e compare o estado persistido com a admissibilidade efetiva F5.3.",
     icon: "evidence",
     group: "workspace",
     showInSidebar: true,
@@ -129,10 +131,22 @@ export const appRoutes = [
     title: "Claims",
     eyebrow: "Afirmações rastreáveis",
     description:
-      "Claims, vínculos e elegibilidade contextual permanecem fora da foundation e sem dados simulados.",
+      "Claims sintéticas com vínculos explícitos, contradições e separação entre F5.2, F5.3 e F5.4.",
     icon: "claims",
     group: "workspace",
     showInSidebar: true,
+  },
+  {
+    id: "claim-detail",
+    path: "/claims/:claimId",
+    label: "Detalhe da Claim",
+    title: "Detalhe da Claim",
+    eyebrow: "Afirmação rastreável",
+    description: "Versão exata da Claim, base de Evidence e histórico factual sintético.",
+    icon: "claims",
+    group: "workspace",
+    parentId: "claims",
+    showInSidebar: false,
   },
   {
     id: "reviews",
@@ -140,11 +154,22 @@ export const appRoutes = [
     label: "Revisões",
     title: "Revisões factuais",
     eyebrow: "Revisão humana",
-    description:
-      "Nenhuma decisão factual é exibida ou criada nesta etapa; a rota é somente estrutural.",
+    description: "Fila somente leitura de decisões F5.4 sobre versões exatas de Claims sintéticas.",
     icon: "reviews",
     group: "workspace",
     showInSidebar: true,
+  },
+  {
+    id: "review-detail",
+    path: "/revisoes/:reviewId",
+    label: "Detalhe da revisão",
+    title: "Detalhe da revisão factual",
+    eyebrow: "Revisão humana",
+    description: "Base, decisão e eventual invalidação da revisão factual sintética.",
+    icon: "reviews",
+    group: "workspace",
+    parentId: "reviews",
+    showInSidebar: false,
   },
   {
     id: "sources",
@@ -233,6 +258,14 @@ export function getRouteByPathname(pathname: string): AppRouteDefinition | undef
 
 export function getInvestigationDetailPath(investigationId: string): string {
   return `/investigacoes/${encodeURIComponent(investigationId)}`;
+}
+
+export function getClaimDetailPath(claimId: string): string {
+  return `/claims/${encodeURIComponent(claimId)}`;
+}
+
+export function getReviewDetailPath(reviewId: string): string {
+  return `/revisoes/${encodeURIComponent(reviewId)}`;
 }
 
 export function getEntityConfirmationPath(identifier: string): string {

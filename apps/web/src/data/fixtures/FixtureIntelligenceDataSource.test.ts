@@ -55,6 +55,7 @@ describe("FixtureIntelligenceDataSource", () => {
           },
         }),
         expect.objectContaining({ role: "CONTRADICTS" }),
+        expect.objectContaining({ role: "QUALIFIES" }),
       ]),
     );
     expect(conflictedClaim?.factualReview).toMatchObject({
@@ -74,6 +75,26 @@ describe("FixtureIntelligenceDataSource", () => {
       entity: { legalName: "Atlas Meridian Comércio S.A." },
     });
     await expect(dataSource.getInvestigationDetail("inv-inexistente")).resolves.toBeNull();
+    await expect(
+      dataSource.getClaimDetail("claim-northstar-registration-status"),
+    ).resolves.toMatchObject({ version: 2, assessment: "CONFLICTED" });
+    await expect(dataSource.getFactualReviewDetail("review-02")).resolves.toMatchObject({
+      claimId: "claim-atlas-prior-identifier",
+      claimVersion: 1,
+      effectiveStatus: "INVALIDATED",
+    });
+    await expect(dataSource.getClaimDetail("claim-inexistente")).resolves.toBeNull();
+    await expect(dataSource.getFactualReviewDetail("review-inexistente")).resolves.toBeNull();
+  });
+
+  it("preserves persisted Evidence PENDING independently from every effective F5.3 state", async () => {
+    const evidence = await new FixtureIntelligenceDataSource().listEvidence();
+    expect(new Set(evidence.map((item) => item.persistedAdmissibilityStatus))).toEqual(
+      new Set(["PENDING"]),
+    );
+    expect(new Set(evidence.map((item) => item.admissibility.status))).toEqual(
+      new Set(["PENDING", "ADMISSIBLE", "RESTRICTED", "REJECTED", "EXPIRED", "REVOKED"]),
+    );
   });
 
   it("exposes deterministic empty and error scenarios", async () => {

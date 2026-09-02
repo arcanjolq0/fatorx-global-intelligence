@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   appRoutes,
   getEntityConfirmationPath,
+  getClaimDetailPath,
   getInvestigationDetailPath,
+  getReviewDetailPath,
   getRouteBreadcrumbs,
   getRouteByPathname,
 } from "./navigation";
@@ -17,7 +19,9 @@ const expectedPaths = [
   "/entidades",
   "/evidencias",
   "/claims",
+  "/claims/:claimId",
   "/revisoes",
+  "/revisoes/:reviewId",
   "/fontes",
   "/relatorios",
   "/auditoria",
@@ -64,5 +68,12 @@ describe("navigation configuration", () => {
       "new-investigation",
       "entity-confirmation",
     ]);
+  });
+
+  it("resolves Claim and factual review details from the shared route registry", () => {
+    expect(getClaimDetailPath("claim/01")).toBe("/claims/claim%2F01");
+    expect(getReviewDetailPath("review 01")).toBe("/revisoes/review%2001");
+    expect(getRouteByPathname("/claims/claim-01")?.id).toBe("claim-detail");
+    expect(getRouteByPathname("/revisoes/review-01")?.id).toBe("review-detail");
   });
 });

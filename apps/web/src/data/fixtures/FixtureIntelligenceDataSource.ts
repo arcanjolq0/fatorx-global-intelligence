@@ -62,8 +62,16 @@ export class FixtureIntelligenceDataSource implements IntelligenceDataSource {
     return this.#read(this.#filterByInvestigation(this.#data.claims, investigationId));
   }
 
+  getClaimDetail(claimId: string): Promise<ClaimSummary | null> {
+    return this.#read(this.#data.claims.find((claim) => claim.id === claimId) ?? null);
+  }
+
   listFactualReviews(investigationId?: string): Promise<readonly ClaimReviewSummary[]> {
     return this.#read(this.#filterByInvestigation(this.#data.factualReviews, investigationId));
+  }
+
+  getFactualReviewDetail(reviewId: string): Promise<ClaimReviewSummary | null> {
+    return this.#read(this.#data.factualReviews.find((review) => review.id === reviewId) ?? null);
   }
 
   getRecentActivity(): Promise<readonly ActivityItem[]> {

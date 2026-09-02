@@ -14,6 +14,8 @@ export interface IntelligenceDataSource {
   getInvestigationDetail(investigationId: string): Promise<InvestigationDetail | null>;
   listEvidence(investigationId?: string): Promise<readonly EvidenceSummary[]>;
   listClaims(investigationId?: string): Promise<readonly ClaimSummary[]>;
+  getClaimDetail(claimId: string): Promise<ClaimSummary | null>;
   listFactualReviews(investigationId?: string): Promise<readonly ClaimReviewSummary[]>;
+  getFactualReviewDetail(reviewId: string): Promise<ClaimReviewSummary | null>;
   getRecentActivity(): Promise<readonly ActivityItem[]>;
 }

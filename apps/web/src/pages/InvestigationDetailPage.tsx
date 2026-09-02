@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
 import { Badge, Card, Skeleton, StatePanel } from "../components/ui";
+import { EvidenceCollection } from "../components/intelligence/EvidenceCollection";
+import { ClaimsCollection } from "../components/intelligence/ClaimsCollection";
+import { ReviewsCollection } from "../components/intelligence/ReviewsCollection";
 import type { IntelligenceDataSource } from "../data/IntelligenceDataSource";
 import { fixtureIntelligenceDataSource } from "../data/fixtures/FixtureIntelligenceDataSource";
 import type { ActivityItem, ClaimSummary, InvestigationDetail } from "../data/types";
@@ -278,27 +281,12 @@ function InvestigationEntity({ detail }: { readonly detail: InvestigationDetail 
   );
 }
 
-function DeferredTab({
-  detail,
-  tab,
-}: {
-  readonly detail: InvestigationDetail;
-  readonly tab: DetailTabId;
-}) {
-  const summaries: Readonly<Record<Exclude<DetailTabId, "overview" | "entity">, string>> = {
-    evidence: `${detail.evidence.length.toLocaleString("pt-BR")} Evidence(s) sintética(s) vinculada(s). O Evidence Explorer não faz parte desta entrega.`,
-    claims: `${detail.claims.length.toLocaleString("pt-BR")} Claim(s) sintética(s). Elegibilidade contextual não promove admissibilidade global nem factualidade.`,
-    reviews: `${detail.factualReviews.length.toLocaleString("pt-BR")} revisão(ões) sintética(s). Aceite interno não torna Claim verdadeira ou reportável.`,
-    history:
-      "O histórico completo permanece indisponível; somente a atividade sintética resumida é exibida na Visão geral.",
-  };
-  if (tab === "overview" || tab === "entity") return null;
+function DeferredHistoryTab({ tab }: { readonly tab: DetailTabId }) {
+  if (tab !== "history") return null;
   return (
-    <StatePanel
-      kind="unavailable"
-      title={`${tabs.find((item) => item.id === tab)?.label ?? "Seção"} em próxima etapa`}
-    >
-      {summaries[tab]}
+    <StatePanel kind="unavailable" title="Histórico completo em próxima etapa">
+      Somente os históricos factuais estritamente necessários são exibidos nas vistas de Evidence e
+      Claim.
     </StatePanel>
   );
 }
@@ -416,7 +404,30 @@ export function InvestigationDetailPage({
           <InvestigationOverview activity={activity} detail={detail} />
         ) : null}
         {activeTab === "entity" ? <InvestigationEntity detail={detail} /> : null}
-        <DeferredTab detail={detail} tab={activeTab} />
+        {activeTab === "evidence" ? (
+          <EvidenceCollection
+            claims={detail.claims}
+            evidence={detail.evidence}
+            investigations={[detail]}
+            scopedInvestigationId={detail.id}
+          />
+        ) : null}
+        {activeTab === "claims" ? (
+          <ClaimsCollection
+            claims={detail.claims}
+            investigations={[detail]}
+            scopedInvestigationId={detail.id}
+          />
+        ) : null}
+        {activeTab === "reviews" ? (
+          <ReviewsCollection
+            claims={detail.claims}
+            investigations={[detail]}
+            reviews={detail.factualReviews}
+            scopedInvestigationId={detail.id}
+          />
+        ) : null}
+        <DeferredHistoryTab tab={activeTab} />
       </section>
     </div>
   );

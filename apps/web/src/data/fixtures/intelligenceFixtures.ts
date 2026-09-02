@@ -141,88 +141,202 @@ const investigations = [
 
 const evidence = [
   {
+    createdAt: "2026-08-28T10:00:00Z",
+    friendlyId: "EVD-ATL-002",
+    history: [
+      {
+        occurredAt: "2026-08-28T10:00:00Z",
+        summary: "Versão 2 registrada na fixture controlada.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-atlas-registration",
     investigationId: "inv-atlas-meridian",
     label: "Extrato sintético de registro empresarial",
     kind: "STRUCTURED_DATA",
-    capturedAt: "2026-08-28T10:00:00Z",
+    locatorSummary: "Registro sintético · seção cadastral",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture registral controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-atlas-registration",
+    version: 2,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "ADMISSIBLE",
     },
   },
   {
+    createdAt: "2026-08-28T10:05:00Z",
+    friendlyId: "EVD-ATL-003",
+    history: [
+      {
+        occurredAt: "2026-08-28T10:05:00Z",
+        summary: "Evidence registrada; decisão efetiva ainda pendente.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-atlas-address",
     investigationId: "inv-atlas-meridian",
     label: "Referência sintética de endereço operacional",
     kind: "TEXT",
-    capturedAt: "2026-08-28T10:05:00Z",
+    locatorSummary: "Referência sintética · endereço principal",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture textual controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-atlas-address",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "PENDING",
     },
   },
   {
+    createdAt: "2026-08-28T10:10:00Z",
+    friendlyId: "EVD-ATL-004",
+    history: [
+      {
+        occurredAt: "2026-08-28T10:10:00Z",
+        summary: "Evidence registrada com uso efetivo restrito.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-atlas-filing",
     investigationId: "inv-atlas-meridian",
     label: "Documento societário sintético",
     kind: "TEXT",
-    capturedAt: "2026-08-28T10:10:00Z",
+    locatorSummary: "Documento sintético · quadro societário",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture documental controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-atlas-filing",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "RESTRICTED",
     },
   },
   {
+    createdAt: "2026-08-27T09:40:00Z",
+    friendlyId: "EVD-ATL-001",
+    history: [
+      {
+        occurredAt: "2026-08-27T09:40:00Z",
+        summary: "Versão 1 registrada na fixture controlada.",
+        type: "RECORDED",
+      },
+      {
+        occurredAt: "2026-08-28T10:00:00Z",
+        summary: "Versão superada pela versão 2 e decisão efetiva revogada.",
+        type: "VERSION_SUPERSEDED",
+      },
+    ],
     id: "ev-atlas-prior-registration",
     investigationId: "inv-atlas-meridian",
     label: "Versão sintética anterior do registro",
     kind: "STRUCTURED_DATA",
-    capturedAt: "2026-08-27T09:40:00Z",
+    locatorSummary: "Registro sintético · versão histórica",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture registral controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-atlas-registration",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "REVOKED",
     },
   },
   {
+    createdAt: "2026-08-29T13:30:00Z",
+    friendlyId: "EVD-NOR-001",
+    history: [
+      {
+        occurredAt: "2026-08-29T13:30:00Z",
+        summary: "Evidence registrada na fixture controlada.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-northstar-registration",
     investigationId: "inv-northstar-components",
     label: "Extrato sintético de registro empresarial",
     kind: "STRUCTURED_DATA",
-    capturedAt: "2026-08-29T13:30:00Z",
+    locatorSummary: "Registro sintético · identificação",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture registral controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-northstar-registration",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "ADMISSIBLE",
     },
   },
   {
+    createdAt: "2026-08-29T13:35:00Z",
+    friendlyId: "EVD-NOR-002",
+    history: [
+      {
+        occurredAt: "2026-08-29T13:35:00Z",
+        summary: "Referência registrada e decisão efetiva rejeitada.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-northstar-alias",
     investigationId: "inv-northstar-components",
     label: "Referência sintética de denominação anterior",
     kind: "EXTERNAL_REFERENCE",
-    capturedAt: "2026-08-29T13:35:00Z",
+    locatorSummary: null,
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture de referência controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-northstar-alias",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "REJECTED",
     },
   },
   {
+    createdAt: "2026-08-29T13:40:00Z",
+    friendlyId: "EVD-NOR-003",
+    history: [
+      {
+        occurredAt: "2026-08-29T13:40:00Z",
+        summary: "Evidence registrada na fixture controlada.",
+        type: "RECORDED",
+      },
+      {
+        occurredAt: "2026-08-31T10:55:00Z",
+        summary: "Decisão efetiva passou a Expirada para uso factual interno.",
+        type: "EFFECTIVE_STATUS_CHANGED",
+      },
+    ],
     id: "ev-northstar-status",
     investigationId: "inv-northstar-components",
     label: "Registro sintético de situação cadastral",
     kind: "TEXT",
-    capturedAt: "2026-08-29T13:40:00Z",
+    locatorSummary: "Registro sintético · situação cadastral",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture textual controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-northstar-status",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "EXPIRED",
     },
   },
   {
+    createdAt: "2026-08-30T16:30:00Z",
+    friendlyId: "EVD-RHE-001",
+    history: [
+      {
+        occurredAt: "2026-08-30T16:30:00Z",
+        summary: "Resultado sintético registrado; decisão efetiva pendente.",
+        type: "RECORDED",
+      },
+    ],
     id: "ev-rheinbruck-registration",
     investigationId: "inv-rheinbruck-machines",
     label: "Resultado sintético de coleta controlada",
     kind: "STRUCTURED_DATA",
-    capturedAt: "2026-08-30T16:30:00Z",
+    locatorSummary: "Coleta simulada · identificação",
+    origin: { category: "CONTROLLED_SYNTHETIC_FIXTURE", label: "Fixture de coleta controlada" },
+    persistedAdmissibilityStatus: "PENDING",
+    seriesId: "evidence-series-rheinbruck-registration",
+    version: 1,
     admissibility: {
       purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
       status: "PENDING",
@@ -232,14 +346,18 @@ const evidence = [
 
 const claims = [
   {
+    createdAt: "2026-08-29T14:00:00Z",
     id: "claim-atlas-legal-name",
     investigationId: "inv-atlas-meridian",
     label: "Denominação registrada corresponde a Atlas Meridian Comércio S.A.",
+    seriesId: "claim-series-atlas-legal-name",
+    version: 1,
     assessment: "SUPPORTED",
     criticality: "STANDARD",
     evidenceUses: [
       {
         evidenceId: "ev-atlas-registration",
+        evidenceVersion: 2,
         role: "SUPPORTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "ELIGIBLE" },
         admissibility: {
@@ -254,16 +372,32 @@ const claims = [
       effectiveStatus: "ACCEPTED",
       reviewedAt: "2026-08-30T15:00:00Z",
     },
+    history: [
+      {
+        occurredAt: "2026-08-29T14:00:00Z",
+        summary: "Versão 1 da Claim registrada na fixture.",
+        version: 1,
+      },
+      {
+        occurredAt: "2026-08-30T15:00:00Z",
+        summary: "Aceita somente para uso factual interno.",
+        version: 1,
+      },
+    ],
   },
   {
+    createdAt: "2026-08-29T15:00:00Z",
     id: "claim-atlas-prior-identifier",
     investigationId: "inv-atlas-meridian",
     label: "Identificador anterior permanece aplicável à entidade",
+    seriesId: "claim-series-atlas-prior-identifier",
+    version: 1,
     assessment: "SUPPORTED",
     criticality: "STANDARD",
     evidenceUses: [
       {
         evidenceId: "ev-atlas-prior-registration",
+        evidenceVersion: 1,
         role: "SUPPORTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "ELIGIBLE" },
         admissibility: {
@@ -278,16 +412,32 @@ const claims = [
       effectiveStatus: "INVALIDATED",
       reviewedAt: "2026-08-29T17:20:00Z",
     },
+    history: [
+      {
+        occurredAt: "2026-08-29T15:00:00Z",
+        summary: "Versão 1 da Claim registrada na fixture.",
+        version: 1,
+      },
+      {
+        occurredAt: "2026-08-31T09:10:00Z",
+        summary: "Aceite invalidado após revogação efetiva da Evidence vinculada.",
+        version: 1,
+      },
+    ],
   },
   {
+    createdAt: "2026-08-30T09:30:00Z",
     id: "claim-northstar-registration",
     investigationId: "inv-northstar-components",
     label: "Identificador sintético corresponde ao registro apresentado",
+    seriesId: "claim-series-northstar-registration",
+    version: 1,
     assessment: "SUPPORTED",
     criticality: "STANDARD",
     evidenceUses: [
       {
         evidenceId: "ev-northstar-registration",
+        evidenceVersion: 1,
         role: "SUPPORTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "ELIGIBLE" },
         admissibility: {
@@ -302,16 +452,27 @@ const claims = [
       effectiveStatus: "PENDING",
       reviewedAt: null,
     },
+    history: [
+      {
+        occurredAt: "2026-08-30T09:30:00Z",
+        summary: "Versão 1 da Claim registrada; revisão factual pendente.",
+        version: 1,
+      },
+    ],
   },
   {
+    createdAt: "2026-08-30T09:40:00Z",
     id: "claim-northstar-alias",
     investigationId: "inv-northstar-components",
     label: "Denominação anterior pode ser usada como nome vigente",
+    seriesId: "claim-series-northstar-alias",
+    version: 1,
     assessment: "INSUFFICIENT",
     criticality: "STANDARD",
     evidenceUses: [
       {
         evidenceId: "ev-northstar-alias",
+        evidenceVersion: 1,
         role: "SUPPORTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "RESTRICTED" },
         admissibility: {
@@ -326,16 +487,32 @@ const claims = [
       effectiveStatus: "REJECTED",
       reviewedAt: "2026-08-31T10:45:00Z",
     },
+    history: [
+      {
+        occurredAt: "2026-08-30T09:40:00Z",
+        summary: "Versão 1 da Claim registrada na fixture.",
+        version: 1,
+      },
+      {
+        occurredAt: "2026-08-31T10:45:00Z",
+        summary: "Rejeitada para uso factual interno.",
+        version: 1,
+      },
+    ],
   },
   {
+    createdAt: "2026-08-30T10:00:00Z",
     id: "claim-northstar-registration-status",
     investigationId: "inv-northstar-components",
     label: "Situação cadastral permanece ativa no período observado",
+    seriesId: "claim-series-northstar-registration-status",
+    version: 2,
     assessment: "CONFLICTED",
     criticality: "CRITICAL",
     evidenceUses: [
       {
         evidenceId: "ev-northstar-registration",
+        evidenceVersion: 1,
         role: "SUPPORTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "ELIGIBLE" },
         admissibility: {
@@ -345,11 +522,22 @@ const claims = [
       },
       {
         evidenceId: "ev-northstar-status",
+        evidenceVersion: 1,
         role: "CONTRADICTS",
         eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "ELIGIBLE" },
         admissibility: {
           purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
           status: "EXPIRED",
+        },
+      },
+      {
+        evidenceId: "ev-northstar-alias",
+        evidenceVersion: 1,
+        role: "QUALIFIES",
+        eligibility: { purpose: "INTERNAL_CLAIM_VERIFICATION", status: "RESTRICTED" },
+        admissibility: {
+          purpose: "INTERNAL_FACTUAL_EVIDENCE_USE",
+          status: "REJECTED",
         },
       },
     ],
@@ -359,15 +547,75 @@ const claims = [
       effectiveStatus: "NEEDS_CORRECTION",
       reviewedAt: "2026-08-31T11:00:00Z",
     },
+    history: [
+      {
+        occurredAt: "2026-08-30T10:00:00Z",
+        summary: "Versão 1 registrada com base inicial.",
+        version: 1,
+      },
+      {
+        occurredAt: "2026-08-31T10:50:00Z",
+        summary: "Versão 2 adicionou vínculo contraditório e qualificador explícitos.",
+        version: 2,
+      },
+      {
+        occurredAt: "2026-08-31T11:00:00Z",
+        summary: "Versão 2 devolvida para correção factual.",
+        version: 2,
+      },
+    ],
   },
 ] as const satisfies readonly ClaimSummary[];
 
-const factualReviews = claims.map((claim, index) => ({
-  id: `review-${String(index + 1).padStart(2, "0")}`,
-  claimId: claim.id,
-  investigationId: claim.investigationId,
-  ...claim.factualReview,
-})) satisfies readonly ClaimReviewSummary[];
+const reviewMetadata = [
+  {
+    claimId: "claim-atlas-legal-name",
+    decisionNote: "Base sintética considerada suficiente somente para uso factual interno.",
+    invalidationReason: null,
+    reviewer: { displayName: "Marina Costa", id: "reviewer-01" },
+  },
+  {
+    claimId: "claim-atlas-prior-identifier",
+    decisionNote: "Decisão histórica preservada para rastreabilidade.",
+    invalidationReason: "A Evidence exata vinculada recebeu estado efetivo Revogado.",
+    reviewer: { displayName: "Rafael Nunes", id: "reviewer-02" },
+  },
+  {
+    claimId: "claim-northstar-registration",
+    decisionNote: null,
+    invalidationReason: null,
+    reviewer: null,
+  },
+  {
+    claimId: "claim-northstar-alias",
+    decisionNote: "A base não sustenta uso da denominação como nome vigente.",
+    invalidationReason: null,
+    reviewer: { displayName: "Marina Costa", id: "reviewer-01" },
+  },
+  {
+    claimId: "claim-northstar-registration-status",
+    decisionNote: "Contradição explícita exige correção da Claim antes de nova revisão.",
+    invalidationReason: null,
+    reviewer: { displayName: "Rafael Nunes", id: "reviewer-02" },
+  },
+] as const;
+
+const factualReviews = claims.map((claim, index) => {
+  const metadata = reviewMetadata[index];
+  if (metadata?.claimId !== claim.id) {
+    throw new Error("Fixture de revisão factual desalinhada com a Claim.");
+  }
+  return {
+    id: `review-${String(index + 1).padStart(2, "0")}`,
+    claimId: claim.id,
+    claimVersion: claim.version,
+    investigationId: claim.investigationId,
+    decisionNote: metadata.decisionNote,
+    invalidationReason: metadata.invalidationReason,
+    reviewer: metadata.reviewer,
+    ...claim.factualReview,
+  };
+}) satisfies readonly ClaimReviewSummary[];
 
 const entityCandidatesByInvestigation: Readonly<Record<string, readonly EntityCandidate[]>> = {
   "inv-atlas-meridian": [

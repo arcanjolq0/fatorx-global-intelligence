@@ -23,6 +23,9 @@ export type EffectiveEvidenceAdmissibilityStatus =
 export type EffectiveFactualReviewStatus =
   "PENDING" | "ACCEPTED" | "REJECTED" | "NEEDS_CORRECTION" | "INVALIDATED";
 
+export type EvidenceKind = "TEXT" | "STRUCTURED_DATA" | "IMAGE" | "EXTERNAL_REFERENCE";
+export type EvidenceRole = "SUPPORTS" | "CONTRADICTS" | "QUALIFIES";
+
 export interface JurisdictionPresentation {
   readonly code: string;
   readonly label: string;
@@ -94,34 +97,68 @@ export interface FactualReviewPresentation {
 
 export interface EvidenceUsePresentation {
   readonly evidenceId: string;
-  readonly role: "SUPPORTS" | "CONTRADICTS" | "QUALIFIES";
+  readonly evidenceVersion: number;
+  readonly role: EvidenceRole;
   readonly eligibility: ContextualEligibilityPresentation;
   readonly admissibility: GlobalAdmissibilityPresentation;
 }
 
+export interface EvidenceHistoryItem {
+  readonly occurredAt: IsoDateTime;
+  readonly summary: string;
+  readonly type: "RECORDED" | "VERSION_SUPERSEDED" | "EFFECTIVE_STATUS_CHANGED";
+}
+
 export interface EvidenceSummary {
+  readonly createdAt: IsoDateTime;
+  readonly friendlyId: string;
+  readonly history: readonly EvidenceHistoryItem[];
   readonly id: string;
   readonly investigationId: string;
   readonly label: string;
-  readonly kind: "TEXT" | "STRUCTURED_DATA" | "IMAGE" | "EXTERNAL_REFERENCE";
-  readonly capturedAt: IsoDateTime;
+  readonly kind: EvidenceKind;
+  readonly locatorSummary: string | null;
+  readonly origin: {
+    readonly category: "CONTROLLED_SYNTHETIC_FIXTURE";
+    readonly label: string;
+  };
+  readonly persistedAdmissibilityStatus: "PENDING";
+  readonly seriesId: string;
+  readonly version: number;
   readonly admissibility: GlobalAdmissibilityPresentation;
 }
 
+export interface ClaimHistoryItem {
+  readonly occurredAt: IsoDateTime;
+  readonly summary: string;
+  readonly version: number;
+}
+
 export interface ClaimSummary {
+  readonly createdAt: IsoDateTime;
   readonly id: string;
   readonly investigationId: string;
   readonly label: string;
+  readonly seriesId: string;
+  readonly version: number;
   readonly assessment: "INSUFFICIENT" | "SUPPORTED" | "CONFLICTED";
   readonly criticality: "STANDARD" | "CRITICAL";
   readonly evidenceUses: readonly EvidenceUsePresentation[];
   readonly factualReview: FactualReviewPresentation;
+  readonly history: readonly ClaimHistoryItem[];
 }
 
 export interface ClaimReviewSummary extends FactualReviewPresentation {
+  readonly claimVersion: number;
+  readonly decisionNote: string | null;
   readonly id: string;
+  readonly invalidationReason: string | null;
   readonly claimId: string;
   readonly investigationId: string;
+  readonly reviewer: {
+    readonly displayName: string;
+    readonly id: string;
+  } | null;
 }
 
 export interface InvestigationDetail extends InvestigationSummary {

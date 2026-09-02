@@ -1,6 +1,10 @@
 import type {
+  ClaimSummary,
+  ContextualEligibilityStatus,
   EffectiveEvidenceAdmissibilityStatus,
   EffectiveFactualReviewStatus,
+  EvidenceKind,
+  EvidenceRole,
   InvestigationLifecycleStatus,
 } from "../data/types";
 import type { BadgeTone } from "../components/ui/Badge";
@@ -38,6 +42,43 @@ export const factualReviewStatusLabels: Readonly<Record<EffectiveFactualReviewSt
   NEEDS_CORRECTION: "Requer correção",
   INVALIDATED: "Decisão invalidada",
 };
+
+export const eligibilityStatusLabels: Readonly<Record<ContextualEligibilityStatus, string>> = {
+  ELIGIBLE: "Elegível no contexto",
+  RESTRICTED: "Elegibilidade restrita",
+  REJECTED: "Não elegível",
+};
+
+export const evidenceKindLabels: Readonly<Record<EvidenceKind, string>> = {
+  TEXT: "Texto",
+  STRUCTURED_DATA: "Dados estruturados",
+  IMAGE: "Imagem",
+  EXTERNAL_REFERENCE: "Referência externa",
+};
+
+export const evidenceRoleLabels: Readonly<Record<EvidenceRole, string>> = {
+  SUPPORTS: "Sustenta",
+  CONTRADICTS: "Contradiz",
+  QUALIFIES: "Qualifica",
+};
+
+export const claimAssessmentLabels: Readonly<Record<ClaimSummary["assessment"], string>> = {
+  INSUFFICIENT: "Base insuficiente",
+  SUPPORTED: "Com suporte",
+  CONFLICTED: "Com contradição",
+};
+
+export function getEligibilityStatusTone(status: ContextualEligibilityStatus): BadgeTone {
+  if (status === "ELIGIBLE") return "success";
+  if (status === "RESTRICTED") return "warning";
+  return "danger";
+}
+
+export function getEvidenceRoleTone(role: EvidenceRole): BadgeTone {
+  if (role === "SUPPORTS") return "success";
+  if (role === "CONTRADICTS") return "danger";
+  return "info";
+}
 
 export function getInvestigationStatusTone(status: InvestigationLifecycleStatus): BadgeTone {
   if (status === "COMPLETED") return "success";
