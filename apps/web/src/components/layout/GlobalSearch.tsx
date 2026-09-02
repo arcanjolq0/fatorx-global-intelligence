@@ -9,17 +9,16 @@ export function GlobalSearch() {
       <Icon name="search" />
       <input
         aria-describedby="global-search-status"
-        aria-disabled="true"
+        disabled
         id="global-search"
         placeholder="Buscar empresas, investigações, evidências..."
-        readOnly
         type="search"
       />
       <span className="global-search__shortcut" aria-hidden="true">
-        Em breve
+        Indisponível
       </span>
       <span className="sr-only" id="global-search-status">
-        Busca disponível apenas como estrutura visual; nenhum endpoint é consultado.
+        Busca global indisponível nesta demonstração; nenhum serviço é consultado.
       </span>
     </div>
   );

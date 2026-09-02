@@ -23,7 +23,7 @@ describe("DashboardPage", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("heading", { name: "Intelligence workspace em uma visão" }),
+      await screen.findByRole("heading", { name: "Visão consolidada do workspace" }),
     ).toBeVisible();
     const indicators = screen.getByRole("region", { name: "Indicadores do workspace" });
     expect(within(indicators).getByText("Investigações")).toBeVisible();
@@ -52,6 +52,6 @@ describe("DashboardPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar a Visão Geral",
     );
-    expect(screen.getByText(/Nenhum endpoint ou serviço externo foi consultado/i)).toBeVisible();
+    expect(screen.getByText(/Nenhum serviço externo foi consultado/i)).toBeVisible();
   });
 });

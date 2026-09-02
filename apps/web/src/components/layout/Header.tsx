@@ -31,7 +31,7 @@ export function Header({ isSidebarOpen, onMenuClick }: HeaderProps) {
         </Button>
         <GlobalSearch />
         <div className="topbar__status">
-          <Badge tone="neutral">Sem integração</Badge>
+          <Badge tone="neutral">Demonstração local</Badge>
         </div>
       </header>
 

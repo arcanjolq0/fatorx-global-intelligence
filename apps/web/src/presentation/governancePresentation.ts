@@ -39,8 +39,8 @@ export const auditResultLabels: Readonly<Record<AuditEventResult, string>> = {
 export const reportAvailabilityLabels: Readonly<
   Record<ReportPreviewSummary["availability"], string>
 > = {
-  PREVIEW_AVAILABLE: "Preview disponível",
-  NOT_AVAILABLE: "Preview indisponível",
+  PREVIEW_AVAILABLE: "Prévia disponível",
+  NOT_AVAILABLE: "Prévia indisponível",
 };
 
 export function getAuditResultTone(result: AuditEventResult): BadgeTone {

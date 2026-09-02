@@ -52,7 +52,7 @@ export function ClaimsCollection({
   if (claims.length === 0) {
     return (
       <StatePanel kind="empty" title="Nenhuma Claim disponível">
-        O read model sintético não contém Claims para este escopo.
+        O modelo de leitura sintético não contém Claims para este escopo.
       </StatePanel>
     );
   }
@@ -186,7 +186,7 @@ export function ClaimsCollection({
           />
         </div>
         <p className="filter-result-count" aria-live="polite">
-          {rows.length} de {claims.length} Claim(s)
+          {rows.length} de {claims.length} Claims
         </p>
       </Card>
       <Card className="collection-table-card">

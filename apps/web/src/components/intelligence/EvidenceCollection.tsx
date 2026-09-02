@@ -71,7 +71,7 @@ export function EvidenceCollection({
   if (evidence.length === 0) {
     return (
       <StatePanel kind="empty" title="Nenhuma Evidence disponível">
-        O read model sintético não contém Evidence para este escopo. Nenhuma fonte real foi
+        O modelo de leitura sintético não contém Evidence para este escopo. Nenhuma fonte real foi
         consultada.
       </StatePanel>
     );
@@ -230,7 +230,7 @@ export function EvidenceCollection({
           />
         </div>
         <p className="filter-result-count" aria-live="polite">
-          {rows.length} de {evidence.length} Evidence(s)
+          {rows.length} de {evidence.length} itens de Evidence
         </p>
       </Card>
       <Card className="collection-table-card">
@@ -241,7 +241,7 @@ export function EvidenceCollection({
           </StatePanel>
         ) : (
           <Table
-            caption="Evidence disponível no read model sintético"
+            caption="Evidence disponível no modelo de leitura sintético"
             columns={columns}
             getRowKey={(item) => item.id}
             rows={rows}

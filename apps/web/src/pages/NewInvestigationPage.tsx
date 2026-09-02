@@ -150,7 +150,7 @@ export function NewInvestigationPage({
           onAction={refineSearch}
           title="Não foi possível buscar candidatos"
         >
-          O adapter sintético não respondeu. Revise o dado e tente novamente; nenhuma chamada de
+          O adaptador sintético não respondeu. Revise o dado e tente novamente; nenhuma chamada de
           rede foi feita.
         </StatePanel>
       ) : null}

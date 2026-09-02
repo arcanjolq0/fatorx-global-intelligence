@@ -29,7 +29,7 @@ const expectedPaths = [
 ];
 
 describe("navigation configuration", () => {
-  it("defines every foundation route once", () => {
+  it("defines every application route once", () => {
     const paths = appRoutes.map((route) => route.path);
 
     expect(paths).toEqual(expectedPaths);

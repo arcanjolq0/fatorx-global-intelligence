@@ -19,7 +19,7 @@ describe("Table", () => {
   it("renders a semantic empty state", () => {
     render(
       <Table
-        caption="Registros de foundation"
+        caption="Registros controlados"
         columns={columns}
         getRowKey={(row) => row.id}
         rows={[]}
@@ -33,14 +33,14 @@ describe("Table", () => {
   it("adds mobile labels while preserving table semantics", () => {
     render(
       <Table
-        caption="Registros de foundation"
+        caption="Registros controlados"
         columns={columns}
         getRowKey={(row) => row.id}
         rows={[{ id: "1", label: "Item controlado", status: "Indisponível" }]}
       />,
     );
 
-    expect(screen.getByRole("table", { name: "Registros de foundation" })).toBeVisible();
+    expect(screen.getByRole("table", { name: "Registros controlados" })).toBeVisible();
     expect(screen.getByRole("columnheader", { name: "Registro" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "Item controlado" })).toHaveAttribute(
       "data-label",

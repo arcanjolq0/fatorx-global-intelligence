@@ -844,7 +844,7 @@ const reportPreviews = investigations.map((investigation) => {
       id: "report-preview-atlas",
       investigationId: investigation.id,
       limitations: [
-        "Preview visual local; não é relatório produtivo nem documento aprovado.",
+        "Prévia visual local; não é relatório produtivo nem documento aprovado.",
         "Contém somente Claims aceitas para uso factual interno e sua Evidence exata.",
         "Não contém risk score, decisão de crédito, assinatura ou garantia de verdade externa.",
       ],

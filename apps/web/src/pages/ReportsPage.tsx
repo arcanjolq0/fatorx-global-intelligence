@@ -65,7 +65,7 @@ export function ReportsPage({
   }, [dataSource, retryVersion]);
 
   if (state.status === "loading")
-    return <CollectionLoading label="Carregando previews de relatório" />;
+    return <CollectionLoading label="Carregando prévias de relatório" />;
   if (state.status === "error") {
     return (
       <CollectionError
@@ -80,7 +80,7 @@ export function ReportsPage({
   const firstReport = state.reports[0];
   if (firstReport === undefined || state.investigations.length === 0) {
     return (
-      <StatePanel kind="empty" title="Nenhum preview de relatório disponível">
+      <StatePanel kind="empty" title="Nenhuma prévia de relatório disponível">
         A fixture selecionada não contém investigações. Nenhum relatório foi gerado ou solicitado.
       </StatePanel>
     );
@@ -101,25 +101,25 @@ export function ReportsPage({
       <section className="page-intro">
         <div>
           <p className="eyebrow">Representação não produtiva</p>
-          <h2>Preview rastreável de relatório</h2>
+          <h2>Prévia rastreável de relatório</h2>
           <p>
             Visualização local para validar hierarquia e linhagem, sem gerar, exportar, aprovar ou
             assinar documentos.
           </p>
         </div>
-        <Badge tone="warning">Preview / mock</Badge>
+        <Badge tone="warning">Prévia demonstrativa</Badge>
       </section>
       <p className="semantic-boundary-banner semantic-boundary-banner--strong">
-        <strong>Este preview não é um relatório produtivo.</strong>
+        <strong>Esta prévia não é um relatório produtivo.</strong>
         Não há PDF, exportação, assinatura, aprovação, risk score ou decisão de crédito. Aceite F5.4
         significa somente uso factual interno da versão exata da Claim.
       </p>
 
       <Card className="report-selector">
         <Select
-          aria-label="Investigação do preview"
+          aria-label="Investigação da prévia"
           helperText="A seleção é local e não dispara geração nem consulta de backend."
-          label="Investigação do preview"
+          label="Investigação da prévia"
           onChange={(event) => {
             setSelectedInvestigationId(event.currentTarget.value);
           }}
@@ -149,7 +149,7 @@ export function ReportsPage({
         </header>
 
         {selectedReport.availability === "NOT_AVAILABLE" ? (
-          <StatePanel kind="unavailable" title="Sem base factual aceita para o preview">
+          <StatePanel kind="unavailable" title="Sem base factual aceita para a prévia">
             A ausência de Claims aceitas para uso factual interno impede esta representação. Isso
             não é uma conclusão sobre a entidade.
           </StatePanel>
@@ -160,7 +160,10 @@ export function ReportsPage({
                 <p className="card__eyebrow">Linhagem factual</p>
                 <h4 id="traceability-title">Relatório → Claim → revisão factual → Evidence</h4>
               </div>
-              <span>{selectedReport.traceability.length} Claim(s) aceita(s)</span>
+              <span>
+                {selectedReport.traceability.length.toLocaleString("pt-BR")}{" "}
+                {selectedReport.traceability.length === 1 ? "Claim aceita" : "Claims aceitas"}
+              </span>
             </div>
             {selectedReport.traceability.map((entry) => {
               const claim = claimById.get(entry.claimId);

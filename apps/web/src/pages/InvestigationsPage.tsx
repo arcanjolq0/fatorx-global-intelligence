@@ -179,8 +179,8 @@ export function InvestigationsPage({
         <div>
           <h2 id="investigations-content-title">Workspace de investigações</h2>
           <p>
-            Read models sintéticos demonstram a navegação sem representar integração com backend,
-            fonte real ou dado produtivo.
+            Modelos de leitura sintéticos demonstram a navegação sem representar integração com
+            backend, fonte real ou dado produtivo.
           </p>
         </div>
         <div className="page-intro__actions">
@@ -245,7 +245,7 @@ export function InvestigationsPage({
             }}
             title="Não foi possível carregar as investigações"
           >
-            O adapter de demonstração falhou. Nenhuma chamada de rede foi realizada.
+            O adaptador de demonstração falhou. Nenhuma chamada de rede foi realizada.
           </StatePanel>
         ) : null}
 

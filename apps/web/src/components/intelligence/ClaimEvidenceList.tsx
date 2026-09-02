@@ -29,7 +29,7 @@ export function ClaimEvidenceList({
               </span>
               <EvidenceRoleBadge role={evidenceUse.role} />
             </div>
-            <p>{evidence?.label ?? "Evidence não disponível no read model sintético."}</p>
+            <p>{evidence?.label ?? "Evidence não disponível no modelo de leitura sintético."}</p>
             <div className="claim-evidence-list__semantics">
               <span>
                 <small>F5.2 · vínculo</small>

@@ -116,8 +116,8 @@ function InvestigationOverview({
               {investigationStatusLabels[detail.lifecycleStatus]}
             </Badge>
             <p>
-              Este estado vem do read model sintético e não representa execução de connector, fonte
-              real ou transição no backend.
+              Este estado vem do modelo de leitura sintético e não representa execução de conector,
+              fonte real ou transição no backend.
             </p>
           </div>
         </Card>
@@ -280,9 +280,9 @@ function InvestigationEntity({ detail }: { readonly detail: InvestigationDetail 
 function DeferredHistoryTab({ tab }: { readonly tab: DetailTabId }) {
   if (tab !== "history") return null;
   return (
-    <StatePanel kind="unavailable" title="Histórico completo em próxima etapa">
-      Somente os históricos factuais estritamente necessários são exibidos nas vistas de Evidence e
-      Claim.
+    <StatePanel kind="unavailable" title="Histórico agregado indisponível">
+      A interface atual apresenta apenas os eventos sintéticos necessários nas vistas de Evidence e
+      Claims. Nenhum histórico adicional é consultado.
     </StatePanel>
   );
 }
@@ -338,14 +338,14 @@ export function InvestigationDetailPage({
         }}
         title="Não foi possível carregar a investigação"
       >
-        O read adapter sintético falhou. Nenhuma consulta de backend foi realizada.
+        O adaptador de leitura sintético falhou. Nenhuma consulta de backend foi realizada.
       </StatePanel>
     );
   }
   if (loadState.status === "not-found") {
     return (
       <StatePanel kind="empty" title="Investigação não encontrada">
-        O identificador da URL não corresponde a uma investigação disponível nas fixtures.
+        O identificador da URL não corresponde a uma investigação disponível nos dados sintéticos.
         <div className="state-panel__inline-action">
           <Link className="button button--secondary" to="/investigacoes">
             Ver investigações

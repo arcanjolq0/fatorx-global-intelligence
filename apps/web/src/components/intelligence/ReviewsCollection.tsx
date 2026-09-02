@@ -55,7 +55,7 @@ export function ReviewsCollection({
   if (reviews.length === 0) {
     return (
       <StatePanel kind="empty" title="Nenhuma revisão factual disponível">
-        O read model sintético não contém decisões F5.4 para este escopo.
+        O modelo de leitura sintético não contém decisões F5.4 para este escopo.
       </StatePanel>
     );
   }
@@ -169,7 +169,7 @@ export function ReviewsCollection({
           />
         </div>
         <p className="filter-result-count" aria-live="polite">
-          {rows.length} de {reviews.length} revisão(ões)
+          {rows.length} de {reviews.length} revisões
         </p>
       </Card>
       <Card className="collection-table-card">

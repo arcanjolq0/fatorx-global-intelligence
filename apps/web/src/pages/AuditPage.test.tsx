@@ -24,7 +24,7 @@ describe("AuditPage", () => {
 
     const table = await screen.findByRole("table", { name: "Eventos de auditoria sintéticos" });
     expect(within(table).getAllByRole("row")).toHaveLength(7);
-    expect(screen.getByText("Mock local · read-only")).toBeVisible();
+    expect(screen.getByText("Demonstração local · somente leitura")).toBeVisible();
     expect(screen.getByText(/não expõe conteúdo documental/i)).toBeVisible();
     expect(screen.queryByText(/token-|cookie=|secret=/i)).not.toBeInTheDocument();
   });

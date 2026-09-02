@@ -57,7 +57,7 @@ export const appRoutes = [
     title: "Investigações",
     eyebrow: "Workspace investigativo",
     description:
-      "A navegação está disponível, mas nenhuma investigação é listada ou consultada nesta foundation.",
+      "Investigações sintéticas com filtros locais, estados operacionais e acesso ao detalhe rastreável.",
     icon: "investigations",
     group: "workspace",
     showInSidebar: true,
@@ -107,7 +107,7 @@ export const appRoutes = [
     title: "Entidades",
     eyebrow: "Resolução de identidade",
     description:
-      "A foundation não consulta, confirma ou vincula entidades; a rota preserva esse limite explicitamente.",
+      "Contexto de entidades sintéticas acessível pelas investigações, sem catálogo ou consulta externa.",
     icon: "entities",
     group: "workspace",
     showInSidebar: true,
@@ -190,7 +190,7 @@ export const appRoutes = [
     title: "Relatórios",
     eyebrow: "Resultado investigativo",
     description:
-      "Preview visual rastreável e não produtivo, sem geração, exportação ou decisão de risco.",
+      "Prévia visual rastreável e não produtiva, sem geração, exportação ou decisão de risco.",
     icon: "reports",
     group: "governance",
     showInSidebar: true,
@@ -230,7 +230,7 @@ export const notFoundRoute = {
   label: "Página não encontrada",
   title: "Página não encontrada",
   eyebrow: "Navegação",
-  description: "Este endereço não faz parte da foundation atual.",
+  description: "O endereço solicitado não corresponde a uma rota disponível nesta interface.",
 } as const;
 
 export function getRouteByPathname(pathname: string): AppRouteDefinition | undefined {

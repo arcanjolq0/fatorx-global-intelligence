@@ -6,8 +6,8 @@ export function NotFoundPage() {
   return (
     <Card className="not-found">
       <p className="eyebrow">404</p>
-      <h2 id="page-title">Endereço indisponível</h2>
-      <p>Este endereço não faz parte da foundation atual.</p>
+      <h2 id="page-title">Página não encontrada</h2>
+      <p>O endereço pode ter mudado ou não pertence às rotas disponíveis nesta interface.</p>
       <Link className="button button--primary" to="/">
         Voltar à Visão Geral
       </Link>

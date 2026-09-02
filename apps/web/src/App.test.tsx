@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { App } from "./App";
@@ -23,12 +23,11 @@ describe("App", () => {
       "/investigacoes",
     );
     expect(
-      await screen.findByRole("heading", { level: 2, name: "Intelligence workspace em uma visão" }),
+      await screen.findByRole("heading", { level: 2, name: "Visão consolidada do workspace" }),
     ).toBeVisible();
 
     const search = screen.getByRole("searchbox", { name: "Busca global" });
-    expect(search).toHaveAttribute("readonly");
-    expect(search).toHaveAttribute("aria-disabled", "true");
+    expect(search).toBeDisabled();
 
     const skipLink = screen.getByRole("link", { name: "Ir para o conteúdo principal" });
     expect(skipLink).toHaveAttribute("href", "#main-content");
@@ -52,6 +51,30 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Localizar a empresa investigada" }),
     ).toBeVisible();
+  });
+
+  it("traps focus in the mobile navigation and restores it when dismissed", () => {
+    render(<App />);
+    const menuButton = screen.getByRole("button", { name: "Abrir menu" });
+    menuButton.focus();
+    fireEvent.click(menuButton);
+
+    expect(screen.getByRole("dialog", { name: "Navegação principal" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Visão Geral" })).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(menuButton).toHaveFocus();
+  });
+
+  it("renders the honest read-only settings route", async () => {
+    await router.navigate("/configuracoes");
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Configurações" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Preferências e limites do workspace" }),
+    ).toBeVisible();
+    expect(screen.getByText("Nenhuma alteração é salva.")).toBeVisible();
   });
 
   it("renders an explicit not-found route", async () => {

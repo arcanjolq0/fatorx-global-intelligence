@@ -146,7 +146,7 @@ export function EntityConfirmationPage({
           }}
           title="Não foi possível recuperar os candidatos"
         >
-          O adapter de comandos sintético falhou. Nenhuma integração externa foi acionada.
+          O adaptador de comandos sintético falhou. Nenhuma integração externa foi acionada.
         </StatePanel>
       ) : null}
 

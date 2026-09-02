@@ -147,7 +147,7 @@ export function AuditPage({
           <h2>Eventos relevantes do workspace</h2>
           <p>Projeção sintética reduzida a metadados seguros e úteis para supervisão.</p>
         </div>
-        <Badge tone="neutral">Mock local · read-only</Badge>
+        <Badge tone="neutral">Demonstração local · somente leitura</Badge>
       </section>
       <p className="semantic-boundary-banner">
         <strong>Limite de auditoria:</strong> esta tela não consulta eventos persistidos e não expõe

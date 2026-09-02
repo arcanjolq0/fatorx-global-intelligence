@@ -18,9 +18,9 @@
   --color-surface-hover: #f2f5fa;
   --color-text: #172033;
   --color-text-muted: #526078;
-  --color-text-faint: #6f7b90;
+  --color-text-faint: #667388;
   --color-border: #dce3ed;
-  --color-border-strong: #bec9d8;
+  --color-border-strong: #8391a7;
   --color-primary: #2457d6;
   --color-primary-hover: #1d46b0;
   --color-primary-soft: #edf3ff;
@@ -154,11 +154,17 @@ a {
   color: var(--color-surface);
   font-size: var(--font-size-sm);
   font-weight: var(--weight-bold);
+  opacity: 0;
+  pointer-events: none;
   transform: translateY(-200%);
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -565,10 +571,6 @@ a {
   font-size: var(--font-size-sm);
 }
 
-.foundation-placeholder {
-  padding: var(--space-3);
-}
-
 .investigation-filters {
   display: grid;
   gap: var(--space-4);
@@ -811,6 +813,12 @@ select:disabled {
   background: var(--color-surface-subtle);
   color: var(--color-text-faint);
   opacity: 0.65;
+}
+
+.global-search input:disabled {
+  background: transparent;
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 
 .field__helper,
@@ -1989,6 +1997,126 @@ select:disabled {
   background: var(--color-info-soft);
 }
 
+.settings-grid,
+.entity-boundary-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.settings-definition-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.settings-definition-list > div,
+.preference-list > li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.settings-definition-list > div:first-child,
+.preference-list > li:first-child {
+  padding-top: 0;
+}
+
+.settings-definition-list > div:last-child,
+.preference-list > li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.settings-definition-list dt,
+.preference-list span {
+  color: var(--color-text-faint);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+}
+
+.settings-definition-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+}
+
+.preference-list,
+.capability-list,
+.scope-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preference-list strong {
+  font-size: var(--font-size-sm);
+}
+
+.capability-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+}
+
+.capability-list li {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.capability-list li > span {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.capability-list small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.scope-list {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.scope-list li {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.scope-list li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  content: "";
+}
+
+.entity-access-copy {
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-sm);
+}
+
 @keyframes shimmer {
   to {
     background-position: -400% 0;
@@ -2013,6 +2141,8 @@ select:disabled {
 
   .table-region {
     overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
   }
 
   .table,
@@ -2048,6 +2178,7 @@ select:disabled {
     grid-template-columns: minmax(7rem, 42%) minmax(0, 1fr);
     gap: var(--space-3);
     padding: var(--space-3) 0;
+    overflow-wrap: anywhere;
     text-align: right !important;
   }
 
@@ -2104,10 +2235,6 @@ select:disabled {
     padding: var(--space-6);
   }
 
-  .foundation-placeholder {
-    padding: var(--space-4);
-  }
-
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2152,6 +2279,11 @@ select:disabled {
   }
 
   .detail-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-grid,
+  .entity-boundary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

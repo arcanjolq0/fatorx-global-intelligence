@@ -109,7 +109,7 @@ export function DashboardPage({
         }}
         title="Não foi possível carregar a Visão Geral"
       >
-        O adapter de fixtures falhou. Nenhum endpoint ou serviço externo foi consultado.
+        O adaptador de fixtures falhou. Nenhum serviço externo foi consultado.
       </StatePanel>
     );
   }
@@ -144,7 +144,7 @@ export function DashboardPage({
       <section className="page-intro">
         <div>
           <p className="eyebrow">Panorama operacional</p>
-          <h2>Intelligence workspace em uma visão</h2>
+          <h2>Visão consolidada do workspace</h2>
           <p>
             Indicadores derivados exclusivamente das fixtures tipadas, sem score, fonte real ou
             inferência de risco.
@@ -185,7 +185,8 @@ export function DashboardPage({
 
       {state.investigations.length === 0 ? (
         <StatePanel kind="empty" title="Nenhum dado no cenário atual">
-          O dashboard está pronto para receber um read model, mas a fixture selecionada está vazia.
+          O dashboard está pronto para receber um modelo de leitura, mas a fixture selecionada está
+          vazia.
         </StatePanel>
       ) : (
         <>

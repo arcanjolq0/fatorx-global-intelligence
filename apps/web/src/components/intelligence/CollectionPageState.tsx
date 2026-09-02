@@ -17,7 +17,7 @@ export function CollectionError({ onRetry }: { readonly onRetry: () => void }) {
       onAction={onRetry}
       title="Não foi possível carregar os dados"
     >
-      O adapter de fixtures falhou. Nenhum endpoint ou serviço externo foi consultado.
+      O adaptador de fixtures falhou. Nenhum serviço externo foi consultado.
     </StatePanel>
   );
 }

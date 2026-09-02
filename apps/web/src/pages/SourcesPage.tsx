@@ -116,7 +116,9 @@ export function SourcesPage({
         <div>
           <p className="eyebrow">Catálogo de demonstração</p>
           <h2>Fontes e canais controlados</h2>
-          <p>Inventário somente leitura dos canais sintéticos usados pelas fixtures do frontend.</p>
+          <p>
+            Inventário somente leitura dos canais sintéticos usados pelas fixtures da interface.
+          </p>
         </div>
       </section>
       <p className="semantic-boundary-banner semantic-boundary-banner--strong">

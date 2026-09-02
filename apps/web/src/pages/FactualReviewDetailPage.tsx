@@ -82,13 +82,13 @@ export function FactualReviewDetailPage({
         }}
         title="Não foi possível carregar a revisão"
       >
-        A fixture local falhou; nenhum backend foi consultado.
+        Os dados sintéticos locais não foram carregados; nenhum backend foi consultado.
       </StatePanel>
     );
   if (state.status === "not-found")
     return (
       <StatePanel kind="empty" title="Revisão não encontrada">
-        O identificador não corresponde ao read model sintético.
+        O identificador não corresponde ao modelo de leitura sintético.
         <div className="state-panel__inline-action">
           <Link className="button button--secondary" to="/revisoes">
             Ver revisões
@@ -101,7 +101,7 @@ export function FactualReviewDetailPage({
   if (claim?.version !== state.review.claimVersion)
     return (
       <StatePanel kind="error" title="Base factual incoerente">
-        A versão exata da Claim não está disponível no read model. A revisão não pode ser
+        A versão exata da Claim não está disponível no modelo de leitura. A revisão não pode ser
         apresentada como válida.
       </StatePanel>
     );

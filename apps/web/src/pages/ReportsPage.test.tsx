@@ -17,8 +17,8 @@ describe("ReportsPage", () => {
   it("renders a preview-only report with an explicit factual trace", async () => {
     renderPage();
 
-    expect(await screen.findByText("Este preview não é um relatório produtivo.")).toBeVisible();
-    expect(screen.getByText("Preview disponível")).toBeVisible();
+    expect(await screen.findByText("Esta prévia não é um relatório produtivo.")).toBeVisible();
+    expect(screen.getByText("Prévia disponível")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Relatório → Claim → revisão factual → Evidence" }),
     ).toBeVisible();
@@ -34,19 +34,19 @@ describe("ReportsPage", () => {
 
   it("shows unavailability when an investigation has no accepted factual claim", async () => {
     renderPage();
-    const select = await screen.findByLabelText("Investigação do preview");
+    const select = await screen.findByLabelText("Investigação da prévia");
 
     fireEvent.change(select, { target: { value: "inv-northstar-components" } });
 
-    expect(screen.getByText("Preview indisponível")).toBeVisible();
-    expect(screen.getByText("Sem base factual aceita para o preview")).toBeVisible();
+    expect(screen.getByText("Prévia indisponível")).toBeVisible();
+    expect(screen.getByText("Sem base factual aceita para a prévia")).toBeVisible();
     expect(screen.getByText(/não é uma conclusão sobre a entidade/i)).toBeVisible();
   });
 
   it("renders an empty preview state without generating anything", async () => {
     renderPage("empty");
 
-    expect(await screen.findByText("Nenhum preview de relatório disponível")).toBeVisible();
+    expect(await screen.findByText("Nenhuma prévia de relatório disponível")).toBeVisible();
     expect(screen.getByText(/Nenhum relatório foi gerado ou solicitado/i)).toBeVisible();
   });
 });

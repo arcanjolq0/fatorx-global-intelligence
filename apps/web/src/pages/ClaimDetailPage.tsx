@@ -75,13 +75,13 @@ export function ClaimDetailPage({
         }}
         title="Não foi possível carregar a Claim"
       >
-        A fixture local falhou; nenhum backend foi consultado.
+        Os dados sintéticos locais não foram carregados; nenhum backend foi consultado.
       </StatePanel>
     );
   if (state.status === "not-found")
     return (
       <StatePanel kind="empty" title="Claim não encontrada">
-        O identificador não corresponde ao read model sintético.
+        O identificador não corresponde ao modelo de leitura sintético.
         <div className="state-panel__inline-action">
           <Link className="button button--secondary" to="/claims">
             Ver Claims

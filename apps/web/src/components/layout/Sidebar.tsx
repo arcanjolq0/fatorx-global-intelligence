@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { NavLink } from "react-router";
 
 import { appRoutes, navigationGroups } from "../../app/navigation";
@@ -7,16 +8,20 @@ import { Icon } from "../icons/Icon";
 export interface SidebarProps {
   readonly isOpen: boolean;
   readonly onNavigate: () => void;
+  readonly sidebarRef: RefObject<HTMLElement | null>;
 }
 
 const groupOrder: readonly NavigationGroup[] = ["workspace", "governance"];
 
-export function Sidebar({ isOpen, onNavigate }: SidebarProps) {
+export function Sidebar({ isOpen, onNavigate, sidebarRef }: SidebarProps) {
   return (
     <aside
+      aria-modal={isOpen || undefined}
       className={`sidebar ${isOpen ? "sidebar--open" : ""}`}
       id="app-sidebar"
       aria-label="Navegação principal"
+      ref={sidebarRef}
+      role={isOpen ? "dialog" : undefined}
     >
       <div className="sidebar__brand">
         <span className="sidebar__mark" aria-hidden="true">
@@ -57,8 +62,8 @@ export function Sidebar({ isOpen, onNavigate }: SidebarProps) {
       <div className="sidebar__footer">
         <Icon name="shield" />
         <span>
-          <strong>Foundation segura</strong>
-          <small>Nenhum dado de negócio conectado</small>
+          <strong>Modo demonstração</strong>
+          <small>Fixtures locais · sem API</small>
         </span>
       </div>
     </aside>
