@@ -151,3 +151,17 @@ A revisão final do frontend permanece pendente de rechecagem independente.
 | `pnpm --filter @fatorx/web typecheck`    | PASS                                                                 |
 | `pnpm --filter @fatorx/web build`        | PASS                                                                 |
 | `git diff --check`                       | PASS                                                                 |
+
+## Aprovação final do Frontend MVP visual
+
+- Primeira revisão independente: `APPROVED_WITH_FIXES`.
+- `FRONTEND-REVIEW-001`: `CLOSED`.
+- `FRONTEND-REVIEW-002`: `CLOSED`.
+- Rechecagem independente: `APPROVED`.
+- Findings restantes: 0 bloqueantes e 0 não bloqueantes.
+- Testes frontend: 67 `PASS`.
+- Lint, formatação, typecheck, build e `git diff --check`: `PASS`.
+- O backend não foi alterado.
+
+As limitações produtivas permanecem intencionais e explícitas: fixtures/mock locais, sem API
+HTTP, autenticação, busca produtiva, fontes reais ou geração produtiva de relatório.
