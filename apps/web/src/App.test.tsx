@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { router } from "./app/router";
@@ -7,6 +7,7 @@ import { router } from "./app/router";
 describe("App", () => {
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   beforeEach(async () => {
@@ -64,6 +65,41 @@ describe("App", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(menuButton).toHaveFocus();
+  });
+
+  it.each([390, 1440])(
+    "keeps the route focus and shell controls available at %ipx",
+    async (viewportWidth) => {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: viewportWidth });
+      const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+      render(<App />);
+      scrollTo.mockClear();
+
+      await router.navigate("/investigacoes");
+      await screen.findByRole("heading", { level: 1, name: "Investigações" });
+
+      expect(document.querySelector("main")).toHaveFocus();
+      expect(scrollTo).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 0 });
+      expect(screen.getByRole("banner", { name: "Barra superior" })).toBeVisible();
+      if (viewportWidth === 390) {
+        expect(screen.getByRole("button", { name: "Abrir menu" })).toBeVisible();
+      }
+    },
+  );
+
+  it("preserves browser-restored scroll on back navigation while returning focus to main", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    render(<App />);
+
+    await router.navigate("/investigacoes");
+    await screen.findByRole("heading", { level: 1, name: "Investigações" });
+    scrollTo.mockClear();
+
+    await router.navigate(-1);
+    await screen.findByRole("heading", { level: 1, name: "Visão Geral" });
+
+    expect(document.querySelector("main")).toHaveFocus();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it("renders the honest read-only settings route", async () => {

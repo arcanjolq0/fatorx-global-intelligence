@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation, useNavigationType } from "react-router";
 
 import { Header } from "./Header";
+import { focusRouteMainContent, shouldResetRouteScroll } from "./routeFocus";
 import { Sidebar } from "./Sidebar";
 
 export function AppLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigationType = useNavigationType();
   const mainRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const focusBeforeDrawerRef = useRef<HTMLElement | null>(null);
   const drawerWasOpenRef = useRef(false);
+  const isInitialRouteRef = useRef(true);
 
   useEffect(() => {
-    mainRef.current?.focus();
-  }, [location.pathname]);
+    const resetScroll = shouldResetRouteScroll(navigationType, isInitialRouteRef.current);
+    focusRouteMainContent(mainRef.current, resetScroll);
+    isInitialRouteRef.current = false;
+  }, [location.key, navigationType]);
 
   useEffect(() => {
     if (!isSidebarOpen) {

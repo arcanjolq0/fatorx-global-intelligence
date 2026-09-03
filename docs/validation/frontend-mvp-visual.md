@@ -106,19 +106,48 @@ Em telas menores:
 
 ## Gates de qualidade
 
-| Gate | Resultado |
-| --- | --- |
-| `pnpm test` | PASS — 1.650 testes Python e 61 testes web |
-| Cobertura Python | PASS — 90,06% total |
-| `pnpm lint` | PASS — Ruff, ESLint e scanner de segredos |
-| `pnpm format` | PASS — 241 arquivos Python inalterados e Prettier aplicado |
-| `pnpm format:check` | PASS |
-| `pnpm typecheck` | PASS — mypy em 240 arquivos e TypeScript |
-| `pnpm build` | PASS — pacotes Python e bundle web |
-| `git diff --check` | PASS |
+| Gate                | Resultado                                                  |
+| ------------------- | ---------------------------------------------------------- |
+| `pnpm test`         | PASS — 1.650 testes Python e 61 testes web                 |
+| Cobertura Python    | PASS — 90,06% total                                        |
+| `pnpm lint`         | PASS — Ruff, ESLint e scanner de segredos                  |
+| `pnpm format`       | PASS — 241 arquivos Python inalterados e Prettier aplicado |
+| `pnpm format:check` | PASS                                                       |
+| `pnpm typecheck`    | PASS — mypy em 240 arquivos e TypeScript                   |
+| `pnpm build`        | PASS — pacotes Python e bundle web                         |
+| `git diff --check`  | PASS                                                       |
 
 A primeira chamada de `pnpm test` foi recusada corretamente pelo guard dos testes destrutivos
 porque a variável de consentimento não estava definida. Após confirmar o alvo dedicado local
 `127.0.0.1:55432/fatorx_test` e o container saudável, o gate foi repetido com consentimento
 restrito ao processo e passou integralmente. Os 16 warnings SQLAlchemy observados são os mesmos
 avisos de reflection/migration já presentes na baseline; não foram ocultados.
+
+## Correções após revisão independente
+
+- Resultado da revisão independente: `APPROVED_WITH_FIXES`.
+- `FRONTEND-REVIEW-001` foi corrigido: o foco de rota continua no `main`, agora com
+  `preventScroll`; carregamento inicial e navegação direta iniciam no topo, enquanto uma
+  navegação `POP` preserva a posição restaurada pelo histórico do navegador.
+- `FRONTEND-REVIEW-002` foi corrigido: em telas móveis a busca global segue desabilitada, exibe
+  visivelmente `Indisponível` e usa uma aparência de campo indisponível, sem navegação ou chamada
+  de rede.
+- Foram incluídos testes DOM determinísticos para a política de foco/scroll, retorno pelo
+  histórico, disponibilidade do shell em 390 px e 1440 px, e o estado indisponível da busca em
+  390 px. A verificação visual local complementa esses testes para os estilos responsivos.
+- Nenhum arquivo de backend foi alterado; não foram adicionados endpoint, busca produtiva ou nova
+  integração.
+
+A revisão final do frontend permanece pendente de rechecagem independente.
+
+## Gates das correções de revisão
+
+| Gate                                     | Resultado                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| Testes focados                           | PASS — 11 testes de rota, foco, histórico, menu e busca indisponível |
+| `pnpm --filter @fatorx/web test`         | PASS — 67 testes web                                                 |
+| `pnpm --filter @fatorx/web lint`         | PASS                                                                 |
+| `pnpm --filter @fatorx/web format:check` | PASS                                                                 |
+| `pnpm --filter @fatorx/web typecheck`    | PASS                                                                 |
+| `pnpm --filter @fatorx/web build`        | PASS                                                                 |
+| `git diff --check`                       | PASS                                                                 |
